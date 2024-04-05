@@ -1,0 +1,24 @@
+{
+	"image": "mcr.microsoft.com/devcontainers/universal:2",
+	"features": {
+		"ghcr.io/devcontainers/features/azure-cli:1": {}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"eamodio.gitlens",
+				"GitHub.copilot",
+				"ms-python.black-formatter",
+				"ms-python.python",
+				"GitHub.vscode-github-actions",
+				"ms-vscode.vscode-node-azure-pack"
+			],
+			"settings": {
+				"editor.defaultFormatter": "ms-python.black-formatter",
+				"files.exclude": {
+					"**/__pycache__": true
+				}
+			}
+		}
+	}
+}
