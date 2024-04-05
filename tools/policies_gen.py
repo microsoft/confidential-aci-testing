@@ -38,13 +38,14 @@ def policies_gen(**kwargs):
         json.dump(arm_template, file, indent=2)
 
     print("Calling acipolicygen and saving policy to file")
-    result = subprocess.run(
-        ["az", "confcom", "acipolicygen", "-a", "/tmp/arm.json", "--outraw"], 
-        capture_output=True, 
-        text=True
+    subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"])
+    subprocess.run(
+        [
+            "az", "confcom", "acipolicygen",
+            "-a", "/tmp/arm.json",
+            "--outraw", "--save-to-file", f"{target}/policy.rego"
+        ]
     )
-    with open(f"{target}/policy.rego", "w") as file:
-        file.write(result.stdout)
     print(f"Saved policy to {target}/policy.rego")
 
     print("Cleaning up intermediate ARM template")
