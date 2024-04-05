@@ -12,9 +12,10 @@ def infra_deploy(subscription, resource_group, registry, managed_identity, locat
     assert managed_identity is not None, "Managed Identity must be set"
     assert location is not None, "Location must be set"
 
+    subprocess.run(["az", "account", "set", "--subscription", subscription])
+
     result = subprocess.run([
         "az", "deployment", "sub", "create",
-        *(["--subscription", subscription] if subscription else []),
         "--location", location,
         "--template-file", os.path.join(os.path.dirname(__file__), "..", "aci", "resourceGroup.bicep"),
         "--parameters", f"name={resource_group}",
