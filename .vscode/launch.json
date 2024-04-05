@@ -2,29 +2,69 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "policies_gen",
+            "name": "infra_deploy",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/policies_gen",
-            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tools/infra_deploy.py",
             "args": [
-                "test/example/",
+                "--subscription",
+                "${input:subscription}",
+                "--resource-group",
+                "${input:resource-group}",
                 "--registry",
-                "caciexamples.azurecr.io",
-                "--tag",
-                "latest"
+                "${input:registry}",
+                "--managed-identity",
+                "${input:managed-identity}",
+                "--location",
+                "${input:location}",
             ]
         },
         {
-            "name": "aci_param_set",
+            "name": "end_to_end",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/aci_param_set",
-            "console": "integratedTerminal",
+            "program": "${workspaceFolder}/tools/end_to_end.py",
             "args": [
-                "test/example/",
-                "--param",
-                "tag='not-latest'",
+                "${input:target}",
+            ]
+        },
+        {
+            "name": "images_build",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/images_build.py",
+            "args": [
+                "${input:target}",
+                "--repository",
+                "${input:repository}",
+                "--tag",
+                "${input:tag}",
+            ]
+        },
+        {
+            "name": "images_push",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/images_push.py",
+            "args": [
+                "${input:target}",
+                "--repository",
+                "${input:repository}",
+                "--tag",
+                "${input:tag}",
+            ]
+        },
+        {
+            "name": "policies_gen",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/policies_gen.py",
+            "args": [
+                "${input:target}",
+                "--repository",
+                "${input:repository}",
+                "--tag",
+                "${input:tag}",
             ]
         },
         {
@@ -32,18 +72,84 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/tools/aci_deploy.py",
-            "console": "integratedTerminal",
             "args": [
-                "test/example/",
-                "--subscription",
-                "85c61f94-8912-4e82-900e-6ab44de9bdf8",
-                "--resource-group",
-                "domayre",
+                "${input:target}",
                 "-n",
-                "test-diff-cce",
-                "--parameters",
-                "ccePolicy=\"cGFja2FnZSBwb2xpY3kKCmltcG9ydCBmdXR1cmUua2V5d29yZHMuZXZlcnkKaW1wb3J0IGZ1dHVyZS5rZXl3b3Jkcy5pbgoKYXBpX3N2biA6PSAiMC4xMC4wIgpmcmFtZXdvcmtfc3ZuIDo9ICIwLjEuMCIKCmFsbG93X3Byb3BlcnRpZXNfYWNjZXNzIDo9IHRydWUKYWxsb3dfZHVtcF9zdGFja3MgOj0gdHJ1ZQphbGxvd19ydW50aW1lX2xvZ2dpbmcgOj0gdHJ1ZQphbGxvd19lbnZpcm9ubWVudF92YXJpYWJsZV9kcm9wcGluZyA6PSB0cnVlCmFsbG93X3VuZW5jcnlwdGVkX3NjcmF0Y2ggOj0gdHJ1ZQoKbW91bnRfZGV2aWNlIDo9IHsiYWxsb3dlZCI6IHRydWV9CnVubW91bnRfZGV2aWNlIDo9IHsiYWxsb3dlZCI6IHRydWV9Cm1vdW50X292ZXJsYXkgOj0geyJhbGxvd2VkIjogdHJ1ZX0KdW5tb3VudF9vdmVybGF5IDo9IHsiYWxsb3dlZCI6IHRydWV9CmNyZWF0ZV9jb250YWluZXIgOj0geyJhbGxvd2VkIjogdHJ1ZSwgImVudl9saXN0IjogbnVsbCwgImFsbG93X3N0ZGlvX2FjY2VzcyI6IHRydWV9CmV4ZWNfaW5fY29udGFpbmVyIDo9IHsiYWxsb3dlZCI6IHRydWV9CmV4ZWNfZXh0ZXJuYWwgOj0geyJhbGxvd2VkIjogdHJ1ZSwgImVudl9saXN0IjogbnVsbCwgImFsbG93X3N0ZGlvX2FjY2VzcyI6IHRydWV9CnNodXRkb3duX2NvbnRhaW5lciA6PSB7ImFsbG93ZWQiOiB0cnVlfQpzaWduYWxfY29udGFpbmVyX3Byb2Nlc3MgOj0geyJhbGxvd2VkIjogdHJ1ZX0KcGxhbjlfbW91bnQgOj0geyJhbGxvd2VkIjogdHJ1ZX0KcGxhbjlfdW5tb3VudCA6PSB7ImFsbG93ZWQiOiB0cnVlfQpnZXRfcHJvcGVydGllcyA6PSB7ImFsbG93ZWQiOiB0cnVlfQpkdW1wX3N0YWNrcyA6PSB7ImFsbG93ZWQiOiB0cnVlfQpydW50aW1lX2xvZ2dpbmcgOj0geyJhbGxvd2VkIjogdHJ1ZX0KbG9hZF9mcmFnbWVudCA6PSB7ImFsbG93ZWQiOiB0cnVlfQpzY3JhdGNoX21vdW50IDo9IHsiYWxsb3dlZCI6IHRydWV9CnNjcmF0Y2hfdW5tb3VudCA6PSB7ImFsbG93ZWQiOiB0cnVlfQoKcmVhc29uIDo9IHsiZXJyb3JzIjogeyJhbGxvd2VkIjogdHJ1ZX19Cg==\""
+                "${input:deploymentName}",
             ]
-        }
+        },
+        {
+            "name": "aci_monitor",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/aci_monitor.py",
+            "args": [
+                "-n",
+                "${input:deploymentName}",
+            ]
+        },
+        {
+            "name": "aci_remove",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/aci_remove.py",
+            "args": [
+                "-n",
+                "${input:deploymentName}",
+            ]
+        },
+    ],
+    "inputs": [
+        {
+            "id": "target",
+            "type": "pickString",
+            "description": "Enter the name of the target:",
+            "options": [
+                "test/example",
+            ],
+        },
+        {
+            "id": "registry",
+            "type": "promptString",
+            "description": "Enter the name of the registry:",
+        },
+        {
+            "id": "repository",
+            "type": "promptString",
+            "description": "Enter the repository to use:",
+            "default": "example",
+        },
+        {
+            "id": "tag",
+            "type": "promptString",
+            "description": "Enter the tag to use:",
+            "default": "latest",
+        },
+        {
+            "id": "deploymentName",
+            "type": "promptString",
+            "description": "Enter the name for the deployment:",
+        },
+        {
+            "id": "subscription",
+            "type": "promptString",
+            "description": "Enter the ID of the Azure Subscription:",
+        },
+        {
+            "id": "resource-group",
+            "type": "promptString",
+            "description": "Enter the name of the Resource Group:",
+        },
+        {
+            "id": "managed-identity",
+            "type": "promptString",
+            "description": "Enter the name for the managed identity:",
+        },
+        {
+            "id": "location",
+            "type": "promptString",
+            "description": "Enter the location:",
+            "default": "northeurope"
+        },
     ]
 }
