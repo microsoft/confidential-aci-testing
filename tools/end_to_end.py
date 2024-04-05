@@ -9,7 +9,7 @@ from aci_deploy import aci_deploy
 from aci_monitor import aci_monitor
 from aci_remove import aci_remove
 
-def end_to_end(target, registry, repository, tag, subscription, resource_group, name, location, parameters):
+def end_to_end(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters):
 
     images_build(
         target=target,
@@ -35,6 +35,7 @@ def end_to_end(target, registry, repository, tag, subscription, resource_group, 
         resource_group=resource_group,
         name=name,
         location=location,
+        managed_identity=managed_identity,
         parameters=parameters,
     )
     try:
@@ -78,6 +79,8 @@ if __name__ == "__main__":
     parser.add_argument("--name", "-n", help="Name of deployment", required=True)
     parser.add_argument("--location", 
         help="Location to deploy to", default=os.environ.get("LOCATION"))
+    parser.add_argument("--managed-identity",
+        help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--parameters", help="Path to parameters file")
     
     args = parser.parse_args()
@@ -91,5 +94,6 @@ if __name__ == "__main__":
         tag=args.tag,
         name=args.name,
         location=args.location,
+        managed_identity=args.managed_identity,
         parameters=args.parameters,
     )

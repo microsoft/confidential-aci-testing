@@ -3,8 +3,17 @@
 import argparse
 import os
 import subprocess
+from aci_param_set import update_param
 
-def aci_deploy(target, subscription, resource_group, name, location, parameters):
+def aci_deploy(target, subscription, resource_group, name, location, managed_identity, parameters):
+
+    assert target is not None, "Target is required"
+
+    param_file_path = os.path.join(target, ".bicepparam")
+    if location is not None:
+        update_param(param_file_path, "location", location)
+    if managed_identity is not None:
+        update_param(param_file_path, "managedIDName", managed_identity)
 
     az_command = [
         "az", "deployment", "group", "create",
@@ -12,8 +21,7 @@ def aci_deploy(target, subscription, resource_group, name, location, parameters)
         *(["--subscription", subscription] if subscription else []),
         *(["--resource-group", resource_group] if resource_group else []),
         "--template-file", os.path.join(target, ".bicep"),
-        "--parameters", os.path.join(target, ".bicepparam"),
-        *(["--parameters", f"location={location}"] if location else []),
+        "--parameters", param_file_path,
         "--query", "properties.outputs.id.value", "-o", "tsv",
     ]
     for parameter in parameters or []:
@@ -46,7 +54,10 @@ if __name__ == "__main__":
 
     # Deployment Info
     parser.add_argument("--name", "-n", help="Name of deployment", required=True)
-    parser.add_argument("--location", help="Location to deploy to")
+    parser.add_argument("--location", 
+        help="Location to deploy to", default=os.environ.get("LOCATION"))
+    parser.add_argument("--managed-identity",
+        help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--parameters", help="Path to parameters file", action="append")
     
     args = parser.parse_args()
@@ -57,5 +68,6 @@ if __name__ == "__main__":
         resource_group=args.resource_group,
         name=args.name,
         location=args.location,
+        managed_identity=args.managed_identity,
         parameters=args.parameters,
     )
