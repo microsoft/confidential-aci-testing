@@ -6,6 +6,6 @@ param repository='example'
 param tag='latest'
 
 // Deployment info
-param location = ''
+param location=''
 param ccePolicy=''
 param managedIDName=''
