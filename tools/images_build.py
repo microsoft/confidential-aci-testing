@@ -4,7 +4,12 @@ import argparse
 import os
 import subprocess
 
-def images_build(target, registry, repository, tag):
+def images_build(target, registry, repository, tag="latest"):
+
+    assert target, "Target is required"
+    assert registry, "Registry is required"
+    assert repository, "Repository is required"
+
     for dockerfile in os.listdir(target):
         if dockerfile.endswith(".Dockerfile"):
             image_name = os.path.splitext(dockerfile)[0]
