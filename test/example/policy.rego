@@ -46,5 +46,3 @@ scratch_mount := data.framework.scratch_mount
 scratch_unmount := data.framework.scratch_unmount
 
 reason := {"errors": data.framework.errors}
-
-
