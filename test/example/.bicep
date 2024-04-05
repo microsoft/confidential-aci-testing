@@ -3,7 +3,7 @@ param registry string
 param repository string
 param tag string
 param ccePolicy string
-param managedIDGroup string = resourceGroup().id
+param managedIDGroup string = resourceGroup().name
 param managedIDName string
 
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
