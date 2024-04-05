@@ -67,7 +67,7 @@ if __name__ == "__main__":
     parser.add_argument("--repository",
         help="Container Repository", default=os.environ.get("REPOSITORY"))
     parser.add_argument("--tag",
-        help="Image Tag", default=os.environ.get("TAG"))
+        help="Image Tag", default=os.environ.get("TAG") or "latest")
 
     # Azure Information
     parser.add_argument("--subscription",

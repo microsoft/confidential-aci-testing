@@ -5,9 +5,12 @@ import os
 import subprocess
 from aci_param_set import update_param
 
+
 def aci_deploy(target, subscription, resource_group, name, location, managed_identity, parameters):
 
     assert target is not None, "Target is required"
+    assert resource_group is not None, "Resource Group is required"
+
 
     param_file_path = os.path.join(target, ".bicepparam")
     if location is not None:
@@ -29,13 +32,14 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
         value = "=".join(parameter.split("=")[1:]).strip("\"")
         az_command.extend(["--parameters", f'{key}={value}'])
 
-    result = subprocess.run(az_command, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(result.stderr)
-        return
+    subprocess.run(az_command)
 
-    print(result.stdout)
-    return result.stdout
+    return subprocess.run([
+        "az", "deployment", "group", "show",
+        "--name", name,
+        "--resource-group", resource_group,
+        "--query", "properties.outputs.id.value", "-o", "tsv"
+    ], capture_output=True, text=True).stdout
 
 
 if __name__ == "__main__":

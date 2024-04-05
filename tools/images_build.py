@@ -6,9 +6,9 @@ import subprocess
 
 def images_build(target, registry, repository, tag="latest"):
 
-    assert target, "Target is required"
-    assert registry, "Registry is required"
-    assert repository, "Repository is required"
+    assert target is not None, "Target is required"
+    assert registry is not None, "Registry is required"
+    assert repository is not None, "Repository is required"
 
     for dockerfile in os.listdir(target):
         if dockerfile.endswith(".Dockerfile"):

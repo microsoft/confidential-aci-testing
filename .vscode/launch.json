@@ -74,8 +74,14 @@
             "program": "${workspaceFolder}/tools/aci_deploy.py",
             "args": [
                 "${input:target}",
+                "-g",
+                "${input:resource-group}",
                 "-n",
                 "${input:deploymentName}",
+                "--location",
+                "${input:location}",
+                "--managed-identity",
+                "${input:managed-identity}",
             ]
         },
         {
