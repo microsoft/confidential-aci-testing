@@ -1,9 +1,9 @@
-using './.bicep'
+using './example.bicep'
 
 // Image info
 param registry=''
-param repository='example'
-param tag='latest'
+param repository=''
+param tag=''
 
 // Deployment info
 param location=''

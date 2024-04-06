@@ -20,12 +20,16 @@
             ]
         },
         {
-            "name": "end_to_end",
+            "name": "target_run",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/end_to_end.py",
+            "program": "${workspaceFolder}/tools/target_run.py",
             "args": [
                 "${input:target}",
+                "--name",
+                "${input:deploymentName}",
+                "--tag",
+                "${input:tag}",
             ]
         },
         {
@@ -35,8 +39,6 @@
             "program": "${workspaceFolder}/tools/images_build.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
@@ -48,8 +50,6 @@
             "program": "${workspaceFolder}/tools/images_push.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
@@ -61,8 +61,6 @@
             "program": "${workspaceFolder}/tools/policies_gen.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]

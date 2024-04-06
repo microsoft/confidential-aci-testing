@@ -4,6 +4,7 @@ import argparse
 import os
 import subprocess
 from aci_param_set import update_param
+from target_find_files import find_bicep_file, find_bicep_param_file
 
 
 def aci_deploy(target, subscription, resource_group, name, location, managed_identity, parameters):
@@ -11,8 +12,7 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
     assert target is not None, "Target is required"
     assert resource_group is not None, "Resource Group is required"
 
-
-    param_file_path = os.path.join(target, ".bicepparam")
+    param_file_path = os.path.join(target, find_bicep_param_file(target))
     if location is not None:
         update_param(param_file_path, "location", location)
     if managed_identity is not None:
@@ -22,8 +22,8 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
         "az", "deployment", "group", "create",
         "-n", name,
         *(["--subscription", subscription] if subscription else []),
-        *(["--resource-group", resource_group] if resource_group else []),
-        "--template-file", os.path.join(target, ".bicep"),
+        "--resource-group", resource_group,
+        "--template-file", os.path.join(target, find_bicep_file(target)),
         "--parameters", param_file_path,
         "--query", "properties.outputs.id.value", "-o", "tsv",
     ]
@@ -37,6 +37,7 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
     return subprocess.run([
         "az", "deployment", "group", "show",
         "--name", name,
+        *(["--subscription", subscription] if subscription else []),
         "--resource-group", resource_group,
         "--query", "properties.outputs.id.value", "-o", "tsv"
     ], capture_output=True, text=True).stdout

@@ -4,7 +4,12 @@ import argparse
 import os
 import subprocess
 
+from target_find_files import find_bicep_file
+
 def images_push(target, registry, repository, tag):
+
+    if repository is None:
+        repository = os.path.splitext(find_bicep_file(target))[0]
 
     subprocess.run([
         "az", "acr", "login",

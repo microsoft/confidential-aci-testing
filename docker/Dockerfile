@@ -22,6 +22,11 @@ RUN apt-get update && apt-get install -y python3-pip
 COPY requirements.txt /src/requirements.txt
 RUN pip install -r /src/requirements.txt
 
+COPY README.md /README.md
+COPY test/example /example
 COPY tools /
 
 ENV TARGET=/target
+ENV EXAMPLE_PATH=/example
+
+CMD cat /README.md
