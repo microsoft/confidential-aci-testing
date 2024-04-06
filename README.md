@@ -66,12 +66,16 @@ This populates the directory with an example target, you can then modify the tar
 ## Running a target
 
 ```
-docker run cacitesting.azurecr.io/releases:latest \
+docker run \
     -v my-caci-example:/target \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ~/.azure:/root/.azure \
     --env-file cacitesting.env \
-    /target_run.py
+    cacitesting.azurecr.io/releases:latest \
+    /target_run.py \
+        --repository <YOUR_REPO_NAME> \
+        --tag <YOUR_TAG> \
+        -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
 - Build any images defined in your target directory
