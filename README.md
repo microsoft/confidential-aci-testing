@@ -31,7 +31,7 @@ This passes your Azure Identity down into the container.
 ### Define your environment
 ```
 docker run \
-    cacitesting.azurecr.io/release:latest \
+    cacitesting.azurecr.io/releases:latest \
     /env_create.py > cacitesting.env
 ```
 This creates an environment file with the core variables that need to be defined, such as the URL of the registry to use for image pushing.
@@ -41,7 +41,7 @@ This creates an environment file with the core variables that need to be defined
 docker run \
     -v ~/.azure:/root/.azure \
     --env-file cacitesting.env \
-    cacitesting.azurecr.io/release:latest \
+    cacitesting.azurecr.io/releases:latest \
     /infra_deploy.py
 ```
 This will deploy/check the resources required to build images, generate security policies and deploy container instances.
@@ -55,7 +55,7 @@ mkdir my-caci-example
 docker run \
     -v ./my-caci-example:/target \
     --env-file cacitesting.env \
-    cacitesting.azurecr.io/release:latest \
+    cacitesting.azurecr.io/releases:latest \
     /target_create.py
 ```
 
@@ -66,7 +66,7 @@ This populates the directory with an example target, you can then modify the tar
 ## Running a target
 
 ```
-docker run cacitesting.azurecr.io/release:latest \
+docker run cacitesting.azurecr.io/releases:latest \
     -v my-caci-example:/target \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ~/.azure:/root/.azure \
