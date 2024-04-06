@@ -4,11 +4,14 @@ import argparse
 import os
 import subprocess
 
+from target_find_files import find_bicep_file
+
 def images_build(target, registry, repository, tag="latest"):
 
     assert target is not None, "Target is required"
     assert registry is not None, "Registry is required"
-    assert repository is not None, "Repository is required"
+    if repository is None:
+        repository = os.path.splitext(find_bicep_file(target))[0]
 
     for dockerfile in os.listdir(target):
         if dockerfile.endswith(".Dockerfile"):

@@ -8,6 +8,7 @@ import json
 import os
 import re
 from aci_param_set import update_param
+from target_find_files import find_bicep_file, find_bicep_param_file
 
 def policies_gen(**kwargs):
     target = kwargs.get("target")
@@ -15,12 +16,16 @@ def policies_gen(**kwargs):
     repository = kwargs.get("repository")
     tag = kwargs.get("tag")
 
+    if repository is None:
+        repository = os.path.splitext(find_bicep_file(target))[0]
+        kwargs["repository"] = repository
+
     print("Generating intermediate ARM template as acipolicygen doesn't support bicep")
     with tempfile.TemporaryDirectory() as arm_template_dir:
         arm_template_path = os.path.join(arm_template_dir, "arm.json")
         subprocess.run([
             "az", "bicep", "build", 
-            "-f", f"{target}/.bicep", 
+            "-f", os.path.join(target, find_bicep_file(target)),
             "--outfile", arm_template_path
         ])
 
@@ -59,7 +64,7 @@ def policies_gen(**kwargs):
         print(f"Saved policy to {target}/policy.rego")
 
     print("Setting the specified registry, tag and policy in the bicep parameters file")
-    param_file_path = os.path.join(target, ".bicepparam")
+    param_file_path = os.path.join(target, find_bicep_param_file(target))
     update_param(param_file_path, "registry", registry)
     update_param(param_file_path, "repository", repository)
     update_param(param_file_path, "tag", tag)

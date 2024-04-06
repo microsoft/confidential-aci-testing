@@ -3,6 +3,8 @@
 import argparse
 import os
 
+from target_find_files import find_bicep_param_file
+
 def update_param(file_path, key, value):
 
     with open(file_path, "r") as file:
@@ -24,8 +26,6 @@ if __name__ == "__main__":
         nargs="?", # aka Optional
         type=lambda path: os.path.abspath(os.path.expanduser(path)))
     
-    parser.add_argument("--file", 
-        help="Parameter file to set", default=".bicepparam")
     parser.add_argument("--parameter", 
         help="Parameter to set", required=True)
     
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     param = args.param.split("=")
     update_param(
-        file=os.path.join(args.target, args.file),
+        file=os.path.join(args.target, find_bicep_param_file(args.target)),
         key=param[0],
         value="=".join(param[1:]).replace(os.linesep, ""),
     )

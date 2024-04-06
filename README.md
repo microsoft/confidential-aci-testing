@@ -73,8 +73,6 @@ docker run \
     --env-file cacitesting.env \
     cacitesting.azurecr.io/releases:latest \
     /target_run.py \
-        --repository <YOUR_REPO_NAME> \
-        --tag <YOUR_TAG> \
         -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 

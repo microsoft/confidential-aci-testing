@@ -28,8 +28,6 @@
                 "${input:target}",
                 "--name",
                 "${input:deploymentName}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
@@ -41,8 +39,6 @@
             "program": "${workspaceFolder}/tools/images_build.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
@@ -54,8 +50,6 @@
             "program": "${workspaceFolder}/tools/images_push.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
@@ -67,8 +61,6 @@
             "program": "${workspaceFolder}/tools/policies_gen.py",
             "args": [
                 "${input:target}",
-                "--repository",
-                "${input:repository}",
                 "--tag",
                 "${input:tag}",
             ]
