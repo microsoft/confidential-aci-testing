@@ -9,7 +9,7 @@ from aci_deploy import aci_deploy
 from aci_monitor import aci_monitor
 from aci_remove import aci_remove
 
-def end_to_end(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters):
+def target_run(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters):
 
     images_build(
         target=target,
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    end_to_end(
+    target_run(
         target=args.target,
         subscription=args.subscription,
         resource_group=args.resource_group,

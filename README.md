@@ -1,14 +1,85 @@
-# Project
+# Confidential ACI Testing
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+This project provides utilities for testing workflows involving Confidential ACI.
 
-As the maintainer of this project, please make a few updates:
+## Prerequisites
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+### [Docker](https://docs.docker.com/get-docker/) 
+
+Any operations which require docker, require the following flag:
+```
+-v /var/run/docker.sock:/var/run/docker.sock
+```
+This enables docker-in-docker inside the testing container.
+
+### [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+
+After installing, log into your azure account with:
+```
+az login
+```
+
+Any operation which requires the Azure CLI, requires the following command:
+```
+-v ~/.azure:/root/.azure
+```
+
+This passes your Azure Identity down into the container.
+
+## Setup
+
+### Define your environment
+```
+docker run \
+    cacitesting.azurecr.io/release:latest \
+    /env_create.py > cacitesting.env
+```
+This creates an environment file with the core variables that need to be defined, such as the URL of the registry to use for image pushing.
+
+### Deploy infrastructure to Azure
+```
+docker run \
+    -v ~/.azure:/root/.azure \
+    --env-file cacitesting.env \
+    cacitesting.azurecr.io/release:latest \
+    /infra_deploy.py
+```
+This will deploy/check the resources required to build images, generate security policies and deploy container instances.
+
+This will only succeed if you're logged into an Azure account with subscription level permissions.
+
+### Create Target
+```
+mkdir my-caci-example
+
+docker run \
+    -v ./my-caci-example:/target \
+    --env-file cacitesting.env \
+    cacitesting.azurecr.io/release:latest \
+    /target_create.py
+```
+
+All operations carried out by the container are directed at whatever directory is mounted at `/target`. 
+
+This populates the directory with an example target, you can then modify the target for your specific workflow.
+
+## Running a target
+
+```
+docker run cacitesting.azurecr.io/release:latest \
+    -v my-caci-example:/target \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v ~/.azure:/root/.azure \
+    --env-file cacitesting.env \
+    /target_run.py
+```
+This will: 
+- Build any images defined in your target directory
+- Push them to your configured container registry
+- Generate a security policy and update your .bicepparam file
+- Deploy the container group to Confidential ACI
+- Follow the logs of the deployed container and wait until process exits
+- Remove the container group
 
 ## Contributing
 

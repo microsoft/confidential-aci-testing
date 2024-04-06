@@ -20,12 +20,18 @@
             ]
         },
         {
-            "name": "end_to_end",
+            "name": "target_run",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/end_to_end.py",
+            "program": "${workspaceFolder}/tools/target_run.py",
             "args": [
                 "${input:target}",
+                "--name",
+                "${input:deploymentName}",
+                "--repository",
+                "${input:repository}",
+                "--tag",
+                "${input:tag}",
             ]
         },
         {
