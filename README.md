@@ -50,13 +50,13 @@ This will only succeed if you're logged into an Azure account with subscription 
 
 ### Create Target
 ```
-mkdir my-caci-example
+mkdir my_caci_example
 
 docker run \
-    -v ./my-caci-example:/target \
+    -v ./my_caci_example:/target \
     --env-file cacitesting.env \
     cacitesting.azurecr.io/releases:latest \
-    c_aci_testing.target_create
+    c_aci_testing.target_create -n my_caci_example
 ```
 
 All operations carried out by the container are directed at whatever directory is mounted at `/target`. 
@@ -67,7 +67,7 @@ This populates the directory with an example target, you can then modify the tar
 
 ```
 docker run \
-    -v ./my-caci-example:/target \
+    -v ./my_caci_example:/target \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v ~/.azure:/root/.azure \
     --env-file cacitesting.env \
