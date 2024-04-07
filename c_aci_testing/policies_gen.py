@@ -7,8 +7,8 @@ import tempfile
 import json
 import os
 import re
-from aci_param_set import update_param
-from target_find_files import find_bicep_file, find_bicep_param_file
+from .aci_param_set import aci_param_set
+from .target_find_files import find_bicep_file, find_bicep_param_file
 
 def policies_gen(**kwargs):
     target = kwargs.get("target")
@@ -65,13 +65,13 @@ def policies_gen(**kwargs):
 
     print("Setting the specified registry, tag and policy in the bicep parameters file")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
-    update_param(param_file_path, "registry", registry)
-    update_param(param_file_path, "repository", repository)
-    update_param(param_file_path, "tag", tag)
+    aci_param_set(param_file_path, "registry", registry)
+    aci_param_set(param_file_path, "repository", repository)
+    aci_param_set(param_file_path, "tag", tag)
 
     with open(f"{target}/policy.rego", "r") as file:
         policy = file.read()
-    update_param(param_file_path, "ccePolicy", base64.b64encode(policy.encode()).decode())
+    aci_param_set(param_file_path, "ccePolicy", base64.b64encode(policy.encode()).decode())
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")

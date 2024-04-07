@@ -3,8 +3,8 @@
 import argparse
 import os
 import subprocess
-from aci_param_set import update_param
-from target_find_files import find_bicep_file, find_bicep_param_file
+from .aci_param_set import aci_param_set
+from .target_find_files import find_bicep_file, find_bicep_param_file
 
 
 def aci_deploy(target, subscription, resource_group, name, location, managed_identity, parameters):
@@ -14,9 +14,9 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
 
     param_file_path = os.path.join(target, find_bicep_param_file(target))
     if location is not None:
-        update_param(param_file_path, "location", location)
+        aci_param_set(param_file_path, "location", location)
     if managed_identity is not None:
-        update_param(param_file_path, "managedIDName", managed_identity)
+        aci_param_set(param_file_path, "managedIDName", managed_identity)
 
     az_command = [
         "az", "deployment", "group", "create",

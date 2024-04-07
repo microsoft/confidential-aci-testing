@@ -2,10 +2,19 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "env_create",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "c_aci_testing.env_create",
+            "args": [
+                "${input:envPath}",
+            ]
+        },
+        {
             "name": "infra_deploy",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/infra_deploy.py",
+            "module": "c_aci_testing.infra_deploy",
             "args": [
                 "--subscription",
                 "${input:subscription}",
@@ -23,7 +32,7 @@
             "name": "target_run",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/target_run.py",
+            "module": "c_aci_testing.target_run",
             "args": [
                 "${input:target}",
                 "--name",
@@ -36,7 +45,7 @@
             "name": "images_build",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/images_build.py",
+            "module": "c_aci_testing.images_build",
             "args": [
                 "${input:target}",
                 "--tag",
@@ -47,7 +56,7 @@
             "name": "images_push",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/images_push.py",
+            "module": "c_aci_testing.images_push",
             "args": [
                 "${input:target}",
                 "--tag",
@@ -58,7 +67,7 @@
             "name": "policies_gen",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/policies_gen.py",
+            "module": "c_aci_testing.policies_gen",
             "args": [
                 "${input:target}",
                 "--tag",
@@ -69,24 +78,18 @@
             "name": "aci_deploy",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/aci_deploy.py",
+            "module": "c_aci_testing.aci_deploy",
             "args": [
                 "${input:target}",
-                "-g",
-                "${input:resource-group}",
                 "-n",
                 "${input:deploymentName}",
-                "--location",
-                "${input:location}",
-                "--managed-identity",
-                "${input:managed-identity}",
             ]
         },
         {
             "name": "aci_monitor",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/aci_monitor.py",
+            "module": "c_aci_testing.aci_monitor",
             "args": [
                 "-n",
                 "${input:deploymentName}",
@@ -96,7 +99,7 @@
             "name": "aci_remove",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/aci_remove.py",
+            "module": "c_aci_testing.aci_remove",
             "args": [
                 "-n",
                 "${input:deploymentName}",
@@ -111,6 +114,11 @@
             "options": [
                 "test/example",
             ],
+        },
+        {
+            "id": "envPath",
+            "type": "promptString",
+            "description": "Enter the path to save the environment file:",
         },
         {
             "id": "registry",

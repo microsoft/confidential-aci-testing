@@ -2,12 +2,12 @@
 
 import argparse
 import os
-from images_build import images_build
-from images_push import images_push
-from policies_gen import policies_gen
-from aci_deploy import aci_deploy
-from aci_monitor import aci_monitor
-from aci_remove import aci_remove
+from .images_build import images_build
+from .images_push import images_push
+from .policies_gen import policies_gen
+from .aci_deploy import aci_deploy
+from .aci_monitor import aci_monitor
+from .aci_remove import aci_remove
 
 def target_run(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters):
 

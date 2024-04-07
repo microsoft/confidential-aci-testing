@@ -4,28 +4,29 @@ import argparse
 import os
 import subprocess
 
-from target_find_files import find_bicep_file
+from .target_find_files import find_bicep_file
 
-def images_build(target, registry, repository, tag="latest"):
+def images_push(target, registry, repository, tag):
 
-    assert target is not None, "Target is required"
-    assert registry is not None, "Registry is required"
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
+
+    subprocess.run([
+        "az", "acr", "login",
+        "--name", registry,
+    ])
 
     for dockerfile in os.listdir(target):
         if dockerfile.endswith(".Dockerfile"):
             image_name = os.path.splitext(dockerfile)[0]
             subprocess.run([
-                "docker", "build",
-                "-t", f'{registry}/{repository}/{image_name}:{tag}',
-                "-f", f"{target}/{dockerfile}",
-                target,
-            ])
+                    "docker", "push",
+                    f'{registry}/{repository}/{image_name}:{tag}',
+                ])
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build docker images from target")
+    parser = argparse.ArgumentParser(description="Push docker images from target")
 
     parser.add_argument("target",
         help="Target directory", default=os.environ.get("TARGET"),
@@ -40,7 +41,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    images_build(
+    images_push(
         target=args.target,
         registry=args.registry,
         repository=args.repository,

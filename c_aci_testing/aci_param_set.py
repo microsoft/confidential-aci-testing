@@ -3,9 +3,9 @@
 import argparse
 import os
 
-from target_find_files import find_bicep_param_file
+from .target_find_files import find_bicep_param_file
 
-def update_param(file_path, key, value):
+def aci_param_set(file_path, key, value):
 
     with open(file_path, "r") as file:
         content = file.read().split(os.linesep)
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     param = args.param.split("=")
-    update_param(
+    aci_param_set(
         file=os.path.join(args.target, find_bicep_param_file(args.target)),
         key=param[0],
         value="=".join(param[1:]).replace(os.linesep, ""),
