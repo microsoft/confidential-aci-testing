@@ -119,6 +119,7 @@
             "id": "envPath",
             "type": "promptString",
             "description": "Enter the path to save the environment file:",
+            "default": ".env",
         },
         {
             "id": "registry",

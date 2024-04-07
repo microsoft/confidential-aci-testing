@@ -17,12 +17,13 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN apt-get update && apt-get install -y python3-distutils
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
-# Install Python Package
+# Install Python Package in Container
 RUN apt-get update && apt-get install -y python3-pip
 COPY README.md /README.md
 COPY c_aci_testing /c_aci_testing
+COPY aci /aci
 COPY setup.py /
-RUN pip install .
+RUN pip install . && python3 setup.py sdist
 
 COPY test/example /example
 

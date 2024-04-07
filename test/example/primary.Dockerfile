@@ -1,1 +1,1 @@
-FROM nginx:latest
+FROM hello-world:latest

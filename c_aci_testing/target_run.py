@@ -9,7 +9,7 @@ from .aci_deploy import aci_deploy
 from .aci_monitor import aci_monitor
 from .aci_remove import aci_remove
 
-def target_run(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters):
+def target_run(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters, cleanup):
 
     images_build(
         target=target,
@@ -29,6 +29,7 @@ def target_run(target, registry, repository, tag, subscription, resource_group, 
         repository=repository,
         tag=tag,
     )
+    print("Deploying Container to Azure")
     id = aci_deploy(
         target=target,
         subscription=subscription,
@@ -37,7 +38,8 @@ def target_run(target, registry, repository, tag, subscription, resource_group, 
         location=location,
         managed_identity=managed_identity,
         parameters=parameters,
-    )
+    ).rstrip("\n")
+    print("Deployment complete, monitoring...")
     try:
         aci_monitor(
             subscription=subscription,
@@ -46,12 +48,14 @@ def target_run(target, registry, repository, tag, subscription, resource_group, 
             ids=id
         )
     finally:
-        aci_remove(
-            subscription=subscription,
-            resource_group=resource_group,
-            name=None,
-            ids=id
-        )
+        if cleanup:
+            print("Removing container")
+            aci_remove(
+                subscription=subscription,
+                resource_group=resource_group,
+                name=None,
+                ids=id
+            )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")
@@ -82,6 +86,7 @@ if __name__ == "__main__":
     parser.add_argument("--managed-identity",
         help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--parameters", help="Path to parameters file")
+    parser.add_argument("--no-cleanup", help="Path to parameters file", action="store_true")
     
     args = parser.parse_args()
 
@@ -96,4 +101,5 @@ if __name__ == "__main__":
         location=args.location,
         managed_identity=args.managed_identity,
         parameters=args.parameters,
+        cleanup=not args.no_cleanup,
     )
