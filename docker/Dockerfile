@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y python3-distutils
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
 
 # Install Python Package in Container
-RUN apt-get update && apt-get install -y python3-pip
+RUN apt-get update && apt-get install -y python3-pip python3-venv
 COPY README.md /README.md
 COPY c_aci_testing /c_aci_testing
 COPY aci /aci
