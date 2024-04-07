@@ -4,7 +4,7 @@
 import argparse
 import os
 import subprocess
-from pkg_resources import resource_filename
+from importlib.resources import files
 
 
 def target_create(target, name):
@@ -16,7 +16,7 @@ def target_create(target, name):
     
     example_path = os.environ.get("EXAMPLE_PATH")
     if example_path is None:
-        example_path = resource_filename(__name__, "../test/example/")
+        example_path = str(files(__name__).joinpath("../test/example"))
     
     # Copy the contents of example_path to target
     subprocess.run(["cp", "-r", example_path + "/.", target])
