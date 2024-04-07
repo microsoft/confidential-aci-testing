@@ -2,6 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "target_create",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "c_aci_testing.target_create",
+            "args": [
+                "${input:target}",
+                "--name",
+                "${input:deploymentName}",
+            ]
+        },
+        {
             "name": "env_create",
             "type": "debugpy",
             "request": "launch",
