@@ -4,7 +4,7 @@ import argparse
 import os
 import subprocess
 
-def infra_deploy(subscription, resource_group, registry, managed_identity, location):
+def infra_deploy(subscription, resource_group, registry, managed_identity, location, github_org, github_repo):
 
     assert subscription is not None, "Subscription must be set"
     assert resource_group is not None, "Resource Group must be set"
@@ -21,6 +21,8 @@ def infra_deploy(subscription, resource_group, registry, managed_identity, locat
         "--parameters", f"name={resource_group}",
         "--parameters", f"registryName={registry}",
         "--parameters", f"managedIdentityName={managed_identity}",
+        "--parameters", f"githubOrg={github_org}",
+        "--parameters", f"githubRepo={github_repo}",
     ])
 
 
@@ -37,6 +39,10 @@ if __name__ == "__main__":
         help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--location", 
         help="Location to deploy to", default=os.environ.get("LOCATION"))
+    parser.add_argument("--github-org", 
+        help="Github Organisation to link credential", default=os.environ.get("GITHUB_ORG"))
+    parser.add_argument("--github-repo", 
+        help="Github Repository to link credential", default=os.environ.get("GITHUB_REPO"))
     
     args = parser.parse_args()
 
@@ -51,4 +57,6 @@ You can still manually deploy aci/resourceGroup.bicep with the bicep VS Code ext
         registry=args.registry,
         managed_identity=args.managed_identity,
         location=args.location,
+        github_org=args.github_org,
+        github_repo=args.github_repo,
     )

@@ -1,6 +1,8 @@
 param name string
 param registryName string
 param managedIdentityName string
+param githubOrg string
+param githubRepo string
 param location string = deployment().location
 
 targetScope = 'subscription'
@@ -25,5 +27,7 @@ module managedIdentity './managedIdentity.bicep' = {
   params: {
     name: managedIdentityName
     location: location
+    githubOrg: githubOrg
+    githubRepo: githubRepo
   }
 }
