@@ -63,8 +63,8 @@ resource AciCreate 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' 
   }
 }
 
-resource federatedCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
-  name: 'federatedCredential'
+resource federatedCredentialPR 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
+  name: 'federatedCredentialPR'
   parent: managedIdentity
   properties: {
     audiences: [
@@ -72,5 +72,18 @@ resource federatedCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/f
     ]
     issuer: 'https://token.actions.githubusercontent.com'
     subject: 'repo:${githubOrg}/${githubRepo}:pull_request'
+  }
+}
+
+resource federatedCredentialMain 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
+  name: 'federatedCredentialMain'
+  parent: managedIdentity
+  dependsOn: [federatedCredentialPR]
+  properties: {
+    audiences: [
+      'api://AzureADTokenExchange'
+    ]
+    issuer: 'https://token.actions.githubusercontent.com'
+    subject: 'repo:${githubOrg}/${githubRepo}:ref:refs/heads/main'
   }
 }
