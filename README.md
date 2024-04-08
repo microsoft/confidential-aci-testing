@@ -33,6 +33,8 @@ While the repository is private, the easiest way to get the package is through t
 
 ```
 gh auth login
+```
+```
 gh release download latest -R microsoft/confidential-aci-testing
 pip install c-aci-testing*.tar.gz
 ```
@@ -42,7 +44,7 @@ pip install c-aci-testing*.tar.gz
 All scripts can be given call-time parameters, but for parameters which will be consistent across runs, it's easier to define an environment file to use. You can create a blank env file with:
 
 ```
-python -m c_aci_testing.env_create cacitesting.env
+python -m c_aci_testing.env_create > cacitesting.env
 ```
 
 Then just fill in the values you wish to use for your deployments
@@ -58,8 +60,9 @@ This will only succeed if you're logged into an Azure account with subscription 
 
 ### Create a Target
 ```
-export MY_TARGET=./my_new_target
-python -m c_aci_testing.target_create $MY_TARGET
+export TARGET_PATH=./my_new_target
+export TARGET_NAME=my_new_target
+python -m c_aci_testing.target_create $TARGET_PATH -n $TARGET_NAME
 ```
 
 This populates the directory with an example target, you can then modify the target for your specific workflow.
@@ -67,7 +70,7 @@ This populates the directory with an example target, you can then modify the tar
 ## Run the Target
 
 ```
-python -m c_aci_testing.target_run $MY_TARGET -n <YOUR_DEPLOYMENT_NAME>
+python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
 - Build any images defined in your target directory
