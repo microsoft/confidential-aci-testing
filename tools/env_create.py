@@ -11,6 +11,8 @@ export RESOURCE_GROUP=
 export REGISTRY=
 export MANAGED_IDENTITY=
 export LOCATION=
+export GITHUB_ORG=
+export GITHUB_REPO=
 
 # Per Target Options that can also be set at runtime
 # export REPOSITORY=
