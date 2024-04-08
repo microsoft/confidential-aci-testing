@@ -43,5 +43,6 @@ jobs:
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
+        TAG: ${{ github.run_id }}-${{ github.run_number }}
       run: |
         python -m c_aci_testing.target_run test/example -n ${{ github.run_id }}-${{ github.run_number }}
