@@ -2,23 +2,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "target_create",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.target_create",
-            "args": [
-                "${input:target}",
-                "--name",
-                "${input:deploymentName}",
-            ]
-        },
-        {
             "name": "env_create",
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.env_create",
             "args": [
-                "${input:envPath}",
+                "${input:envPath}"
             ]
         },
         {
@@ -26,17 +15,17 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.infra_deploy",
+            "envFile": "${input:envPath}"
+        },
+        {
+            "name": "target_create",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "c_aci_testing.target_create",
             "args": [
-                "--subscription",
-                "${input:subscription}",
-                "--resource-group",
-                "${input:resource-group}",
-                "--registry",
-                "${input:registry}",
-                "--managed-identity",
-                "${input:managed-identity}",
-                "--location",
-                "${input:location}",
+                "${input:targetPath}",
+                "--name",
+                "${input:targetName}"
             ]
         },
         {
@@ -44,12 +33,11 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.target_run",
+            "envFile": "${input:envPath}",
             "args": [
-                "${input:target}",
+                "${input:targetPath}",
                 "--name",
-                "${input:deploymentName}",
-                "--tag",
-                "${input:tag}",
+                "${input:deploymentName}"
             ]
         },
         {
@@ -57,10 +45,9 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_build",
+            "envFile": "${input:envPath}",
             "args": [
-                "${input:target}",
-                "--tag",
-                "${input:tag}",
+                "${input:targetPath}"
             ]
         },
         {
@@ -68,10 +55,9 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_push",
+            "envFile": "${input:envPath}",
             "args": [
-                "${input:target}",
-                "--tag",
-                "${input:tag}",
+                "${input:targetPath}"
             ]
         },
         {
@@ -79,10 +65,9 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.policies_gen",
+            "envFile": "${input:envPath}",
             "args": [
-                "${input:target}",
-                "--tag",
-                "${input:tag}",
+                "${input:targetPath}"
             ]
         },
         {
@@ -90,10 +75,11 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_deploy",
+            "envFile": "${input:envPath}",
             "args": [
-                "${input:target}",
+                "${input:targetPath}",
                 "-n",
-                "${input:deploymentName}",
+                "${input:deploymentName}"
             ]
         },
         {
@@ -101,9 +87,10 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_monitor",
+            "envFile": "${input:envPath}",
             "args": [
                 "-n",
-                "${input:deploymentName}",
+                "${input:deploymentName}"
             ]
         },
         {
@@ -111,69 +98,34 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_remove",
+            "envFile": "${input:envPath}",
             "args": [
                 "-n",
-                "${input:deploymentName}",
+                "${input:deploymentName}"
             ]
-        },
+        }
     ],
     "inputs": [
-        {
-            "id": "target",
-            "type": "pickString",
-            "description": "Enter the name of the target:",
-            "options": [
-                "test/example",
-            ],
-        },
         {
             "id": "envPath",
             "type": "promptString",
             "description": "Enter the path to save the environment file:",
-            "default": ".env",
+            "default": ".env"
         },
         {
-            "id": "registry",
+            "id": "targetPath",
             "type": "promptString",
-            "description": "Enter the name of the registry:",
+            "description": "Enter the name of the target:"
         },
         {
-            "id": "repository",
+            "id": "targetName",
             "type": "promptString",
-            "description": "Enter the repository to use:",
-            "default": "example",
-        },
-        {
-            "id": "tag",
-            "type": "promptString",
-            "description": "Enter the tag to use:",
-            "default": "latest",
+            "description": "Enter the name of the target:"
         },
         {
             "id": "deploymentName",
             "type": "promptString",
-            "description": "Enter the name for the deployment:",
-        },
-        {
-            "id": "subscription",
-            "type": "promptString",
-            "description": "Enter the ID of the Azure Subscription:",
-        },
-        {
-            "id": "resource-group",
-            "type": "promptString",
-            "description": "Enter the name of the Resource Group:",
-        },
-        {
-            "id": "managed-identity",
-            "type": "promptString",
-            "description": "Enter the name for the managed identity:",
-        },
-        {
-            "id": "location",
-            "type": "promptString",
-            "description": "Enter the location:",
-            "default": "northeurope"
-        },
+            "description": "Enter the name of the target:"
+        }
     ]
 }
