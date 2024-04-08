@@ -6,15 +6,15 @@ import argparse
 def env_create(out=None):
     env = \
 """# Core Environment Variables
-SUBSCRIPTION=
-RESOURCE_GROUP=
-REGISTRY=
-MANAGED_IDENTITY=
-LOCATION=
+export SUBSCRIPTION=
+export RESOURCE_GROUP=
+export REGISTRY=
+export MANAGED_IDENTITY=
+export LOCATION=
 
 # Per Target Options that can also be set at runtime
-# REPOSITORY=
-# TAG="""
+# export REPOSITORY=
+# export TAG="""
     if out is not None:
         with open(out, "w") as f:
             f.write(env)
