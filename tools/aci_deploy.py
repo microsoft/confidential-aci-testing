@@ -32,15 +32,7 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
         value = "=".join(parameter.split("=")[1:]).strip("\"")
         az_command.extend(["--parameters", f'{key}={value}'])
 
-    subprocess.run(az_command)
-
-    return subprocess.run([
-        "az", "deployment", "group", "show",
-        "--name", name,
-        *(["--subscription", subscription] if subscription else []),
-        "--resource-group", resource_group,
-        "--query", "properties.outputs.id.value", "-o", "tsv"
-    ], capture_output=True, text=True).stdout
+    return subprocess.run(az_command, capture_output=True, text=True).stdout
 
 
 if __name__ == "__main__":
