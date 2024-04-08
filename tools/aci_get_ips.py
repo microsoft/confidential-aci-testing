@@ -4,7 +4,12 @@ import argparse
 import os
 import subprocess
 
-def aci_get_ips(subscription, resource_group, name, ids):
+def aci_get_ips(
+        name,
+        ids,
+        subscription=os.environ.get("SUBSCRIPTION"),
+        resource_group=os.environ.get("RESOURCE_GROUP"),
+    ):
 
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
