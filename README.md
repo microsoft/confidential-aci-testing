@@ -113,8 +113,15 @@ python -m c_aci_testing.aci_remove --name $DEPLOYMENT_NAME
 
 ### Integrate with VS Code
 #### Add steps to Run and Debug
-Coming Soon
+
+```
+python -m c_aci_testing.vscode_run_debug
+```
+
+This adds launch configurations for each script in the python package for easy use.
+
 #### Add Targets to Testing
+
 ```
 python -m c_aci_testing.vscode_testing $TARGET_PATH
 ```

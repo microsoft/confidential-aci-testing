@@ -1,4 +1,4 @@
-name: Test Python Package
+name: Test
 
 permissions:
   id-token: write
@@ -10,7 +10,7 @@ on:
       - main
 
 jobs:
-  test-default-target:
+  default-target:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -49,7 +49,50 @@ jobs:
         python -m c_aci_testing.target_create default_target_test -n default_target_test
         python -m c_aci_testing.target_run default_target_test -n $TAG
 
-  test-python-runner:
+  vscode-integration:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Build and Install Python package
+      run: |
+        python packaging/package_build.py
+        pip install *.tar.gz
+
+    - name: Create Test Repo
+      run: |
+        mkdir vscode_integration_test
+        cd vscode_integration_test
+        mkdir .vscode
+        wget https://raw.githubusercontent.com/microsoft/confidential-aci-examples/b610e9c3d6ea0cb01a604771b2f3e7463752acde/.vscode/launch.json -O .vscode/launch.json
+
+    - name: Run Test Target
+      env: 
+        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        RESOURCE_GROUP: c-aci-testing
+        REGISTRY: cacitesting.azurecr.io
+        MANAGED_IDENTITY: c-aci-testing
+        LOCATION: northeurope
+        TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
+      run: python -m c_aci_testing.vscode_run_debug
+
+  python-runner:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -90,7 +133,7 @@ jobs:
         python -m c_aci_testing.vscode_testing python_runner_test
         python -m unittest discover
   
-  test-individual-scripts:
+  individual-scripts:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
