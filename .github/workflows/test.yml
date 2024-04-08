@@ -101,6 +101,7 @@ jobs:
     - name: Deploy and Monitor Container Groups
       env: 
         SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        RESOURCE_GROUP: c-aci-testing
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
         DEP_NAME: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
