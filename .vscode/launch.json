@@ -15,7 +15,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.infra_deploy",
-            "envFile": "${input:envPath}"
+            "envFile": "${workspaceFolder}/${input:envPath}"
         },
         {
             "name": "target_create",
@@ -33,7 +33,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.target_run",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "${input:targetPath}",
                 "--name",
@@ -45,7 +45,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_build",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "${input:targetPath}"
             ]
@@ -55,7 +55,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_push",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "${input:targetPath}"
             ]
@@ -65,7 +65,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.policies_gen",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "${input:targetPath}"
             ]
@@ -75,7 +75,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_deploy",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "${input:targetPath}",
                 "-n",
@@ -87,7 +87,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_monitor",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "-n",
                 "${input:deploymentName}"
@@ -98,7 +98,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_remove",
-            "envFile": "${input:envPath}",
+            "envFile": "${workspaceFolder}/${input:envPath}",
             "args": [
                 "-n",
                 "${input:deploymentName}"
