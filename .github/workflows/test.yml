@@ -1,8 +1,8 @@
 name: Test Python Package
 
 permissions:
-  contents: write
-  packages: write
+  id-token: write
+  contents: read
 
 on:
   pull_request:
