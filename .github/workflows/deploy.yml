@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -28,7 +28,7 @@ jobs:
 
     - name: Build Python package
       run: |
-        python packaging/build_package.py
+        python packaging/package_build.py
         echo "PACKAGE_NAME=$(ls *.tar.gz | xargs basename)" >> $GITHUB_ENV
 
     - name: Create GitHub Release
