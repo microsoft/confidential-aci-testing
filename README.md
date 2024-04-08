@@ -60,8 +60,9 @@ This will only succeed if you're logged into an Azure account with subscription 
 
 ### Create a Target
 ```
-export MY_TARGET=./my_new_target
-python -m c_aci_testing.target_create $MY_TARGET
+export TARGET_PATH=./my_new_target
+export TARGET_NAME=my_new_target
+python -m c_aci_testing.target_create $TARGET_PATH -n $TARGET_NAME
 ```
 
 This populates the directory with an example target, you can then modify the target for your specific workflow.
@@ -69,7 +70,7 @@ This populates the directory with an example target, you can then modify the tar
 ## Run the Target
 
 ```
-python -m c_aci_testing.target_run $MY_TARGET -n <YOUR_DEPLOYMENT_NAME>
+python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
 - Build any images defined in your target directory
