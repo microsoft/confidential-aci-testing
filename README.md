@@ -83,14 +83,40 @@ This will:
 - Remove the container group
 
 ## Extra Features
+
 ### Run individual deployment steps
-Coming Soon
+
+As well as running a given target end to end, each individual stage of the process can be run separately
+
+```
+python -m c_aci_testing.images_build $TARGET_PATH
+```
+
+```
+python -m c_aci_testing.images_push $TARGET_PATH
+```
+
+```
+python -m c_aci_testing.policies_gen $TARGET_PATH
+```
+
+```
+DEPLOYMENT_NAME=my-deployment
+
+# Deploy and monitor (Can be run separately)
+python -m c_aci_testing.aci_monitor --id \
+    $(python -m c_aci_testing.aci_deploy $TARGET_PATH --name $DEPLOYMENT_NAME)
+
+# Cleanup
+python -m c_aci_testing.aci_remove --name $DEPLOYMENT_NAME
+```
+
 ### Integrate with VS Code
 #### Add steps to Run and Debug
 Coming Soon
 #### Add targets to Testing
 Coming Soon
-### Create a Github Actions workflo#w
+### Create a Github Actions workflow
 Coming Soon
 
 ## Contributing
