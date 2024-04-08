@@ -33,6 +33,8 @@ While the repository is private, the easiest way to get the package is through t
 
 ```
 gh auth login
+```
+```
 gh release download latest -R microsoft/confidential-aci-testing
 pip install c-aci-testing*.tar.gz
 ```
@@ -42,7 +44,7 @@ pip install c-aci-testing*.tar.gz
 All scripts can be given call-time parameters, but for parameters which will be consistent across runs, it's easier to define an environment file to use. You can create a blank env file with:
 
 ```
-python -m c_aci_testing.env_create cacitesting.env
+python -m c_aci_testing.env_create > cacitesting.env
 ```
 
 Then just fill in the values you wish to use for your deployments
