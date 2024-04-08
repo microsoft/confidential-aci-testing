@@ -48,3 +48,47 @@ jobs:
         mkdir default_target_test
         python -m c_aci_testing.target_create default_target_test -n default_target_test
         python -m c_aci_testing.target_run default_target_test -n ${{ github.run_id }}-${{ github.run_number }}
+  
+  test-individual-scripts:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v1
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Build and Install Python package
+      run: |
+        python packaging/package_build.py
+        pip install *.tar.gz
+
+    - name: Run Test Target
+      env: 
+        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        RESOURCE_GROUP: c-aci-testing
+        REGISTRY: cacitesting.azurecr.io
+        MANAGED_IDENTITY: c-aci-testing
+        LOCATION: northeurope
+        TAG: ${{ github.run_id }}-${{ github.run_number }}
+      run: |
+        mkdir individual_scripts_test
+        python -m c_aci_testing.target_create individual_scripts_test -n individual_scripts_test
+        python -m c_aci_testing.images_build individual_scripts_test
+        python -m c_aci_testing.images_push individual_scripts_test
+        python -m c_aci_testing.policies_gen individual_scripts_test
+        python -m c_aci_testing.aci_monitor \
+          -ids $(python -m c_aci_testing.aci_deploy individual_scripts_test -n ${{ github.run_id }}-${{ github.run_number }})
+        python -m c_aci_testing.aci_remove individual_scripts_test
