@@ -2,78 +2,72 @@
 
 This project provides utilities for testing workflows involving Confidential ACI.
 
-## Prerequisites
+## Contents
 
-### [Docker](https://docs.docker.com/get-docker/) 
+- [Dependencies](#dependencies)
+- [Getting Started](#getting-started)
+    - [Install the `c_aci_testing` package](#install-the-c_aci_testing-package)
+    - [Define your Azure Environment](#define-your-azure-environment)
+    - [Deploy infrastructure to Azure](#deploy-infrastructure-to-azure)
+    - [Create a Target](#create-a-target)
+    - [Run the Target](#run-the-target)
+- [Extra Features](#extra-features)
+    - [Run individual deployment steps](#run-individual-deployment-steps)
+    - [Integrate with VS Code](#integrate-with-vs-code)
+        - [Add steps to Run and Debug](#add-steps-to-run-and-debug)
+        - [Add targets to Testing](#add-targets-to-testing)
+    - [Create a Github Actions workflow](#create-a-github-actions-workflow)
 
-Any operations which require docker, require the following flag:
-```
--v /var/run/docker.sock:/var/run/docker.sock
-```
-This enables docker-in-docker inside the testing container.
 
-### [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+## Dependencies
 
-After installing, log into your azure account with:
+- [Python](https://www.python.org)
+- [Docker](https://docs.docker.com/get-docker/) 
+- [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
+
+## Getting Started
+
+### Install the `c_aci_testing` package
+
+While the repository is private, the easiest way to get the package is through the Github CLI
+
 ```
-az login
+gh auth login
+gh release download latest -R microsoft/confidential-aci-testing
+pip install c-aci-testing*.tar.gz
 ```
 
-Any operation which requires the Azure CLI, requires the following command:
+### Define your Azure Environment
+
+All scripts can be given call-time parameters, but for parameters which will be consistent across runs, it's easier to define an environment file to use. You can create a blank env file with:
+
 ```
--v ~/.azure:/root/.azure
+python -m c_aci_testing.env_create cacitesting.env
 ```
 
-This passes your Azure Identity down into the container.
-
-## Setup
-
-### Define your environment
-```
-docker run \
-    cacitesting.azurecr.io/releases:latest \
-    c_aci_testing.env_create > cacitesting.env
-```
-This creates an environment file with the core variables that need to be defined, such as the URL of the registry to use for image pushing.
+Then just fill in the values you wish to use for your deployments
 
 ### Deploy infrastructure to Azure
 ```
-docker run \
-    -v ~/.azure:/root/.azure \
-    --env-file cacitesting.env \
-    cacitesting.azurecr.io/releases:latest \
-    c_aci_testing.infra_deploy
+python -m c_aci_testing.infra_deploy
 ```
+
 This will deploy/check the resources required to build images, generate security policies and deploy container instances.
 
-This will only succeed if you're logged into an Azure account with subscription level permissions.
+This will only succeed if you're logged into an Azure account with subscription level permissions to assign roles.
 
-### Create Target
+### Create a Target
 ```
-mkdir my_caci_example
-
-docker run \
-    -v ./my_caci_example:/target \
-    --env-file cacitesting.env \
-    cacitesting.azurecr.io/releases:latest \
-    c_aci_testing.target_create -n my_caci_example
+export MY_TARGET=./my_new_target
+python -m c_aci_testing.target_create $MY_TARGET
 ```
-
-All operations carried out by the container are directed at whatever directory is mounted at `/target`. 
 
 This populates the directory with an example target, you can then modify the target for your specific workflow.
 
-## Running a target
+## Run the Target
 
 ```
-docker run \
-    -v ./my_caci_example:/target \
-    -v /var/run/docker.sock:/var/run/docker.sock \
-    -v ~/.azure:/root/.azure \
-    --env-file cacitesting.env \
-    cacitesting.azurecr.io/releases:latest \
-    c_aci_testing.target_run \
-        -n <YOUR_DEPLOYMENT_NAME>
+python -m c_aci_testing.target_run $MY_TARGET -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
 - Build any images defined in your target directory
@@ -82,6 +76,17 @@ This will:
 - Deploy the container group to Confidential ACI
 - Follow the logs of the deployed container and wait until process exits
 - Remove the container group
+
+## Extra Features
+### Run individual deployment steps
+Coming Soon
+### Integrate with VS Code
+#### Add steps to Run and Debug
+Coming Soon
+#### Add targets to Testing
+Coming Soon
+### Create a Github Actions workflo#w
+Coming Soon
 
 ## Contributing
 
