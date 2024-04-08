@@ -11,7 +11,8 @@ setup(
     url='https://github.com/microsoft/c-aci-testing',
     packages=find_packages(),
     install_requires=[
-        "pytest"
+        "pytest",
+        "json5",
     ],
     include_package_data=True,
     package_data={
