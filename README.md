@@ -113,14 +113,21 @@ python -m c_aci_testing.aci_remove --name $DEPLOYMENT_NAME
 
 ### Integrate with VS Code
 #### Add steps to Run and Debug
+
 ```
 python -m c_aci_testing.vscode_run_debug
 ```
 
 This adds launch configurations for each script in the python package for easy use.
 
-#### Add targets to Testing
-Coming Soon
+#### Add Targets to Testing
+
+```
+python -m c_aci_testing.vscode_testing $TARGET_PATH
+```
+
+This creates a Python Unittest runner for a provided target, as well as populating a workspace level settings file which points unittest at the target. If there is already a workspace level target, it is left alone.
+
 ### Create a Github Actions workflow
 Coming Soon
 

@@ -10,13 +10,17 @@ setup(
     author_email='dominicayre@microsoft.com',
     url='https://github.com/microsoft/c-aci-testing',
     packages=find_packages(),
-    install_requires=["json5"],
+    install_requires=[
+        "pytest",
+        "json5",
+    ],
     include_package_data=True,
     package_data={
         '': [
             './test/example/*',
             './aci/*',
             './.vscode/*',
+            './python_runner/*',
         ],
     },
 )

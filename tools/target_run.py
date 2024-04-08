@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from contextlib import contextmanager
 import os
 from .images_build import images_build
 from .images_push import images_push
@@ -9,7 +10,20 @@ from .aci_deploy import aci_deploy
 from .aci_monitor import aci_monitor
 from .aci_remove import aci_remove
 
-def target_run(target, registry, repository, tag, subscription, resource_group, name, location, managed_identity, parameters, cleanup):
+@contextmanager
+def target_run(
+    target,
+    name,
+    registry=os.environ.get("REGISTRY"),
+    subscription=os.environ.get("SUBSCRIPTION"),
+    resource_group=os.environ.get("RESOURCE_GROUP"),
+    managed_identity=os.environ.get("MANAGED_IDENTITY"),
+    location=os.environ.get("LOCATION"),
+    tag=os.environ.get("TAG"),
+    parameters=None,
+    cleanup=True,
+    repository=None
+):
 
     images_build(
         target=target,
@@ -39,8 +53,9 @@ def target_run(target, registry, repository, tag, subscription, resource_group, 
         managed_identity=managed_identity,
         parameters=parameters,
     ).rstrip("\n")
-    print("Deployment complete, monitoring...")
+    print("Deployment complete")
     try:
+        yield id
         aci_monitor(
             subscription=subscription,
             resource_group=resource_group,
