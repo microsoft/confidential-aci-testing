@@ -10,9 +10,13 @@ setup(
     author_email='dominicayre@microsoft.com',
     url='https://github.com/microsoft/c-aci-testing',
     packages=find_packages(),
-    install_requires=[],
+    install_requires=["json5"],
     include_package_data=True,
     package_data={
-        '': ['./test/example/*', './aci/*'],
+        '': [
+            './test/example/*',
+            './aci/*',
+            './.vscode/*',
+        ],
     },
 )
