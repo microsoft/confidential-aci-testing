@@ -43,11 +43,11 @@ jobs:
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
-        TAG: ${{ github.run_id }}-${{ github.run_number }}
+        TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: |
         mkdir default_target_test
         python -m c_aci_testing.target_create default_target_test -n default_target_test
-        python -m c_aci_testing.target_run default_target_test -n ${{ github.run_id }}-${{ github.run_number }}
+        python -m c_aci_testing.target_run default_target_test -n $TAG
   
   test-individual-scripts:
     runs-on: ubuntu-latest
@@ -82,7 +82,7 @@ jobs:
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
-        TAG: ${{ github.run_id }}-${{ github.run_number }}
+        TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: |
         mkdir individual_scripts_test
         python -m c_aci_testing.target_create individual_scripts_test -n individual_scripts_test
@@ -90,5 +90,5 @@ jobs:
         python -m c_aci_testing.images_push individual_scripts_test
         python -m c_aci_testing.policies_gen individual_scripts_test
         python -m c_aci_testing.aci_monitor \
-          -ids $(python -m c_aci_testing.aci_deploy individual_scripts_test -n ${{ github.run_id }}-${{ github.run_number }})
+          -ids $(python -m c_aci_testing.aci_deploy individual_scripts_test -n $TAG)
         python -m c_aci_testing.aci_remove individual_scripts_test
