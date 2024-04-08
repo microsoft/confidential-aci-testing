@@ -54,8 +54,8 @@ def target_run(
         parameters=parameters,
     ).rstrip("\n")
     print("Deployment complete")
+    yield id
     try:
-        yield id
         aci_monitor(
             subscription=subscription,
             resource_group=resource_group,
