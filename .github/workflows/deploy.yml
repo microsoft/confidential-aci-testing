@@ -1,5 +1,9 @@
 name: Release Python Package
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   workflow_dispatch:
     inputs:
