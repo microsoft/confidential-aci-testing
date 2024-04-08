@@ -1,31 +1,53 @@
-name: Deploy Image
+name: Release Python Package
+
+permissions:
+  contents: write
+  packages: write
 
 on:
-    workflow_dispatch:
-        inputs:
-            tag:
-                description: 'Tag to deploy'
-                required: true
-                default: 'latest'
+  workflow_dispatch:
+    inputs:
+      releaseName:
+        description: 'Release Name'
+        required: true
+      releaseTag:
+        description: 'Release Tag'
+        required: true
 
 jobs:
-  build-and-push:
+  build-and-release:
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        python-version: '3.10'
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+    - name: Build Python package
+      run: |
+        python packaging/package_build.py
+        echo "PACKAGE_NAME=$(ls *.tar.gz | xargs basename)" >> $GITHUB_ENV
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        context: .
-        file: docker/Dockerfile
-        push: true
-        tags: ghcr.io/${{ github.repository }}:latest
+        tag_name: ${{ github.event.inputs.releaseTag }}
+        release_name: ${{ github.event.inputs.releaseName }}
+        draft: false
+        prerelease: true
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ env.PACKAGE_NAME }}
+        asset_name: ${{ env.PACKAGE_NAME }}
+        asset_content_type: application/gzip

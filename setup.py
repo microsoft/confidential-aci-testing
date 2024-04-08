@@ -11,4 +11,8 @@ setup(
     url='https://github.com/microsoft/c-aci-testing',
     packages=find_packages(),
     install_requires=[],
+    include_package_data=True,
+    package_data={
+        '': ['./test/example/*', './aci/*'],
+    },
 )

@@ -51,6 +51,7 @@ Then just fill in the values you wish to use for your deployments
 
 ### Deploy infrastructure to Azure
 ```
+source cacitesting.env
 python -m c_aci_testing.infra_deploy
 ```
 
@@ -70,6 +71,7 @@ This populates the directory with an example target, you can then modify the tar
 ## Run the Target
 
 ```
+source cacitesting.env
 python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
