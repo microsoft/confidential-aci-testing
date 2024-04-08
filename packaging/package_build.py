@@ -31,6 +31,8 @@ def package_build():
 
         shutil.copytree("aci", os.path.join(package_dir, "aci"))
         shutil.copytree("test", os.path.join(package_dir, "test"))
+        shutil.copytree(".vscode", os.path.join(package_dir, ".vscode"))
+        shutil.copytree("python_runner", os.path.join(package_dir, "python_runner"))
 
         subprocess.run(["python", "setup.py", "sdist"], cwd=tempdir)
         for file in glob.glob(os.path.join(tempdir, "dist", "*.tar.gz")):
