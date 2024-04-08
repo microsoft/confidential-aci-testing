@@ -126,7 +126,7 @@ This adds launch configurations for each script in the python package for easy u
 python -m c_aci_testing.vscode_testing $TARGET_PATH
 ```
 
-This creates a Python Unittest runner for a provided target, as well as populating a workspace level settings file which points unittest at the target. If there is already a workspace level target, it is left alone
+This creates a Python Unittest runner for a provided target, as well as populating a workspace level settings file which points unittest at the target. If there is already a workspace level target, it is left alone.
 
 ### Create a Github Actions workflow
 Coming Soon
