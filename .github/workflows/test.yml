@@ -23,6 +23,9 @@ jobs:
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
         subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
 
+    - name: Setup Docker
+      run: sudo usermod -aG docker
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
