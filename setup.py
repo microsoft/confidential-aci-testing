@@ -19,7 +19,7 @@ setup(
             './test/example/*',
             './aci/*',
             './.vscode/*',
-            './python/*',
+            './python_runner/*',
         ],
     },
 )
