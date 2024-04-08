@@ -10,20 +10,28 @@ on:
       - main
 
 jobs:
-    test-python-package:
-        runs-on: ubuntu-latest
-        steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+  test-python-package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-            python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-        - name: Build and Install Python package
-          run: |
-            python packaging/package_build.py
-            pip install *.tar.gz
+    - name: Build and Install Python package
+      run: |
+        python packaging/package_build.py
+        pip install *.tar.gz
 
-        - name: 
+    - name: Run Test Target
+      env: 
+        SUBSCRIPTION: 85c61f94-8912-4e82-900e-6ab44de9bdf8
+        RESOURCE_GROUP: c-aci-examples
+        REGISTRY: caciexamples.azurecr.io
+        MANAGED_IDENTITY: caciexamples
+        LOCATION: northeurope
+      run: |
+        python -m c_aci_testing.target_run test/example -n ${{ github.run_id }}-${{ github.run_number }}
