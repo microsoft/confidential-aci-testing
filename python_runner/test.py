@@ -4,7 +4,8 @@
 import unittest
 import os
 
-from c_aci_testing.target_run import target_run, aci_get_ips
+from c_aci_testing.target_run import target_run
+from c_aci_testing.aci_get_ips import aci_get_ips
 
 class ExampleTest(unittest.TestCase):
     def test_example(self):

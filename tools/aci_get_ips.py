@@ -4,12 +4,17 @@ import argparse
 import os
 import subprocess
 
-def aci_get_ips(subscription, resource_group, name, ids):
+def aci_get_ips(
+        subscription=os.environ.get("SUBSCRIPTION"),
+        resource_group=os.environ.get("RESOURCE_GROUP"),
+        name=None,
+        ids=None,
+    ):
 
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
-    az_command = [
+    result = subprocess.run([
         "az", "container", "show",
         "--query", "ipAddress.ip",
         "--output", "tsv",
@@ -17,8 +22,15 @@ def aci_get_ips(subscription, resource_group, name, ids):
         *(["--resource-group", resource_group] if resource_group else []),
         *(["--name", name] if name else []),
         *(["--ids", ids] if ids else []),
-    ]
-    subprocess.run(az_command)
+    ])
+
+    if result.returncode != 0:
+        print("Error getting IP address")
+        print(result.stderr)
+        return None
+
+    print(result.stdout)
+    return result.stdout
 
 
 if __name__ == "__main__":
