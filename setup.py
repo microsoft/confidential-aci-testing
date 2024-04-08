@@ -13,6 +13,6 @@ setup(
     install_requires=[],
     include_package_data=True,
     package_data={
-        '': ['../test/example/*'],
+        '': ['./test/example/*', './aci/*'],
     },
 )

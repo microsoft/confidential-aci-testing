@@ -17,7 +17,7 @@ def infra_deploy(subscription, resource_group, registry, managed_identity, locat
     result = subprocess.run([
         "az", "deployment", "sub", "create",
         "--location", location,
-        "--template-file", os.path.join(os.path.dirname(__file__), "..", "aci", "resourceGroup.bicep"),
+        "--template-file", os.path.join(os.path.dirname(__file__), "aci", "resourceGroup.bicep"),
         "--parameters", f"name={resource_group}",
         "--parameters", f"registryName={registry}",
         "--parameters", f"managedIdentityName={managed_identity}",

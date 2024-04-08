@@ -4,7 +4,6 @@
 import argparse
 import os
 import subprocess
-from importlib.resources import files
 
 
 def target_create(target, name):
@@ -16,7 +15,7 @@ def target_create(target, name):
     
     example_path = os.environ.get("EXAMPLE_PATH")
     if example_path is None:
-        example_path = str(files(__name__).joinpath("../test/example"))
+        example_path = os.path.join(os.path.dirname(__file__), "test", "example")
     
     # Copy the contents of example_path to target
     subprocess.run(["cp", "-r", example_path + "/.", target])
