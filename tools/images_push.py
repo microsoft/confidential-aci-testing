@@ -7,7 +7,12 @@ import argparse
 import os
 import subprocess
 
-def images_push(target, registry, tag):
+from .target_find_files import find_bicep_file
+
+def images_push(target, registry, repository, tag):
+
+    if repository is None:
+        repository = os.path.splitext(find_bicep_file(target))[0]
 
     subprocess.run(["az", "acr", "login", "--name", registry])
 
@@ -15,6 +20,7 @@ def images_push(target, registry, tag):
         env={
             **os.environ,
             "REGISTRY": registry,
+            "REPOSITORY": repository,
             "TAG": tag,
         },
         cwd=target,
@@ -31,6 +37,8 @@ if __name__ == "__main__":
         type=lambda path: os.path.abspath(os.path.expanduser(path)))
     parser.add_argument("--registry",
         help="Container Registry", default=os.environ.get("REGISTRY"))
+    parser.add_argument("--repository",
+        help="Container Repository", default=os.environ.get("REPOSITORY"))
     parser.add_argument("--tag",
         help="Image Tag", default=os.environ.get("TAG") or "latest")
 
@@ -39,5 +47,6 @@ if __name__ == "__main__":
     images_push(
         target=args.target,
         registry=args.registry,
+        repository=args.repository,
         tag=args.tag,
     )
