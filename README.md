@@ -35,7 +35,8 @@ While the repository is private, the easiest way to get the package is through t
 gh auth login
 ```
 ```
-gh release download latest -R microsoft/confidential-aci-testing
+latest=$(gh release list -R microsoft/confidential-aci-testing -L 1 --json tagName --jq '.[0].tagName')
+gh release download $latest -R microsoft/confidential-aci-testing
 pip install c-aci-testing*.tar.gz
 ```
 
