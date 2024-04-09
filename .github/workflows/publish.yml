@@ -21,13 +21,6 @@ jobs:
         python packaging/package_build.py
         echo "PACKAGE_NAME=$(ls *.tar.gz | xargs basename)" >> $GITHUB_ENV
 
-    - name: If the tag already exists, replace it with the current revision
-      run: |
-        if git rev-parse ${{ github.ref_name }} >/dev/null 2>&1; then
-          git tag -d ${{ github.ref_name }}
-          git push --delete origin ${{ github.ref_name }}
-        fi
-
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
