@@ -22,7 +22,7 @@ def aci_get_ips(
         *(["--resource-group", resource_group] if resource_group else []),
         *(["--name", name] if name else []),
         *(["--ids", ids] if ids else []),
-    ])
+    ], capture_output=True, text=True)
 
     if result.returncode != 0:
         print("Error getting IP address")
