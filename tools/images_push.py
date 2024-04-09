@@ -39,6 +39,5 @@ if __name__ == "__main__":
     images_push(
         target=args.target,
         registry=args.registry,
-        repository=args.repository,
         tag=args.tag,
     )
