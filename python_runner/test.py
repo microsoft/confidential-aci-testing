@@ -10,12 +10,12 @@ from c_aci_testing.aci_get_ips import aci_get_ips
 
 class ExampleTest(unittest.TestCase):
     def test_example(self):
-        
+
         target_dir = os.path.realpath(os.path.dirname(__file__))
         id = str(uuid.uuid4())
 
         with target_run_ctx(
-            target=target_dir, 
+            target=target_dir,
             name=f"my-deployment-{id}",
             tag=id,
             follow=True
