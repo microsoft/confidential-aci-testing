@@ -11,7 +11,7 @@ from .aci_monitor import aci_monitor
 from .aci_remove import aci_remove
 
 @contextmanager
-def target_run(
+def target_run_ctx(
     target,
     name,
     registry=os.environ.get("REGISTRY"),
@@ -74,6 +74,9 @@ def target_run(
                 ids=id
             )
 
+def target_run(**kwargs):
+    with target_run_ctx(**kwargs): ...
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")
 
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    with target_run(
+    target_run(
         target=args.target,
         subscription=args.subscription,
         resource_group=args.resource_group,
@@ -121,4 +124,4 @@ if __name__ == "__main__":
         parameters=args.parameters,
         follow=not args.no_follow,
         cleanup=not args.no_cleanup,
-    ): ...
+    )
