@@ -23,9 +23,9 @@ jobs:
 
     - name: If the tag already exists, replace it with the current revision
       run: |
-        if git rev-parse ${{ github.ref }} >/dev/null 2>&1; then
-          git tag -d ${{ github.ref }}
-          git push --delete origin ${{ github.ref }}
+        if git rev-parse ${{ github.ref_name }} >/dev/null 2>&1; then
+          git tag -d ${{ github.ref_name }}
+          git push --delete origin ${{ github.ref_name }}
         fi
 
     - name: Create GitHub Release
@@ -34,8 +34,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: ${{ github.ref }}
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ github.ref_name }}
         draft: false
         prerelease: true
 
