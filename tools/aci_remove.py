@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import os
 import subprocess
@@ -29,7 +32,7 @@ if __name__ == "__main__":
         help="Azure Resource Group ID", default=os.environ.get("RESOURCE_GROUP"))
     parser.add_argument("--name", "-n", help="Name of deployment")
     parser.add_argument("--ids", help="ID of deployment")
-    
+
     args = parser.parse_args()
 
     aci_remove(

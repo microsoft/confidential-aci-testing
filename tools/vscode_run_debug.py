@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 
 import argparse
 import json
@@ -30,7 +33,7 @@ def vscode_testing(target):
     for configuration in launch_json["configurations"]:
         if configuration["name"] not in existing_configurations:
             user_json["configurations"].append(configuration)
-    
+
     for input in launch_json["inputs"]:
         if input["id"] not in existing_inputs:
             user_json["inputs"].append(input)

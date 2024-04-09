@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import os
 import shutil
@@ -19,11 +22,11 @@ def package_build():
         shutil.copy("setup.py", tempdir)
 
         package_dir = os.path.join(tempdir, package_name)
-        
+
         if os.path.exists(package_dir):
             shutil.rmtree(package_dir)
         os.mkdir(package_dir)
-        
+
         # Copy the contents of ./tools to the package directory
         for file in os.listdir("tools"):
             if file.endswith(".py"):
@@ -38,7 +41,7 @@ def package_build():
         subprocess.run(["python", "setup.py", "sdist"], cwd=tempdir)
         for file in glob.glob(os.path.join(tempdir, "dist", "*.tar.gz")):
             shutil.copy(
-                file, 
+                file,
                 os.path.realpath(os.path.join(os.path.basename(__file__), ".."))
             )
 

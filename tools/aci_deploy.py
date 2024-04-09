@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import os
 import subprocess
@@ -59,12 +62,12 @@ if __name__ == "__main__":
 
     # Deployment Info
     parser.add_argument("--name", "-n", help="Name of deployment", required=True)
-    parser.add_argument("--location", 
+    parser.add_argument("--location",
         help="Location to deploy to", default=os.environ.get("LOCATION"))
     parser.add_argument("--managed-identity",
         help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--parameters", help="Path to parameters file", action="append")
-    
+
     args = parser.parse_args()
 
     aci_deploy(

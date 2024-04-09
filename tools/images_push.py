@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import os
 import subprocess
@@ -38,7 +41,7 @@ if __name__ == "__main__":
         help="Container Repository", default=os.environ.get("REPOSITORY"))
     parser.add_argument("--tag",
         help="Image Tag", default=os.environ.get("TAG") or "latest")
-    
+
     args = parser.parse_args()
 
     images_push(

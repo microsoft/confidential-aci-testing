@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import os
 import subprocess
@@ -37,13 +40,13 @@ if __name__ == "__main__":
         help="Container Registry", default=os.environ.get("REGISTRY"))
     parser.add_argument("--managed-identity",
         help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
-    parser.add_argument("--location", 
+    parser.add_argument("--location",
         help="Location to deploy to", default=os.environ.get("LOCATION"))
-    parser.add_argument("--github-org", 
+    parser.add_argument("--github-org",
         help="Github Organisation to link credential", default=os.environ.get("GITHUB_ORG"))
-    parser.add_argument("--github-repo", 
+    parser.add_argument("--github-repo",
         help="Github Repository to link credential", default=os.environ.get("GITHUB_REPO"))
-    
+
     args = parser.parse_args()
 
     print("""

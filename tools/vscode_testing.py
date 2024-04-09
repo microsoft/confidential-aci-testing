@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 
 import argparse
 import os
@@ -14,7 +17,7 @@ def vscode_run_debug(target):
     if not os.path.exists(target):
         print("Target doesn't exist")
         return
-    
+
     # Copy the python runner code to the target
     runner_dir = os.path.join(os.path.dirname(__file__), "python_runner")
     for file in os.listdir(runner_dir):
@@ -29,15 +32,15 @@ def vscode_run_debug(target):
     user_json_path = os.path.join(vs_code_path, "settings.json")
     if not os.path.exists(user_json_path):
         shutil.copy(
-            os.path.join(os.path.dirname(__file__), ".vscode", "settings.json"), 
+            os.path.join(os.path.dirname(__file__), ".vscode", "settings.json"),
             user_json_path
         )
-        
+
         with open(user_json_path, "r") as file:
             user_json = json5.load(file)
-        
+
         user_json["python.testing.unittestArgs"][2] = os.path.abspath(os.path.join(target, ".."))
-        
+
         with open(user_json_path, "w") as file:
             json.dump(user_json, file, indent=4)
 

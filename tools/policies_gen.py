@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 import argparse
 import base64
 import subprocess
@@ -24,7 +27,7 @@ def policies_gen(**kwargs):
     with tempfile.TemporaryDirectory() as arm_template_dir:
         arm_template_path = os.path.join(arm_template_dir, "arm.json")
         subprocess.run([
-            "az", "bicep", "build", 
+            "az", "bicep", "build",
             "-f", os.path.join(target, find_bicep_file(target)),
             "--outfile", arm_template_path
         ])
@@ -86,7 +89,7 @@ if __name__ == "__main__":
         help="Container Repository", default=os.environ.get("REPOSITORY"))
     parser.add_argument("--tag",
         help="Image Tag", default=os.environ.get("TAG") or "latest")
-    
+
     args = parser.parse_args()
 
     policies_gen(

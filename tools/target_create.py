@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
 
 import argparse
 import os
@@ -12,11 +15,11 @@ def target_create(target, name):
     if os.listdir(target):
         print(f"Target directory must be empty")
         return
-    
+
     example_path = os.environ.get("EXAMPLE_PATH")
     if example_path is None:
         example_path = os.path.join(os.path.dirname(__file__), "test", "example")
-    
+
     # Copy the contents of example_path to target
     subprocess.run(["cp", "-r", example_path + "/.", target])
 
