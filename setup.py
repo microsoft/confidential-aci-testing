@@ -21,6 +21,7 @@ setup(
             './aci/*',
             './.vscode/*',
             './python_runner/*',
+            './github_actions/*',
         ],
     },
 )
