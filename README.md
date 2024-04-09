@@ -48,11 +48,14 @@ All scripts can be given call-time parameters, but for parameters which will be 
 python -m c_aci_testing.env_create > cacitesting.env
 ```
 
-Then just fill in the values you wish to use for your deployments
+Then just fill in the values you wish to use for your deployments, and source it
+
+```
+source cacitesting.env
+```
 
 ### Deploy infrastructure to Azure
 ```
-source cacitesting.env
 python -m c_aci_testing.infra_deploy
 ```
 
@@ -64,6 +67,8 @@ This will only succeed if you're logged into an Azure account with subscription 
 ```
 export TARGET_PATH=./my_new_target
 export TARGET_NAME=my_new_target
+```
+```
 python -m c_aci_testing.target_create $TARGET_PATH -n $TARGET_NAME
 ```
 
@@ -72,7 +77,6 @@ This populates the directory with an example target, you can then modify the tar
 ## Run the Target
 
 ```
-source cacitesting.env
 python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will: 
@@ -103,7 +107,9 @@ python -m c_aci_testing.policies_gen $TARGET_PATH
 
 ```
 DEPLOYMENT_NAME=my-deployment
+```
 
+```
 # Deploy and monitor (Can be run separately)
 python -m c_aci_testing.aci_monitor --id \
     $(python -m c_aci_testing.aci_deploy $TARGET_PATH --name $DEPLOYMENT_NAME)
