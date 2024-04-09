@@ -84,7 +84,6 @@ jobs:
         LOCATION: northeurope
         TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: python -m c_aci_testing.vscode_run_debug
-        python -m c_aci_testing.target_run default_target_test -n $TAG
 
   github-integration:
     runs-on: ubuntu-latest
