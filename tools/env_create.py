@@ -6,17 +6,28 @@ import argparse
 def env_create(out=None):
     env = \
 """# Core Environment Variables
-export SUBSCRIPTION=
-export RESOURCE_GROUP=
-export REGISTRY=
-export MANAGED_IDENTITY=
-export LOCATION=
-export GITHUB_ORG=
-export GITHUB_REPO=
+SUBSCRIPTION=
+RESOURCE_GROUP=
+REGISTRY=
+MANAGED_IDENTITY=
+LOCATION=
+GITHUB_ORG=
+GITHUB_REPO=
 
 # Per Target Options that can also be set at runtime
-# export REPOSITORY=
-# export TAG="""
+# REPOSITORY=
+# TAG=
+
+# Support source-ing the env file as well as providing it directly
+export SUBSCRIPTION=$SUBSCRIPTION
+export RESOURCE_GROUP=$RESOURCE_GROUP
+export REGISTRY=$REGISTRY
+export MANAGED_IDENTITY=$MANAGED_IDENTITY
+export LOCATION=$LOCATION
+export GITHUB_ORG=$GITHUB_ORG
+export GITHUB_REPO=$GITHUB_REPO
+export REPOSITORY=$REPOSITORY
+export TAG=$TAG"""
     if out is not None:
         with open(out, "w") as f:
             f.write(env)
