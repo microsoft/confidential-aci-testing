@@ -40,7 +40,7 @@ def aci_deploy(target, subscription, resource_group, name, location, managed_ide
         *(["--subscription", subscription] if subscription else []),
         "--resource-group", resource_group,
         "--query", "properties.outputs.id.value", "-o", "tsv"
-    ], capture_output=True, text=True).stdout
+    ], capture_output=True, text=True).stdout.rstrip("\n")
 
 
 if __name__ == "__main__":

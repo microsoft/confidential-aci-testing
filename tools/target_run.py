@@ -53,7 +53,7 @@ def target_run(
         location=location,
         managed_identity=managed_identity,
         parameters=parameters,
-    ).rstrip("\n")
+    )
     print("Deployment complete")
     try:
         yield id
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-    target_run(
+    with target_run(
         target=args.target,
         subscription=args.subscription,
         resource_group=args.resource_group,
@@ -121,4 +121,4 @@ if __name__ == "__main__":
         parameters=args.parameters,
         follow=not args.no_follow,
         cleanup=not args.no_cleanup,
-    )
+    ): ...
