@@ -6,6 +6,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.env_create",
+            "justMyCode": false,
             "args": [
                 "${input:cacitestingEnvPath}"
             ]
@@ -15,6 +16,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.infra_deploy",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}"
         },
         {
@@ -22,6 +24,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.target_create",
+            "justMyCode": false,
             "args": [
                 "${input:cacitestingTargetPath}",
                 "--name",
@@ -33,6 +36,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.target_run",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "${input:cacitestingTargetPath}",
@@ -45,6 +49,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_build",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "${input:cacitestingTargetPath}"
@@ -55,6 +60,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.images_push",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "${input:cacitestingTargetPath}"
@@ -65,6 +71,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.policies_gen",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "${input:cacitestingTargetPath}"
@@ -75,6 +82,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_deploy",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "${input:cacitestingTargetPath}",
@@ -87,6 +95,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_monitor",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "-n",
@@ -98,6 +107,7 @@
             "type": "debugpy",
             "request": "launch",
             "module": "c_aci_testing.aci_remove",
+            "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
                 "-n",
@@ -115,7 +125,7 @@
         {
             "id": "cacitestingTargetPath",
             "type": "promptString",
-            "description": "Enter the name of the target:"
+            "description": "Enter the path to the target:"
         },
         {
             "id": "cacitestingTargetName",
@@ -125,7 +135,7 @@
         {
             "id": "cacitestingDeploymentName",
             "type": "promptString",
-            "description": "Enter the name of the target:"
+            "description": "Enter the name of the deployment:"
         }
     ]
 }
