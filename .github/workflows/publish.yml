@@ -5,17 +5,12 @@ permissions:
   packages: write
 
 on:
-  workflow_dispatch:
-    inputs:
-      releaseName:
-        description: 'Release Name'
-        required: true
-      releaseTag:
-        description: 'Release Tag'
-        required: true
+  push:
+    tags:
+      - '*'
 
 jobs:
-  build-and-release:
+  python-package:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
