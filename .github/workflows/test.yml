@@ -29,11 +29,6 @@ jobs:
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
     - name: Build and Install Python package
       run: |
         python packaging/package_build.py
@@ -67,11 +62,6 @@ jobs:
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
 
     - name: Build and Install Python package
       run: |
@@ -111,11 +101,6 @@ jobs:
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-
     - name: Build and Install Python package
       run: |
         python packaging/package_build.py
@@ -151,11 +136,6 @@ jobs:
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
 
     - name: Build and Install Python package
       run: |
