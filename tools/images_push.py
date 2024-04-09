@@ -14,18 +14,18 @@ def images_push(target, registry, repository, tag):
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    subprocess.run([
-        "az", "acr", "login",
-        "--name", registry,
-    ])
+    subprocess.run(["az", "acr", "login", "--name", registry])
 
-    for dockerfile in os.listdir(target):
-        if dockerfile.endswith(".Dockerfile"):
-            image_name = os.path.splitext(dockerfile)[0]
-            subprocess.run([
-                    "docker", "push",
-                    f'{registry}/{repository}/{image_name}:{tag}',
-                ])
+    subprocess.run(["docker-compose", "push"],
+        env={
+            **os.environ,
+            "REGISTRY": registry,
+            "REPOSITORY": repository,
+            "TAG": tag,
+        },
+        cwd=target,
+        check=True,
+    )
 
 
 if __name__ == "__main__":

@@ -16,15 +16,16 @@ def images_build(target, registry, repository, tag="latest"):
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    for dockerfile in os.listdir(target):
-        if dockerfile.endswith(".Dockerfile"):
-            image_name = os.path.splitext(dockerfile)[0]
-            subprocess.run([
-                "docker", "build",
-                "-t", f'{registry}/{repository}/{image_name}:{tag}',
-                "-f", f"{target}/{dockerfile}",
-                target,
-            ])
+    subprocess.run(["docker-compose", "build"],
+        env={
+            **os.environ,
+            "REGISTRY": registry,
+            "REPOSITORY": repository,
+            "TAG": tag,
+        },
+        cwd=target,
+        check=True,
+    )
 
 
 if __name__ == "__main__":
