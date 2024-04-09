@@ -21,6 +21,7 @@ def target_run(
     location=os.environ.get("LOCATION"),
     tag=os.environ.get("TAG"),
     parameters=None,
+    follow=True,
     cleanup=True,
     repository=None
 ):
@@ -60,7 +61,8 @@ def target_run(
             subscription=subscription,
             resource_group=resource_group,
             name=None,
-            ids=id
+            ids=id,
+            follow=follow,
         )
     finally:
         if cleanup:
@@ -102,6 +104,7 @@ if __name__ == "__main__":
         help="Managed Identiy", default=os.environ.get("MANAGED_IDENTITY"))
     parser.add_argument("--parameters", help="Path to parameters file")
     parser.add_argument("--no-cleanup", help="Path to parameters file", action="store_true")
+    parser.add_argument("--no-follow", help="Path to parameters file", action="store_true")
     
     args = parser.parse_args()
 
@@ -116,5 +119,6 @@ if __name__ == "__main__":
         location=args.location,
         managed_identity=args.managed_identity,
         parameters=args.parameters,
+        follow=not args.no_follow,
         cleanup=not args.no_cleanup,
     )

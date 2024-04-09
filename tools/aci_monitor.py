@@ -4,13 +4,14 @@ import argparse
 import os
 import subprocess
 
-def aci_monitor(subscription, resource_group, name, ids):
+def aci_monitor(subscription, resource_group, name, ids, follow=True):
 
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
     az_command = [
-        "az", "container", "logs", "--follow",
+        "az", "container", "logs",
+        *(["--follow"] if follow else []),
         *(["--subscription", subscription] if subscription else []),
         *(["--resource-group", resource_group] if resource_group else []),
         *(["--name", name] if name else []),
