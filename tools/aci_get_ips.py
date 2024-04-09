@@ -30,7 +30,7 @@ def aci_get_ips(
         return None
 
     print(result.stdout)
-    return result.stdout
+    return result.stdout.rstrip("\n")
 
 
 if __name__ == "__main__":
