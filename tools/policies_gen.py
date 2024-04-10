@@ -23,6 +23,7 @@ def policies_gen(**kwargs):
     with open(bicep_path, "r") as file:
         if not any(line.startswith("param ccePolicy string") for line in file):
             print("Bicep template has no policy parameter, skipping generation")
+            return
 
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
