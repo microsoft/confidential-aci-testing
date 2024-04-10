@@ -38,7 +38,7 @@ def package_build():
         shutil.copytree("python_runner", os.path.join(package_dir, "python_runner"))
         shutil.copytree("github_actions", os.path.join(package_dir, "github_actions"))
 
-        subprocess.run(["python", "setup.py", "sdist"], cwd=tempdir)
+        subprocess.run(["python", "setup.py", "sdist"], cwd=tempdir, check=True)
         for file in glob.glob(os.path.join(tempdir, "dist", "*.tar.gz")):
             shutil.copy(
                 file,
