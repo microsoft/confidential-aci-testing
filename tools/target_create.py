@@ -21,7 +21,7 @@ def target_create(target, name):
         example_path = os.path.join(os.path.dirname(__file__), "test", "example")
 
     # Copy the contents of example_path to target
-    subprocess.run(["cp", "-r", example_path + "/.", target])
+    subprocess.run(["cp", "-r", example_path + "/.", target], check=True)
 
     # Rename the files to match the target name
     os.rename(

@@ -19,6 +19,11 @@ def policies_gen(**kwargs):
     repository = kwargs.get("repository")
     tag = kwargs.get("tag")
 
+    bicep_path = os.path.join(target, find_bicep_file(target))
+    with open(bicep_path, "r") as file:
+        if not any(line.startswith("param ccePolicy string") for line in file):
+            print("Bicep template has no policy parameter, skipping generation")
+
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
         kwargs["repository"] = repository
@@ -28,9 +33,9 @@ def policies_gen(**kwargs):
         arm_template_path = os.path.join(arm_template_dir, "arm.json")
         subprocess.run([
             "az", "bicep", "build",
-            "-f", os.path.join(target, find_bicep_file(target)),
+            "-f", bicep_path,
             "--outfile", arm_template_path
-        ])
+        ], check=True)
 
         with open(arm_template_path, "r") as file:
             arm_template = json.load(file)
@@ -56,14 +61,12 @@ def policies_gen(**kwargs):
             json.dump(arm_template, file, indent=2)
 
         print("Calling acipolicygen and saving policy to file")
-        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"])
-        subprocess.run(
-            [
-                "az", "confcom", "acipolicygen",
-                "-a", arm_template_path,
-                "--outraw", "--save-to-file", f"{target}/policy.rego"
-            ]
-        )
+        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+        subprocess.run(["az", "confcom", "acipolicygen",
+            "-a", arm_template_path,
+            "--outraw",
+            "--save-to-file", f"{target}/policy.rego"
+        ], check=True)
         print(f"Saved policy to {target}/policy.rego")
 
     print("Setting the specified registry, tag and policy in the bicep parameters file")

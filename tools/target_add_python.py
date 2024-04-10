@@ -14,10 +14,10 @@ def target_add_python(target):
     # Create a virtual environment with this python package installed
     subprocess.run([
         "python3", "-m", "venv", f"{target}/.venv",
-    ])
+    ], check=True)
     subprocess.run([
         f"{target}/.venv/bin/pip", "install", os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
-    ])
+    ], check=True)
 
 
 if __name__ == "__main__":
