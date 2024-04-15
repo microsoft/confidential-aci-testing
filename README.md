@@ -22,7 +22,7 @@ This project provides utilities for testing workflows involving Confidential ACI
 ## Dependencies
 
 - [Python](https://www.python.org)
-- [Docker](https://docs.docker.com/get-docker/) 
+- [Docker](https://docs.docker.com/get-docker/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli)
 
 ## Getting Started
@@ -80,7 +80,7 @@ This populates the directory with an example target, you can then modify the tar
 ```
 python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
-This will: 
+This will:
 - Build any images defined in your target directory
 - Push them to your configured container registry
 - Generate a security policy and update your .bicepparam file
@@ -155,8 +155,8 @@ contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additio
 
 ## Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft
+trademarks or logos is subject to and must follow
 [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
 Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
 Any use of third-party trademarks or logos are subject to those third-party's policies.
