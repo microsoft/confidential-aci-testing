@@ -29,11 +29,6 @@ This project provides utilities for testing workflows involving Confidential ACI
 
 ### Install the `c_aci_testing` package
 
-While the repository is private, the easiest way to get the package is through the Github CLI
-
-```
-gh auth login
-```
 ```
 latest=$(gh release list -R microsoft/confidential-aci-testing -L 1 --json tagName --jq '.[0].tagName')
 gh release download $latest -R microsoft/confidential-aci-testing
