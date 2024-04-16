@@ -12,14 +12,23 @@ def aci_remove(subscription, resource_group, name, ids):
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
-    subprocess.run([
-        "az", "resource", "delete", "--no-wait",
-        *(["--subscription", subscription] if subscription else []),
-        *(["--resource-group", resource_group] if resource_group else []),
-        "--resource-type", "Microsoft.ContainerInstance/containerGroups",
-        *(["--name", name] if name else []),
-        *(["--ids", ids] if ids else []),
-    ], check=True)
+    if name :
+        subprocess.run([
+            "az", "resource", "delete", "--no-wait",
+            *(["--subscription", subscription] if subscription else []),
+            *(["--resource-group", resource_group] if resource_group else []),
+            "--resource-type", "Microsoft.ContainerInstance/containerGroups",
+            *(["--name", name]),
+        ], check=True)
+    else:
+        for id in ids:
+            subprocess.run([
+                "az", "resource", "delete", "--no-wait",
+                *(["--subscription", subscription] if subscription else []),
+                *(["--resource-group", resource_group] if resource_group else []),
+                "--resource-type", "Microsoft.ContainerInstance/containerGroups",
+                *(["--ids", id]),
+            ], check=True)
 
 
 if __name__ == "__main__":

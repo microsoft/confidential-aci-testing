@@ -12,14 +12,23 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
-    subprocess.run([
-        "az", "container", "logs",
-        *(["--follow"] if follow else []),
-        *(["--subscription", subscription] if subscription else []),
-        *(["--resource-group", resource_group] if resource_group else []),
-        *(["--name", name] if name else []),
-        *(["--ids", ids] if ids else []),
-    ], check=not follow)
+    if name:
+        subprocess.run([
+            "az", "container", "logs",
+            *(["--follow"] if follow else []),
+            *(["--subscription", subscription] if subscription else []),
+            *(["--resource-group", resource_group] if resource_group else []),
+            *(["--name", name]),
+        ], check=not follow)
+    else:
+        for id in ids:
+            subprocess.run([
+                "az", "container", "logs",
+                *(["--follow"] if follow else []),
+                *(["--subscription", subscription] if subscription else []),
+                *(["--resource-group", resource_group] if resource_group else []),
+                *(["--ids", id]),
+            ], check=not follow)
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ def aci_deploy(
         check=True,
         capture_output=True,
         text=True,
-    ).stdout.rstrip("\n")
+    ).stdout.rstrip("\n").replace("\n", " ").split("\n")
 
 
 if __name__ == "__main__":
