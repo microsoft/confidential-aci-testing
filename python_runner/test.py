@@ -19,8 +19,8 @@ class ExampleTest(unittest.TestCase):
             name=f"my-deployment-{id}",
             tag=id,
             follow=True
-        ) as deployment_id:
-            print(f"Executing test body, container group IP: {aci_get_ips(ids=deployment_id)}")
+        ) as deployment_ids:
+            print(f"Executing test body, container group IP: {aci_get_ips(ids=deployment_ids[0])}")
 
         # Cleanup happens after block has finished
 
