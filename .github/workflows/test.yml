@@ -205,6 +205,7 @@ jobs:
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
         DEP_NAME: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
+        TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: python -m c_aci_testing.aci_deploy individual_scripts_test -n $DEP_NAME
 
     - name: Monitor Container Groups
