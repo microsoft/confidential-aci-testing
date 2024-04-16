@@ -49,7 +49,7 @@ def target_run_ctx(
         tag=tag,
     )
     print("Deploying Container to Azure")
-    id = aci_deploy(
+    ids = aci_deploy(
         target=target,
         subscription=subscription,
         resource_group=resource_group,
@@ -59,14 +59,14 @@ def target_run_ctx(
         tag=tag,
         parameters=parameters,
     )
-    print("Deployment complete")
+    print(f"Deployment complete: {ids}")
     try:
-        yield id
+        yield ids
         aci_monitor(
             subscription=subscription,
             resource_group=resource_group,
             name=None,
-            ids=id,
+            ids=ids,
             follow=follow,
         )
     finally:
@@ -76,7 +76,7 @@ def target_run_ctx(
                 subscription=subscription,
                 resource_group=resource_group,
                 name=None,
-                ids=id,
+                ids=ids,
             )
 
 

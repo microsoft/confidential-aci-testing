@@ -47,7 +47,7 @@ def aci_deploy(
         "--parameters",
         param_file_path,
         "--query",
-        "properties.outputs.id.value",
+        "properties.outputs.ids.value",
         "-o",
         "tsv",
     ]
@@ -70,7 +70,7 @@ def aci_deploy(
             "--resource-group",
             resource_group,
             "--query",
-            "properties.outputs.id.value",
+            "properties.outputs.ids.value",
             "-o",
             "tsv",
         ],

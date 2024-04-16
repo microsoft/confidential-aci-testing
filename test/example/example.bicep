@@ -60,4 +60,4 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
   }
 }
 
-output id string = containerGroup.id
+output ids array = [containerGroup.id]
