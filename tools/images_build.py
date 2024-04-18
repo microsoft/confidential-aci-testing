@@ -19,7 +19,7 @@ def images_build(target, registry, repository, tag="latest"):
     subprocess.run(["docker-compose", "build"],
         env={
             **os.environ,
-            "TARGET": target,
+            "TARGET": os.path.realpath(target),
             "REGISTRY": registry,
             "REPOSITORY": repository,
             "TAG": tag,

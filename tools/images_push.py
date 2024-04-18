@@ -21,7 +21,7 @@ def images_push(target, registry, repository, tag):
         ["docker-compose", "push"],
         env={
             **os.environ,
-            "TARGET": target,
+            "TARGET": os.path.realpath(target),
             "REGISTRY": registry,
             "REPOSITORY": repository,
             "TAG": tag,
