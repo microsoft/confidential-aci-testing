@@ -9,6 +9,7 @@ import subprocess
 
 from .target_find_files import find_bicep_file
 
+
 def images_push(target, registry, repository, tag):
 
     if repository is None:
@@ -16,9 +17,11 @@ def images_push(target, registry, repository, tag):
 
     subprocess.run(["az", "acr", "login", "--name", registry])
 
-    subprocess.run(["docker-compose", "push"],
+    subprocess.run(
+        ["docker-compose", "push"],
         env={
             **os.environ,
+            "TARGET": target,
             "REGISTRY": registry,
             "REPOSITORY": repository,
             "TAG": tag,
@@ -31,16 +34,24 @@ def images_push(target, registry, repository, tag):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Push docker images from target")
 
-    parser.add_argument("target",
-        help="Target directory", default=os.environ.get("TARGET"),
-        nargs="?", # aka Optional
-        type=lambda path: os.path.abspath(os.path.expanduser(path)))
-    parser.add_argument("--registry",
-        help="Container Registry", default=os.environ.get("REGISTRY"))
-    parser.add_argument("--repository",
-        help="Container Repository", default=os.environ.get("REPOSITORY"))
-    parser.add_argument("--tag",
-        help="Image Tag", default=os.environ.get("TAG") or "latest")
+    parser.add_argument(
+        "target",
+        help="Target directory",
+        default=os.environ.get("TARGET"),
+        nargs="?",  # aka Optional
+        type=lambda path: os.path.abspath(os.path.expanduser(path)),
+    )
+    parser.add_argument(
+        "--registry", help="Container Registry", default=os.environ.get("REGISTRY")
+    )
+    parser.add_argument(
+        "--repository",
+        help="Container Repository",
+        default=os.environ.get("REPOSITORY"),
+    )
+    parser.add_argument(
+        "--tag", help="Image Tag", default=os.environ.get("TAG") or "latest"
+    )
 
     args = parser.parse_args()
 
