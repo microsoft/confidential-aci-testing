@@ -32,20 +32,21 @@ def target_run_ctx(
     repository=None,
     prefer_pull=False,
 ):
-    try:
-        assert prefer_pull
-        images_pull(
+    services_to_build = None
+    if prefer_pull:
+        services_to_build = images_pull(
             target=target,
             registry=registry,
             repository=repository,
             tag=tag,
         )
-    except:
+    if not prefer_pull or services_to_build:
         images_build(
             target=target,
             registry=registry,
             repository=repository,
             tag=tag,
+            services_to_build=services_to_build,
         )
         images_push(
             target=target,

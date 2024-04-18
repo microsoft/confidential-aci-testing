@@ -18,7 +18,7 @@ def images_pull(target, registry, repository, tag="latest"):
 
     subprocess.run(["az", "acr", "login", "--name", registry])
 
-    subprocess.run(["docker-compose", "pull"],
+    res = subprocess.run(["docker-compose", "pull"],
         env={
             **os.environ,
             "TARGET": os.path.realpath(target),
@@ -27,8 +27,13 @@ def images_pull(target, registry, repository, tag="latest"):
             "TAG": tag,
         },
         cwd=target,
-        check=True,
+        capture_output=True,
+        text=True,
     )
+    for line in res.stderr.split(os.linesep):
+        if line.strip().startswith("docker compose build"):
+            return line.split()[3:]
+    return []
 
 
 if __name__ == "__main__":
