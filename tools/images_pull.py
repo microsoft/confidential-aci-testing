@@ -16,6 +16,8 @@ def images_pull(target, registry, repository, tag="latest"):
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
+    subprocess.run(["az", "acr", "login", "--name", registry])
+
     subprocess.run(["docker-compose", "pull"],
         env={
             **os.environ,
