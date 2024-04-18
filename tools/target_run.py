@@ -6,6 +6,8 @@
 import argparse
 from contextlib import contextmanager
 import os
+
+from .images_pull import images_pull
 from .images_build import images_build
 from .images_push import images_push
 from .policies_gen import policies_gen
@@ -28,20 +30,29 @@ def target_run_ctx(
     follow=True,
     cleanup=True,
     repository=None,
+    prefer_pull=False,
 ):
-
-    images_build(
-        target=target,
-        registry=registry,
-        repository=repository,
-        tag=tag,
-    )
-    images_push(
-        target=target,
-        registry=registry,
-        repository=repository,
-        tag=tag,
-    )
+    try:
+        assert prefer_pull
+        images_pull(
+            target=target,
+            registry=registry,
+            repository=repository,
+            tag=tag,
+        )
+    except:
+        images_build(
+            target=target,
+            registry=registry,
+            repository=repository,
+            tag=tag,
+        )
+        images_push(
+            target=target,
+            registry=registry,
+            repository=repository,
+            tag=tag,
+        )
     policies_gen(
         target=target,
         registry=registry,
@@ -141,6 +152,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "--no-follow", help="Path to parameters file", action="store_true"
     )
+    parser.add_argument("--prefer-pull",
+        help="Attempt to pull image and only build if that fails", action="store_true"
+    )
 
     args = parser.parse_args()
 
@@ -157,4 +171,5 @@ if __name__ == "__main__":
         parameters=args.parameters,
         follow=not args.no_follow,
         cleanup=not args.no_cleanup,
+        prefer_pull=args.prefer_pull,
     )
