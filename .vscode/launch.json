@@ -45,6 +45,17 @@
             ]
         },
         {
+            "name": "c_aci_testing.images_pull",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "c_aci_testing.images_pull",
+            "justMyCode": false,
+            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
+            "args": [
+                "${input:cacitestingTargetPath}"
+            ]
+        },
+        {
             "name": "c_aci_testing.images_build",
             "type": "debugpy",
             "request": "launch",
