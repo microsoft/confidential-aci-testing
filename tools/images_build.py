@@ -9,14 +9,19 @@ import subprocess
 
 from .target_find_files import find_bicep_file
 
-def images_build(target, registry, repository, tag="latest"):
+def images_build(target, registry, repository, tag="latest", services_to_build=None):
 
     assert target is not None, "Target is required"
     assert registry is not None, "Registry is required"
     if repository is None:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    subprocess.run(["docker-compose", "build"],
+    build_command = ["docker-compose", "build"]
+    if services_to_build:
+        build_command.extend(services_to_build)
+        build_command.append("--with-dependencies")
+
+    subprocess.run(build_command,
         env={
             **os.environ,
             "TARGET": os.path.realpath(target),
