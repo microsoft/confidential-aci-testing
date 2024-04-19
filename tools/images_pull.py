@@ -5,50 +5,73 @@
 
 import argparse
 import os
-import subprocess
 
+from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
+
 
 def images_pull(target, registry, repository, tag="latest"):
 
-    assert target is not None, "Target is required"
-    assert registry is not None, "Registry is required"
-    if repository is None:
+    assert target, "Target is required"
+    assert registry, "Registry is required"
+    if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    subprocess.run(["az", "acr", "login", "--name", registry])
+    with LoggingWindow(
+        header=f"\033[92mPulling images for {target}\033[0m",
+        prefix="\033[92m| \033[0m",
+        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+    ) as run_subprocess:
 
-    res = subprocess.run(["docker-compose", "pull"],
-        env={
-            **os.environ,
-            "TARGET": os.path.realpath(target),
-            "REGISTRY": registry,
-            "REPOSITORY": repository,
-            "TAG": tag,
-        },
-        cwd=target,
-        capture_output=True,
-        text=True,
-    )
-    for line in res.stderr.split(os.linesep):
-        if line.strip().startswith("docker compose build"):
-            return line.split()[3:]
-    return []
+        print(f"Logging into {registry}")
+        run_subprocess(["az", "acr", "login", "--name", registry])
+
+        print(f"Pulling images from {registry}")
+        stdout, stderr = run_subprocess(
+            ["docker-compose", "pull"],
+            env={
+                **os.environ,
+                "TARGET": os.path.realpath(target),
+                "REGISTRY": registry,
+                "REPOSITORY": repository,
+                "TAG": tag,
+            },
+            cwd=target,
+        )
+
+        images_not_pulled = []
+        for line in stderr:
+            if line.strip().startswith("docker compose build"):
+                images_not_pulled.extend(line.split()[3:])
+
+        if images_not_pulled:
+            print(f'Pulled all images except: {" ".join(images_not_pulled)}')
+        else:
+            print("Pulled all images successfully")
+        return images_not_pulled
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pull docker images from target")
 
-    parser.add_argument("target",
-        help="Target directory", default=os.environ.get("TARGET"),
-        nargs="?", # aka Optional
-        type=lambda path: os.path.abspath(os.path.expanduser(path)))
-    parser.add_argument("--registry",
-        help="Container Registry", default=os.environ.get("REGISTRY"))
-    parser.add_argument("--repository",
-        help="Container Repository", default=os.environ.get("REPOSITORY"))
-    parser.add_argument("--tag",
-        help="Image Tag", default=os.environ.get("TAG") or "latest")
+    parser.add_argument(
+        "target",
+        help="Target directory",
+        default=os.environ.get("TARGET"),
+        nargs="?",  # aka Optional
+        type=lambda path: os.path.abspath(os.path.expanduser(path)),
+    )
+    parser.add_argument(
+        "--registry", help="Container Registry", default=os.environ.get("REGISTRY")
+    )
+    parser.add_argument(
+        "--repository",
+        help="Container Repository",
+        default=os.environ.get("REPOSITORY"),
+    )
+    parser.add_argument(
+        "--tag", help="Image Tag", default=os.environ.get("TAG") or "latest"
+    )
 
     args = parser.parse_args()
 
