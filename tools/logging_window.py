@@ -17,6 +17,12 @@ class LoggingWindow:
         if header:
             print("\033[1m" + header + "\033[0m")
 
+        try:
+            os.get_terminal_size()
+            self.headless = False
+        except:
+            self.headless = True
+
     def __enter__(self):
         sys.stdout = self
         def run_subprocess(command, cwd=os.curdir, env=None, check=True):
@@ -64,6 +70,10 @@ class LoggingWindow:
         return self.original.fileno()
 
     def write(self, message):
+        if self.headless:
+            self.original.write(self.prefix + message)
+            return
+
         if message == os.linesep: # Usually come from python prints, we can ignore
             return
         lines = message.rstrip(os.linesep).split(os.linesep)
