@@ -82,7 +82,10 @@ class LoggingWindow:
             self.original.write('\x1b[2K')
             line_to_write = self.prefix + line
             rendered_length = len(re.sub(r'\x1B[@-_][0-?]*[ -/]*[@-~]', '', line_to_write))
-            line_height = (rendered_length // os.get_terminal_size().columns) + 1
+            try:
+                line_height = (rendered_length // os.get_terminal_size().columns) + 1
+            except:
+                line_height = 1
 
             for _ in range(min((previous_height - self.height), line_height) - 1):
                 self.original.write("\n")
