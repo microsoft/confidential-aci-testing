@@ -27,6 +27,7 @@ def aci_remove(subscription, resource_group, name, ids):
                 "--resource-type", "Microsoft.ContainerInstance/containerGroups",
                 *(["--name", name]),
             ], check=True)
+            print(f"Removed container: {name}")
         else:
             for id in ids:
                 run_subprocess([
@@ -36,6 +37,8 @@ def aci_remove(subscription, resource_group, name, ids):
                     "--resource-type", "Microsoft.ContainerInstance/containerGroups",
                     *(["--ids", id]),
                 ], check=True)
+                print(f"Removed container: {id}")
+
 
 
 if __name__ == "__main__":
