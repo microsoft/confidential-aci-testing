@@ -70,13 +70,15 @@ class LoggingWindow:
         return self.original.fileno()
 
     def write(self, message):
-        if self.headless:
-            self.original.write(self.prefix + message)
-            return
-
         if message == os.linesep: # Usually come from python prints, we can ignore
             return
         lines = message.rstrip(os.linesep).split(os.linesep)
+
+        if self.headless:
+            for line in lines:
+                self.original.write(self.prefix + line)
+            return
+
         for _ in range(self.height):
             self.original.write("\x1b[1A")  # Move cursor up by one line
         if len(self.window) == self.max_lines and len(lines) > 0 and not self.ellipsis_added:
