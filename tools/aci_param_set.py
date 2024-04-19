@@ -10,6 +10,7 @@ from .target_find_files import find_bicep_param_file
 
 def aci_param_set(file_path, key, value):
 
+    print(f"Setting parameter {key} to {value}")
     with open(file_path, "r") as file:
         content = file.read().split(os.linesep)
 

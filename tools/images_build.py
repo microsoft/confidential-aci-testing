@@ -5,33 +5,42 @@
 
 import argparse
 import os
-import subprocess
 
+from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
 
 def images_build(target, registry, repository, tag="latest", services_to_build=None):
 
-    assert target is not None, "Target is required"
-    assert registry is not None, "Registry is required"
-    if repository is None:
+    assert target, "Target is required"
+    assert registry, "Registry is required"
+    if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    build_command = ["docker-compose", "build"]
-    if services_to_build:
-        build_command.extend(services_to_build)
-        build_command.append("--with-dependencies")
+    with LoggingWindow(
+        header=f"\033[91mBuilding images for {target}\033[0m",
+        prefix="\033[91m| \033[0m",
+        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+    ) as run_subprocess:
 
-    subprocess.run(build_command,
-        env={
-            **os.environ,
-            "TARGET": os.path.realpath(target),
-            "REGISTRY": registry,
-            "REPOSITORY": repository,
-            "TAG": tag,
-        },
-        cwd=target,
-        check=True,
-    )
+        build_command = ["docker-compose", "build"]
+        if services_to_build:
+            build_command.extend(services_to_build)
+            build_command.append("--with-dependencies")
+
+        print(f"Buiding images for {registry}")
+        run_subprocess(build_command,
+            env={
+                **os.environ,
+                "TARGET": os.path.realpath(target),
+                "REGISTRY": registry,
+                "REPOSITORY": repository,
+                "TAG": tag,
+            },
+            cwd=target,
+            check=True,
+        )
+
+        print("Built all images successfully")
 
 
 if __name__ == "__main__":

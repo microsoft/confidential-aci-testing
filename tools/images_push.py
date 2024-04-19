@@ -5,30 +5,36 @@
 
 import argparse
 import os
-import subprocess
 
+from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
 
 
 def images_push(target, registry, repository, tag):
 
-    if repository is None:
+    if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    subprocess.run(["az", "acr", "login", "--name", registry])
+    with LoggingWindow(
+        header=f"\033[94mPushing images for {target}\033[0m",
+        prefix="\033[94m| \033[0m",
+        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+    ) as run_subprocess:
 
-    subprocess.run(
-        ["docker-compose", "push"],
-        env={
-            **os.environ,
-            "TARGET": os.path.realpath(target),
-            "REGISTRY": registry,
-            "REPOSITORY": repository,
-            "TAG": tag,
-        },
-        cwd=target,
-        check=True,
-    )
+        run_subprocess(["az", "acr", "login", "--name", registry])
+
+        run_subprocess(
+            ["docker-compose", "push"],
+            env={
+                **os.environ,
+                "TARGET": os.path.realpath(target),
+                "REGISTRY": registry,
+                "REPOSITORY": repository,
+                "TAG": tag,
+            },
+            cwd=target,
+            check=True,
+        )
 
 
 if __name__ == "__main__":

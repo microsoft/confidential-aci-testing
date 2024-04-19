@@ -60,7 +60,6 @@ def target_run_ctx(
         repository=repository,
         tag=tag,
     )
-    print("Deploying Container to Azure")
     ids = aci_deploy(
         target=target,
         subscription=subscription,
@@ -71,7 +70,6 @@ def target_run_ctx(
         tag=tag,
         parameters=parameters,
     )
-    print(f"Deployment complete: {ids}")
     try:
         yield ids
         aci_monitor(
@@ -83,7 +81,6 @@ def target_run_ctx(
         )
     finally:
         if cleanup:
-            print("Removing container")
             aci_remove(
                 subscription=subscription,
                 resource_group=resource_group,
