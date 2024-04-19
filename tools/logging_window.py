@@ -76,7 +76,7 @@ class LoggingWindow:
 
         if self.headless:
             for line in lines:
-                self.original.write(self.prefix + line)
+                self.original.write(self.prefix + line + os.linesep)
             return
 
         for _ in range(self.height):
