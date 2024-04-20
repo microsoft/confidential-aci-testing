@@ -62,8 +62,9 @@ class LoggingWindow:
                 raise subprocess.CalledProcessError(proc.returncode, command)
 
             for idx, stream in enumerate(streams.keys()):
-                self.write(remainder[idx])
-                stream_outputs[stream].append(remainder[idx])
+                if remainder[idx]:
+                    self.write(remainder[idx])
+                    stream_outputs[stream].append(remainder[idx])
 
             return stream_outputs.values()
 
