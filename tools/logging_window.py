@@ -45,7 +45,7 @@ class LoggingWindow:
             break_outer = False
             while True:
                 for stream in streams.keys():
-                    output = stream_proc[stream].readline()
+                    output = stream_proc[stream].read()
                     stream_last_out[stream] = output
                     if output:
                         self.write(output)
