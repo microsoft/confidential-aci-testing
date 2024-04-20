@@ -27,7 +27,7 @@ def aci_deploy(
     assert resource_group, "Resource Group is required"
 
     with LoggingWindow(
-        header=f"\033[36mDeploying Bicep Template {name}\033[0m",
+        header=f"\033[36mDeploying {name}\033[0m",
         prefix="\033[36m| \033[0m",
         max_lines=int(os.environ.get("LOG_LINES", 9999)),
     ) as run_subprocess:
