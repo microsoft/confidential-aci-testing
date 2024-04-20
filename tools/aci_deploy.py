@@ -29,7 +29,7 @@ def aci_deploy(
     with LoggingWindow(
         header=f"\033[36mDeploying {name}\033[0m",
         prefix="\033[36m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         print("Updating parameter file with deployment info")

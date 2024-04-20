@@ -18,7 +18,7 @@ def images_push(target, registry, repository, tag):
     with LoggingWindow(
         header=f"\033[94mPushing images for {target}\033[0m",
         prefix="\033[94m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         run_subprocess(["az", "acr", "login", "--name", registry])
