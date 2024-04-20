@@ -58,9 +58,6 @@ class LoggingWindow:
 
             remainder = proc.communicate()
 
-            if proc.returncode != 0 and check:
-                raise subprocess.CalledProcessError(proc.returncode, command)
-
             for idx, stream in enumerate(streams.keys()):
                 if remainder[idx]:
                     self.write(remainder[idx])
