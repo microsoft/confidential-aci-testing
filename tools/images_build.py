@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 
 from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
@@ -38,6 +39,7 @@ def images_build(target, registry, repository, tag="latest", services_to_build=N
             },
             cwd=target,
             check=True,
+            streams={"stdout": subprocess.PIPE}
         )
 
         print("Built all images successfully")
