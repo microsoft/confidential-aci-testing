@@ -67,10 +67,10 @@ def aci_deploy(
 
         print("Deploying to Azure")
         print(f"View here: https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/%2Fsubscriptions%2F{subscription}%2FresourceGroups%2F{resource_group}%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2F{name}")
-        run_subprocess(az_command, check=True)
+        subprocess.run(az_command, check=True)
 
         print("Deployment complete, collecting IP address defined in outputs")
-        stdout, stderr = run_subprocess(
+        res = subprocess.run(
             [
                 "az",
                 "deployment",
@@ -87,8 +87,9 @@ def aci_deploy(
                 "tsv",
             ],
             check=True,
+            stdout=subprocess.PIPE,
         )
-        ids = [id.rstrip(os.linesep) for id in stdout]
+        ids = [id.rstrip(os.linesep) for id in res.stdout]
         for id in ids:
             print(f'To access {id.split("/")[-1]}, visit:')
             print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/{id}")

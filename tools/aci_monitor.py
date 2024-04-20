@@ -21,13 +21,13 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
             max_lines=int(os.environ.get("LOG_LINES", 0)),
         ) as run_subprocess:
 
-            run_subprocess([
+            subprocess.run([
                 "az", "container", "logs",
                 *(["--follow"] if follow else []),
                 *(["--subscription", subscription] if subscription else []),
                 *(["--resource-group", resource_group] if resource_group else []),
                 *(["--name", name]),
-            ], check=not follow, streams={'stdout': subprocess.PIPE})
+            ], check=not follow)
 
     else:
         for id in ids:
@@ -36,13 +36,13 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
                 prefix="\033[33m| \033[0m",
                 max_lines=int(os.environ.get("LOG_LINES", 0)),
             ) as run_subprocess:
-                run_subprocess([
+                subprocess.run([
                     "az", "container", "logs",
                     *(["--follow"] if follow else []),
                     *(["--subscription", subscription] if subscription else []),
                     *(["--resource-group", resource_group] if resource_group else []),
                     *(["--ids", id]),
-                ], check=not follow, streams={'stdout': subprocess.PIPE})
+                ], check=not follow)
 
 
 if __name__ == "__main__":

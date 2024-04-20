@@ -42,7 +42,7 @@ def policies_gen(**kwargs):
         print("Generating intermediate ARM template as acipolicygen doesn't support bicep")
         with tempfile.TemporaryDirectory() as arm_template_dir:
             arm_template_path = os.path.join(arm_template_dir, "arm.json")
-            run_subprocess([
+            subprocess.run([
                 "az", "bicep", "build",
                 "-f", bicep_path,
                 "--outfile", arm_template_path
@@ -72,8 +72,8 @@ def policies_gen(**kwargs):
                 json.dump(arm_template, file, indent=2)
 
             print("Calling acipolicygen and saving policy to file")
-            run_subprocess(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-            run_subprocess(["az", "confcom", "acipolicygen",
+            subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+            subprocess.run(["az", "confcom", "acipolicygen",
                 "-a", arm_template_path,
                 "--outraw",
                 "--save-to-file", f"{target}/policy.rego"

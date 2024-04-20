@@ -25,47 +25,6 @@ class LoggingWindow:
 
     def __enter__(self):
         sys.stdout = self
-        def run_subprocess(command, cwd=os.curdir, env=None, check=False, streams={"stdout":subprocess.PIPE, "stderr":subprocess.PIPE}):
-            proc = subprocess.Popen(
-                command,
-                cwd=cwd,
-                env=env,
-                text=True,
-                **streams,
-            )
-
-            stream_outputs = {stream: [] for stream in streams.keys()}
-            stream_last_out = {stream: "" for stream in streams.keys()}
-            stream_proc = {}
-            if "stdout" in streams:
-                stream_proc["stdout"] = proc.stdout
-            if "stderr" in streams:
-                stream_proc["stderr"] = proc.stderr
-
-            break_outer = False
-            while True:
-                for stream in streams.keys():
-                    output = stream_proc[stream].read()
-                    stream_last_out[stream] = output
-                    if output:
-                        self.write(output)
-                        stream_outputs[stream].extend([l for l in output.split(os.linesep) if l])
-                    if all(last == "" for last in stream_last_out.values()) and proc.poll() is not None:
-                        break_outer = True
-                        break
-                if break_outer:
-                    break
-
-            remainder = proc.communicate()
-
-            for idx, stream in enumerate(streams.keys()):
-                if remainder[idx]:
-                    self.write(remainder[idx])
-                    stream_outputs[stream].extend([l for l in remainder[idx].split(os.linesep) if l])
-
-            return stream_outputs.values()
-
-        return run_subprocess
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self.original
@@ -127,7 +86,3 @@ class LoggingWindow:
         self.original.flush()
 
 
-if __name__ == "__main__":
-    with LoggingWindow("ls command") as run_subprocess:
-        stdout, stderr = run_subprocess(["ls", "-l"])
-        print(stdout)

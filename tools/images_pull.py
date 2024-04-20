@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 
 from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
@@ -24,10 +25,10 @@ def images_pull(target, registry, repository, tag="latest"):
     ) as run_subprocess:
 
         print(f"Logging into {registry}")
-        run_subprocess(["az", "acr", "login", "--name", registry])
+        subprocess.run(["az", "acr", "login", "--name", registry])
 
         print(f"Pulling images from {registry}")
-        stdout, stderr = run_subprocess(
+        res = subprocess.run(
             ["docker-compose", "pull"],
             env={
                 **os.environ,
@@ -36,11 +37,12 @@ def images_pull(target, registry, repository, tag="latest"):
                 "REPOSITORY": repository,
                 "TAG": tag,
             },
+            stderr=subprocess.PIPE,
             cwd=target,
         )
 
         images_not_pulled = []
-        for line in stderr:
+        for line in res.stderr.decode().split(os.linesep):
             if line.strip().startswith("docker compose build"):
                 images_not_pulled.extend(line.split()[3:])
 

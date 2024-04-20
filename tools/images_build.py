@@ -28,7 +28,7 @@ def images_build(target, registry, repository, tag="latest", services_to_build=N
             build_command.append("--with-dependencies")
 
         print(f"Buiding images for {registry}")
-        run_subprocess(build_command,
+        subprocess.run(build_command,
             env={
                 **os.environ,
                 "TARGET": os.path.realpath(target),

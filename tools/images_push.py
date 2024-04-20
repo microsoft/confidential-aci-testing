@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 
 from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
@@ -21,9 +22,9 @@ def images_push(target, registry, repository, tag):
         max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
-        run_subprocess(["az", "acr", "login", "--name", registry])
+        subprocess.run(["az", "acr", "login", "--name", registry])
 
-        run_subprocess(
+        subprocess.run(
             ["docker-compose", "push"],
             env={
                 **os.environ,

@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 
 from .logging_window import LoggingWindow
 
@@ -20,7 +21,7 @@ def aci_remove(subscription, resource_group, name, ids):
     ) as run_subprocess:
 
         if name :
-            run_subprocess([
+            subprocess.run([
                 "az", "resource", "delete", "--no-wait",
                 *(["--subscription", subscription] if subscription else []),
                 *(["--resource-group", resource_group] if resource_group else []),
@@ -30,7 +31,7 @@ def aci_remove(subscription, resource_group, name, ids):
             print(f"Removed container: {name}")
         else:
             for id in ids:
-                run_subprocess([
+                subprocess.run([
                     "az", "resource", "delete", "--no-wait",
                     *(["--subscription", subscription] if subscription else []),
                     *(["--resource-group", resource_group] if resource_group else []),
