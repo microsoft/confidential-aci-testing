@@ -77,7 +77,7 @@ jobs:
         LOCATION: northeurope
         TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: |
-        python -m c_aci_testing.target_run test/example-non-terminating -n $DEP_NAME --no-follow
+        python -m c_aci_testing.target_run test/example-non-terminating -n $TAG --no-follow
 
   prefer-pull:
     runs-on: ubuntu-latest
