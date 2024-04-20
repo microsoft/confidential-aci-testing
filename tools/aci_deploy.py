@@ -54,7 +54,7 @@ def aci_deploy(
         "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
         "subscriptions", subscription,
         "resourceGroups", resource_group,
-        "providers/Microsoft.Resources/deployments", name,
+        "providers", "Microsoft.Resources", "deployments", name,
     ]))
     print("")
 
