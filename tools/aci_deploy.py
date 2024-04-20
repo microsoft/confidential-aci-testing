@@ -27,7 +27,7 @@ def aci_deploy(
     assert resource_group, "Resource Group is required"
 
     with LoggingWindow(
-        header=f"\033[36mDeploying Bicep Template for {target}\033[0m",
+        header=f"\033[36mDeploying Bicep Template {name}\033[0m",
         prefix="\033[36m| \033[0m",
         max_lines=int(os.environ.get("LOG_LINES", 9999)),
     ) as run_subprocess:
@@ -87,8 +87,11 @@ def aci_deploy(
             ],
             check=True,
         )
-        return [id.rstrip(os.linesep) for id in stdout]
-
+        ids = [id.rstrip(os.linesep) for id in stdout]
+        for id in ids:
+            print(f'To access {id.split("/")[-1]}, visit:')
+            print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/{id}")
+        return ids
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy ACI for target")
