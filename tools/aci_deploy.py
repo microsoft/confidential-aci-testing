@@ -7,7 +7,6 @@ import argparse
 import os
 import subprocess
 
-from .logging_window import LoggingWindow
 from .aci_param_set import aci_param_set
 from .target_find_files import find_bicep_file, find_bicep_param_file
 
@@ -26,74 +25,58 @@ def aci_deploy(
     assert target, "Target is required"
     assert resource_group, "Resource Group is required"
 
-    with LoggingWindow(
-        header=f"\033[36mDeploying {name}\033[0m",
-        prefix="\033[36m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 0)),
-    ) as run_subprocess:
+    print("Updating parameter file with deployment info")
+    param_file_path = os.path.join(target, find_bicep_param_file(target))
+    if location:
+        aci_param_set(param_file_path, "location", location)
+    if managed_identity:
+        aci_param_set(param_file_path, "managedIDName", managed_identity)
+    if tag:
+        aci_param_set(param_file_path, "tag", tag)
 
-        print("Updating parameter file with deployment info")
-        param_file_path = os.path.join(target, find_bicep_param_file(target))
-        if location:
-            aci_param_set(param_file_path, "location", location)
-        if managed_identity:
-            aci_param_set(param_file_path, "managedIDName", managed_identity)
-        if tag:
-            aci_param_set(param_file_path, "tag", tag)
+    az_command = [
+        "az", "deployment", "group", "create",
+        "-n", name,
+        *(["--subscription", subscription] if subscription else []),
+        "--resource-group", resource_group,
+        "--template-file", os.path.join(target, find_bicep_file(target)),
+        "--parameters", param_file_path,
+        "--query", "properties.outputs.ids.value",
+        "-o", "tsv",
+    ]
+    for parameter in parameters or []:
+        key = parameter.split("=")[0]
+        value = "=".join(parameter.split("=")[1:]).strip('"')
+        az_command.extend(["--parameters", f"{key}={value}"])
 
-        az_command = [
-            "az",
-            "deployment",
-            "group",
-            "create",
-            "-n",
-            name,
+    print(f"{os.linesep}Deploying to Azure, view deployment here:")
+    print("%2F".join([
+        "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
+        "subscriptions", subscription,
+        "resourceGroups", resource_group,
+        "providers/Microsoft.Resources/deployments", name,
+    ]))
+    print("")
+
+    subprocess.run(az_command, check=True)
+
+    res = subprocess.run(
+        [
+            "az", "deployment", "group", "show",
+            "--name", name,
             *(["--subscription", subscription] if subscription else []),
-            "--resource-group",
-            resource_group,
-            "--template-file",
-            os.path.join(target, find_bicep_file(target)),
-            "--parameters",
-            param_file_path,
-            "--query",
-            "properties.outputs.ids.value",
-            "-o",
-            "tsv",
-        ]
-        for parameter in parameters or []:
-            key = parameter.split("=")[0]
-            value = "=".join(parameter.split("=")[1:]).strip('"')
-            az_command.extend(["--parameters", f"{key}={value}"])
-
-        print("Deploying to Azure")
-        print(f"View here: https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/%2Fsubscriptions%2F{subscription}%2FresourceGroups%2F{resource_group}%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2F{name}")
-        subprocess.run(az_command, check=True)
-
-        print("Deployment complete, collecting IP address defined in outputs")
-        res = subprocess.run(
-            [
-                "az",
-                "deployment",
-                "group",
-                "show",
-                "--name",
-                name,
-                *(["--subscription", subscription] if subscription else []),
-                "--resource-group",
-                resource_group,
-                "--query",
-                "properties.outputs.ids.value",
-                "-o",
-                "tsv",
-            ],
-            check=True,
-            stdout=subprocess.PIPE,
-        )
-        ids = [id.rstrip(os.linesep) for id in res.stdout]
-        for id in ids:
-            print(f'To access {id.split("/")[-1]}, visit:')
-            print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/{id}")
-        return ids
+            "--resource-group", resource_group,
+            "--query", "properties.outputs.ids.value",
+            "-o", "tsv",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    ids = [id for id in res.stdout.decode().split(os.linesep) if id]
+    for id in ids:
+        print(f'Deployed {os.linesep}{id.split("/")[-1]}, view here:')
+        print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource/{id}")
+    return ids
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Deploy ACI for target")

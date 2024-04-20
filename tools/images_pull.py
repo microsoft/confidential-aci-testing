@@ -7,7 +7,6 @@ import argparse
 import os
 import subprocess
 
-from .logging_window import LoggingWindow
 from .target_find_files import find_bicep_file
 
 
@@ -18,16 +17,14 @@ def images_pull(target, registry, repository, tag="latest"):
     if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    with LoggingWindow(
-        header=f"\033[92mPulling images for {target}\033[0m",
-        prefix="\033[92m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 0)),
-    ) as run_subprocess:
+    print(f"Logging into {registry}")
+    subprocess.run(["az", "acr", "login", "--name", registry], check=True)
 
-        print(f"Logging into {registry}")
-        subprocess.run(["az", "acr", "login", "--name", registry])
+    print(f"Pulling images from {registry}")
 
-        print(f"Pulling images from {registry}")
+    # Run the pull twice, once to get the output for the user, and once to
+    # get the stderr to check missing images
+    for stderr_val in (None, subprocess.PIPE):
         res = subprocess.run(
             ["docker-compose", "pull"],
             env={
@@ -37,20 +34,20 @@ def images_pull(target, registry, repository, tag="latest"):
                 "REPOSITORY": repository,
                 "TAG": tag,
             },
-            stderr=subprocess.PIPE,
+            stderr=stderr_val,
             cwd=target,
         )
 
-        images_not_pulled = []
-        for line in res.stderr.decode().split(os.linesep):
-            if line.strip().startswith("docker compose build"):
-                images_not_pulled.extend(line.split()[3:])
+    images_not_pulled = []
+    for line in res.stderr.decode().split(os.linesep):
+        if line.strip().startswith("docker compose build"):
+            images_not_pulled.extend(line.split()[3:])
 
-        if images_not_pulled:
-            print(f'Pulled all images except: {" ".join(images_not_pulled)}')
-        else:
-            print("Pulled all images successfully")
-        return images_not_pulled
+    if images_not_pulled:
+        print(f'Pulled all images except: {" ".join(images_not_pulled)}')
+    else:
+        print("Pulled all images successfully")
+    return images_not_pulled
 
 
 if __name__ == "__main__":
