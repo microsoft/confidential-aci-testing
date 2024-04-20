@@ -49,7 +49,7 @@ class LoggingWindow:
                     stream_last_out[stream] = output
                     if output:
                         self.write(output)
-                        stream_outputs[stream].extend(output.split(os.linesep))
+                        stream_outputs[stream].extend([l for l in output.split(os.linesep) if l])
                     if all(last == "" for last in stream_last_out.values()) and proc.poll() is not None:
                         break_outer = True
                         break
@@ -61,7 +61,7 @@ class LoggingWindow:
             for idx, stream in enumerate(streams.keys()):
                 if remainder[idx]:
                     self.write(remainder[idx])
-                    stream_outputs[stream].extend(remainder[idx].split(os.linesep))
+                    stream_outputs[stream].extend([l for l in remainder[idx].split(os.linesep) if l])
 
             return stream_outputs.values()
 
