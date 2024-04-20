@@ -24,7 +24,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -36,7 +36,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -58,7 +58,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -70,7 +70,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -90,7 +90,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -102,7 +102,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -121,7 +121,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -133,7 +133,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -156,7 +156,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -175,7 +175,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -194,7 +194,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -206,7 +206,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -227,7 +227,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -239,7 +239,7 @@ jobs:
 
     - name: Run Test Target
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
         MANAGED_IDENTITY: c-aci-testing
@@ -263,7 +263,7 @@ jobs:
       with:
         client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
         tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
-        subscription-id: ${{ secrets.SUBSCRIPTION_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
 
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
@@ -298,7 +298,7 @@ jobs:
 
     - name: Deploy Container Groups
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         MANAGED_IDENTITY: c-aci-testing
         LOCATION: northeurope
@@ -308,14 +308,14 @@ jobs:
 
     - name: Monitor Container Groups
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         DEP_NAME: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: python -m c_aci_testing.aci_monitor -n $DEP_NAME
 
     - name: Cleanup Container Groups
       env:
-        SUBSCRIPTION: ${{ secrets.SUBSCRIPTION_ID }}
+        SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         DEP_NAME: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: python -m c_aci_testing.aci_remove -n $DEP_NAME

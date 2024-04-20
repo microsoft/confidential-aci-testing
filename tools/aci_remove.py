@@ -5,39 +5,33 @@
 
 import argparse
 import os
+import subprocess
 
-from .logging_window import LoggingWindow
 
 def aci_remove(subscription, resource_group, name, ids):
 
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
-    with LoggingWindow(
-        header=f"\033[31mRemoving Deployment {name or ids[0]}\033[0m",
-        prefix="\033[31m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 0)),
-    ) as run_subprocess:
-
-        if name :
-            run_subprocess([
+    if name :
+        subprocess.run([
+            "az", "resource", "delete", "--no-wait",
+            *(["--subscription", subscription] if subscription else []),
+            *(["--resource-group", resource_group] if resource_group else []),
+            "--resource-type", "Microsoft.ContainerInstance/containerGroups",
+            *(["--name", name]),
+        ], check=True)
+        print(f"Removed container: {name}")
+    else:
+        for id in ids:
+            subprocess.run([
                 "az", "resource", "delete", "--no-wait",
                 *(["--subscription", subscription] if subscription else []),
                 *(["--resource-group", resource_group] if resource_group else []),
                 "--resource-type", "Microsoft.ContainerInstance/containerGroups",
-                *(["--name", name]),
+                *(["--ids", id]),
             ], check=True)
-            print(f"Removed container: {name}")
-        else:
-            for id in ids:
-                run_subprocess([
-                    "az", "resource", "delete", "--no-wait",
-                    *(["--subscription", subscription] if subscription else []),
-                    *(["--resource-group", resource_group] if resource_group else []),
-                    "--resource-type", "Microsoft.ContainerInstance/containerGroups",
-                    *(["--ids", id]),
-                ], check=True)
-                print(f"Removed container: {id}")
+            print(f'Removed container: {id.split("/")[-1]}')
 
 
 
