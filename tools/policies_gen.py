@@ -30,7 +30,7 @@ def policies_gen(**kwargs):
     with LoggingWindow(
         header=f"\033[35mGenerating security policies for {target}\033[0m",
         prefix="\033[35m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         bicep_path = os.path.join(target, find_bicep_file(target))

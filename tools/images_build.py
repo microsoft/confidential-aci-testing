@@ -19,7 +19,7 @@ def images_build(target, registry, repository, tag="latest", services_to_build=N
     with LoggingWindow(
         header=f"\033[91mBuilding images for {target}\033[0m",
         prefix="\033[91m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         build_command = ["docker-compose", "build"]

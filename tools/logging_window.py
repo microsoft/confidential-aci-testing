@@ -7,7 +7,7 @@ import sys
 
 class LoggingWindow:
 
-    def __init__(self, header="", prefix="| ", max_lines=9999):
+    def __init__(self, header="", prefix="| ", max_lines=0):
         self.original = sys.stdout
         self.max_lines = max_lines
         self.ellipsis_added = False
@@ -19,7 +19,7 @@ class LoggingWindow:
 
         try:
             os.get_terminal_size()
-            self.headless = False
+            self.headless = max_lines == 0
         except:
             self.headless = True
 

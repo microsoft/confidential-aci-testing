@@ -20,7 +20,7 @@ def images_pull(target, registry, repository, tag="latest"):
     with LoggingWindow(
         header=f"\033[92mPulling images for {target}\033[0m",
         prefix="\033[92m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         print(f"Logging into {registry}")

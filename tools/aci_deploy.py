@@ -29,7 +29,7 @@ def aci_deploy(
     with LoggingWindow(
         header=f"\033[36mDeploying {name}\033[0m",
         prefix="\033[36m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         print("Updating parameter file with deployment info")
@@ -66,6 +66,7 @@ def aci_deploy(
             az_command.extend(["--parameters", f"{key}={value}"])
 
         print("Deploying to Azure")
+        print(f"View here: https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/%2Fsubscriptions%2F{subscription}%2FresourceGroups%2F{resource_group}%2Fproviders%2FMicrosoft.Resources%2Fdeployments%2F{name}")
         run_subprocess(az_command, check=True)
 
         print("Deployment complete, collecting IP address defined in outputs")

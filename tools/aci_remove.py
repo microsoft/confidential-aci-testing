@@ -16,7 +16,7 @@ def aci_remove(subscription, resource_group, name, ids):
     with LoggingWindow(
         header=f"\033[31mRemoving Deployment {name or ids[0]}\033[0m",
         prefix="\033[31m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
+        max_lines=int(os.environ.get("LOG_LINES", 0)),
     ) as run_subprocess:
 
         if name :

@@ -14,13 +14,13 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
     assert (name or ids) and not (name and ids), \
         "Either name or ids must be set, but not both"
 
-    with LoggingWindow(
-        header=f"\033[33mMonitoring Container {name or ids[0]}\033[0m",
-        prefix="\033[33m| \033[0m",
-        max_lines=int(os.environ.get("LOG_LINES", 9999)),
-    ) as run_subprocess:
+    if name:
+        with LoggingWindow(
+            header=f"\033[33mMonitoring Container {name}\033[0m",
+            prefix="\033[33m| \033[0m",
+            max_lines=int(os.environ.get("LOG_LINES", 0)),
+        ) as run_subprocess:
 
-        if name:
             run_subprocess([
                 "az", "container", "logs",
                 *(["--follow"] if follow else []),
@@ -28,8 +28,14 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
                 *(["--resource-group", resource_group] if resource_group else []),
                 *(["--name", name]),
             ], check=not follow, streams={'stdout': subprocess.PIPE})
-        else:
-            for id in ids:
+
+    else:
+        for id in ids:
+            with LoggingWindow(
+                header=f"\033[33mMonitoring Container {id}\033[0m",
+                prefix="\033[33m| \033[0m",
+                max_lines=int(os.environ.get("LOG_LINES", 0)),
+            ) as run_subprocess:
                 run_subprocess([
                     "az", "container", "logs",
                     *(["--follow"] if follow else []),
