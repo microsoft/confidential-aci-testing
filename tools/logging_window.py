@@ -25,7 +25,7 @@ class LoggingWindow:
 
     def __enter__(self):
         sys.stdout = self
-        def run_subprocess(command, cwd=os.curdir, env=None, check=True, streams={"stdout":subprocess.PIPE, "stderr":subprocess.PIPE}):
+        def run_subprocess(command, cwd=os.curdir, env=None, check=False, streams={"stdout":subprocess.PIPE, "stderr":subprocess.PIPE}):
             proc = subprocess.Popen(
                 command,
                 cwd=cwd,
