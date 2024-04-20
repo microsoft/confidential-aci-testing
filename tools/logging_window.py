@@ -25,41 +25,47 @@ class LoggingWindow:
 
     def __enter__(self):
         sys.stdout = self
-        def run_subprocess(command, cwd=os.curdir, env=None, check=True):
+        def run_subprocess(command, cwd=os.curdir, env=None, check=True, streams={"stdout":subprocess.PIPE, "stderr":subprocess.PIPE}):
             proc = subprocess.Popen(
                 command,
                 cwd=cwd,
                 env=env,
                 text=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                **streams,
             )
 
-            stdout, stderr = ([], [])
-            last_output = defaultdict(str)
+            stream_outputs = {stream: [] for stream in streams.keys()}
+            stream_last_out = {stream: "" for stream in streams.keys()}
+            stream_proc = {}
+            if "stdout" in streams:
+                stream_proc["stdout"] = proc.stdout
+            if "stderr" in streams:
+                stream_proc["stderr"] = proc.stderr
+
             break_outer = False
             while True:
-                for dst, stream in [(stdout, proc.stdout), (stderr, proc.stderr)]:
-                    output = stream.readline()
-                    last_output[stream] = output
-                    if all(last_output[s] == '' for s in [proc.stdout, proc.stderr]) and proc.poll() is not None:
-                        break_outer = True
-                        break
+                for stream in streams.keys():
+                    output = stream_proc[stream].readline()
+                    stream_last_out[stream] = output
                     if output:
                         self.write(output)
-                        dst.append(output)
+                        stream_outputs[stream].append(output)
+                    if all(last == "" for last in stream_last_out.values()) and proc.poll() is not None:
+                        break_outer = True
+                        break
                 if break_outer:
                     break
 
-            rem_stdout, rem_stderr = proc.communicate()
-            if rem_stdout:
-                self.write(rem_stdout)
-                stdout.append(rem_stdout)
-            if rem_stderr:
-                self.write(rem_stderr)
-                stderr.append(rem_stderr)
+            remainder = proc.communicate()
 
-            return stdout, stderr
+            if proc.returncode != 0 and check:
+                raise subprocess.CalledProcessError(proc.returncode, command)
+
+            for idx, stream in enumerate(streams.keys()):
+                self.write(remainder[idx])
+                stream_outputs[stream].append(remainder[idx])
+
+            return stream_outputs
 
         return run_subprocess
 

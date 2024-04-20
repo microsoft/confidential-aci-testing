@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import subprocess
 
 from .logging_window import LoggingWindow
 
@@ -26,7 +27,7 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
                 *(["--subscription", subscription] if subscription else []),
                 *(["--resource-group", resource_group] if resource_group else []),
                 *(["--name", name]),
-            ], check=not follow)
+            ], check=not follow, streams={'stdout': subprocess.PIPE})
         else:
             for id in ids:
                 run_subprocess([
@@ -35,7 +36,7 @@ def aci_monitor(subscription, resource_group, name, ids, follow=True):
                     *(["--subscription", subscription] if subscription else []),
                     *(["--resource-group", resource_group] if resource_group else []),
                     *(["--ids", id]),
-                ], check=not follow)
+                ], check=not follow, streams={'stdout': subprocess.PIPE})
 
 
 if __name__ == "__main__":
