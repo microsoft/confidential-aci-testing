@@ -65,7 +65,7 @@ class LoggingWindow:
                 self.write(remainder[idx])
                 stream_outputs[stream].append(remainder[idx])
 
-            return stream_outputs
+            return stream_outputs.values()
 
         return run_subprocess
 
