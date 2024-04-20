@@ -81,6 +81,7 @@ class LoggingWindow:
         if self.headless:
             for line in lines:
                 self.original.write(self.prefix + line + os.linesep)
+            self.flush()
             return
 
         for _ in range(self.height):
@@ -119,6 +120,8 @@ class LoggingWindow:
                 self.original.write("\n")
             for _ in range(previous_height - self.height):
                 self.original.write("\x1b[1A")
+
+        self.flush()
 
     def flush(self):
         self.original.flush()
