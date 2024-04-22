@@ -19,6 +19,10 @@ def policies_gen(**kwargs):
     registry = kwargs.get("registry")
     repository = kwargs.get("repository")
     tag = kwargs.get("tag")
+    debug = kwargs.get("debug") or False
+
+    if debug:
+        print("Generating debug policies, this should not be used in production")
 
     assert target, "Target is required"
     assert registry, "Registry is required"
@@ -64,7 +68,7 @@ def policies_gen(**kwargs):
         res = subprocess.run(["az", "confcom", "acipolicygen",
             "-a", arm_template_path,
             "--outraw",
-            "--save-to-file", f"{target}/policy.rego"
+            *(["--debug-mode"] if debug else []),
         ], check=True, stdout=subprocess.PIPE)
 
         delimiter = "package policy"
@@ -100,6 +104,8 @@ if __name__ == "__main__":
         help="Container Repository", default=os.environ.get("REPOSITORY"))
     parser.add_argument("--tag",
         help="Image Tag", default=os.environ.get("TAG") or "latest")
+    parser.add_argument("--debug",
+        help="Run in debug mode", action="store_true", default=os.environ.get("DEBUG_IMAGES") == "1")
 
     args = parser.parse_args()
 
@@ -108,4 +114,5 @@ if __name__ == "__main__":
         registry=args.registry,
         repository=args.repository,
         tag=args.tag,
+        debug=args.debug,
     )
