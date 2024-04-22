@@ -16,7 +16,15 @@ def aci_param_set(file_path, key, value):
 
     for i, line in enumerate(content):
         if line.startswith(f"param {key}="):
-            content[i] = f"param {key}='{value}'"
+            statement_end = i
+            for start, end in (("[", "]"), ("{", "}")):
+                if start in line:
+                    for j in range(i, len(content)):
+                        if end in content[j]:
+                            statement_end = j
+                            break
+            del content[i:statement_end]
+            content[i] = f"param {key}={value}"
             break
 
     with open(file_path, "w") as file:

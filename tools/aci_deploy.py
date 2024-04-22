@@ -28,11 +28,11 @@ def aci_deploy(
     print("Updating parameter file with deployment info")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
     if location:
-        aci_param_set(param_file_path, "location", location)
+        aci_param_set(param_file_path, "location", f"'{location}'")
     if managed_identity:
-        aci_param_set(param_file_path, "managedIDName", managed_identity)
+        aci_param_set(param_file_path, "managedIDName", f"'{managed_identity}'")
     if tag:
-        aci_param_set(param_file_path, "tag", tag)
+        aci_param_set(param_file_path, "tag", f"'{tag}'")
 
     az_command = [
         "az", "deployment", "group", "create",
