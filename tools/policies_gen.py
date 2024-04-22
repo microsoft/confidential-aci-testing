@@ -28,7 +28,7 @@ def policies_gen(**kwargs):
 
     bicep_path = os.path.join(target, find_bicep_file(target))
     with open(bicep_path, "r") as file:
-        if not any(line.startswith("param ccePolicy string") for line in file):
+        if not any(line.startswith("param ccePolicies array") for line in file):
             print("Bicep template has no policy parameter, skipping generation")
             return
 
@@ -45,11 +45,6 @@ def policies_gen(**kwargs):
             arm_template = json.load(file)
 
         print("Baking image parameters into template as acipolicygen doesn't support parameters")
-        dockerfiles = set()
-        for filename in os.listdir(target):
-            if filename.endswith(".Dockerfile"):
-                dockerfiles.add(os.path.splitext(filename)[0])
-
         for resource in arm_template["resources"]:
             if resource["type"] == "Microsoft.ContainerInstance/containerGroups":
                 resource["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
@@ -66,22 +61,31 @@ def policies_gen(**kwargs):
 
         print("Calling acipolicygen and saving policy to file")
         subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-        subprocess.run(["az", "confcom", "acipolicygen",
+        res = subprocess.run(["az", "confcom", "acipolicygen",
             "-a", arm_template_path,
             "--outraw",
             "--save-to-file", f"{target}/policy.rego"
-        ], check=True)
-        print(f"Saved policy to {target}/policy.rego")
+        ], check=True, stdout=subprocess.PIPE)
+
+        delimiter = "package policy"
+        policies = [delimiter + policy for policy in res.stdout.decode().split(delimiter)[1:]]
+        policy_base64 = []
+        for idx, policy in enumerate(policies):
+            policy_filename = f"{target}/policy_{idx}.rego"
+            with open(policy_filename, "w") as file:
+                file.write(policy)
+            print(f"Saved policy to {policy_filename}")
+            policy_base64.append(base64.b64encode(policy.encode()).decode())
 
     print("Setting the specified registry, tag and policy in the bicep parameters file")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
-    aci_param_set(param_file_path, "registry", registry)
-    aci_param_set(param_file_path, "repository", repository)
-    aci_param_set(param_file_path, "tag", tag)
+    aci_param_set(param_file_path, "registry", f"'{registry}'")
+    aci_param_set(param_file_path, "repository", f"'{repository}'")
+    aci_param_set(param_file_path, "tag", f"'{tag}'")
 
-    with open(f"{target}/policy.rego", "r") as file:
-        policy = file.read()
-    aci_param_set(param_file_path, "ccePolicy", base64.b64encode(policy.encode()).decode())
+    aci_param_set(param_file_path, "ccePolicies", "[\n" + "\n".join([
+        f"  '{policy}'" for policy in policy_base64
+    ]) + "\n]")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")
