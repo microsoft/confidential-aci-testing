@@ -20,8 +20,9 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
         print("Generating debug policies, this should not be used in production")
 
     assert registry, "Registry must be set"
-    assert repository, "Repository must be set"
     assert tag, "Tag must be set"
+    if not repository:
+        repository = os.path.splitext(find_bicep_file(target))[0]
 
     print("Setting specified parameters")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
