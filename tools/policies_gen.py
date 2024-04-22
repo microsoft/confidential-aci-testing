@@ -49,6 +49,7 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
             result = change.get("after")
             if result:
                 if container_group_prefix in result["id"]:
+                    result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
                     container_group_id = result["id"].split(container_group_prefix)[-1]
                     arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
                     with open(arm_template_path, "w") as file:
