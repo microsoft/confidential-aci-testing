@@ -24,6 +24,12 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
     if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
+    bicep_path = os.path.join(target, find_bicep_file(target))
+    with open(bicep_path, "r") as file:
+        if not any(line.startswith("param ccePolicies object") for line in file):
+            print("Bicep template has no policy parameter, skipping generation")
+            return
+
     print("Setting specified parameters")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
     aci_param_set(param_file_path, "registry", f"'{registry}'")
@@ -40,7 +46,7 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
         "--parameters", param_file_path,
     ], check=True, stdout=subprocess.PIPE)
 
-    policies = []
+    policies = {}
 
     with tempfile.TemporaryDirectory() as arm_template_dir:
         resolves_json = json.loads(res.stdout)
@@ -61,8 +67,10 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
                                 if "value" not in env_var:
                                     env_var["secureValue"] = ""
 
+                        if "confidentialComputeProperties" not in result["properties"]:
+                            result["properties"]["confidentialComputeProperties"] = {}
                         result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
-                        container_group_id = result["id"].split(prefix)[-1]
+                        container_group_id = result["id"].split(prefix)[-1].replace("-", "_")
                         arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
                         with open(arm_template_path, "w") as file:
                             json.dump({"resources": [result]}, file, indent=2)
@@ -75,11 +83,11 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
                             *(["--debug-mode"] if debug else []),
                         ], check=True, stdout=subprocess.PIPE)
 
-                        policies.append(base64.b64encode(res.stdout).decode())
+                        policies[container_group_id] = base64.b64encode(res.stdout).decode()
 
-    aci_param_set(param_file_path, "ccePolicies", "[\n" + "\n".join([
-        f"  '{policy}'" for policy in policies
-    ]) + "\n]")
+    aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
+        f"  {group_id}: '{policy}'" for group_id, policy in policies.items()
+    ]) + "\n}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")
