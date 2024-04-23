@@ -40,7 +40,6 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
         "--parameters", param_file_path,
     ], check=True, stdout=subprocess.PIPE)
 
-    container_group_prefix = "providers/Microsoft.ContainerInstance/containerGroups/"
     policies = []
 
     with tempfile.TemporaryDirectory() as arm_template_dir:
@@ -48,31 +47,35 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
         for change in resolves_json["changes"]:
             result = change.get("after")
             if result:
-                if container_group_prefix in result["id"]:
+                for prefix in (
+                    "providers/Microsoft.ContainerInstance/containerGroups/",
+                    "providers/Microsoft.ContainerInstance/containerGroupProfiles/",
+                ):
+                    if prefix in result["id"]:
 
-                    # Workaround for acipolicygen not supporting empty environment variables
-                    for container in result["properties"]["containers"]:
-                        for env_var in container["properties"].get("environmentVariables", []):
-                            if "value" in env_var and env_var["value"] == "":
-                                del env_var["value"]
-                            if "value" not in env_var:
-                                env_var["secureValue"] = ""
+                        # Workaround for acipolicygen not supporting empty environment variables
+                        for container in result["properties"]["containers"]:
+                            for env_var in container["properties"].get("environmentVariables", []):
+                                if "value" in env_var and env_var["value"] == "":
+                                    del env_var["value"]
+                                if "value" not in env_var:
+                                    env_var["secureValue"] = ""
 
-                    result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
-                    container_group_id = result["id"].split(container_group_prefix)[-1]
-                    arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
-                    with open(arm_template_path, "w") as file:
-                        json.dump({"resources": [result]}, file, indent=2)
+                        result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
+                        container_group_id = result["id"].split(prefix)[-1]
+                        arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
+                        with open(arm_template_path, "w") as file:
+                            json.dump({"resources": [result]}, file, indent=2)
 
-                    print("Calling acipolicygen and saving policy to file")
-                    subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-                    res = subprocess.run(["az", "confcom", "acipolicygen",
-                        "-a", arm_template_path,
-                        "--outraw",
-                        *(["--debug-mode"] if debug else []),
-                    ], check=True, stdout=subprocess.PIPE)
+                        print("Calling acipolicygen and saving policy to file")
+                        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+                        res = subprocess.run(["az", "confcom", "acipolicygen",
+                            "-a", arm_template_path,
+                            "--outraw",
+                            *(["--debug-mode"] if debug else []),
+                        ], check=True, stdout=subprocess.PIPE)
 
-                    policies.append(base64.b64encode(res.stdout).decode())
+                        policies.append(base64.b64encode(res.stdout).decode())
 
     aci_param_set(param_file_path, "ccePolicies", "[\n" + "\n".join([
         f"  '{policy}'" for policy in policies
