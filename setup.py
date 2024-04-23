@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="c-aci-testing",
-    version="0.1.11",
+    version="0.1.12",
     description="Utilities for testing workflows involving Confidential ACI.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
