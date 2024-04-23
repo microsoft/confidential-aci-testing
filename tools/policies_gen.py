@@ -49,6 +49,14 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
             result = change.get("after")
             if result:
                 if container_group_prefix in result["id"]:
+
+                    # Workaround for acipolicygen not supporting empty environment variables
+                    for container in result["properties"]["containers"]:
+                        for env_var in container["environmentVariables"]:
+                            if env_var["value"] == "":
+                                del env_var["value"]
+                                env_var["secureValue"] = ""
+
                     result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
                     container_group_id = result["id"].split(container_group_prefix)[-1]
                     arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
