@@ -2,7 +2,7 @@ param location string
 param registry string
 param repository string
 param tag string
-param ccePolicies array
+param ccePolicies object
 param managedIDGroup string = resourceGroup().name
 param managedIDName string
 

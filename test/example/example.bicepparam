@@ -7,5 +7,5 @@ param tag=''
 
 // Deployment info
 param location=''
-param ccePolicies=[]
+param ccePolicies={}
 param managedIDName=''
