@@ -83,6 +83,9 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
                             *(["--debug-mode"] if debug else []),
                         ], check=True, stdout=subprocess.PIPE)
 
+                        with open(os.path.join(target, f"policy_{container_group_id}.rego"), "w") as file:
+                            file.write(res.stdout.decode())
+
                         policies[container_group_id] = base64.b64encode(res.stdout).decode()
 
     aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
