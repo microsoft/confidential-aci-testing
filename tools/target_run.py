@@ -31,6 +31,7 @@ def target_run_ctx(
     cleanup=True,
     repository=None,
     prefer_pull=False,
+    gen_policies=True,
 ):
     services_to_build = None
     if prefer_pull:
@@ -54,14 +55,15 @@ def target_run_ctx(
             repository=repository,
             tag=tag,
         )
-    policies_gen(
-        target=target,
-        subscription=subscription,
-        resource_group=resource_group,
-        registry=registry,
-        repository=repository,
-        tag=tag,
-    )
+    if gen_policies:
+        policies_gen(
+            target=target,
+            subscription=subscription,
+            resource_group=resource_group,
+            registry=registry,
+            repository=repository,
+            tag=tag,
+        )
     ids = aci_deploy(
         target=target,
         subscription=subscription,
@@ -155,6 +157,11 @@ if __name__ == "__main__":
     parser.add_argument("--prefer-pull",
         help="Attempt to pull image and only build if that fails", action="store_true"
     )
+    parser.add_argument("--skip-policy-gen",
+        help="Skip policy generation, if policies are generated separately",
+        action="store_true",
+        default=os.environ.get("SKIP_POLICY_GEN") == "1",
+    )
 
     args = parser.parse_args()
 
@@ -172,4 +179,5 @@ if __name__ == "__main__":
         follow=not args.no_follow,
         cleanup=not args.no_cleanup,
         prefer_pull=args.prefer_pull,
+        gen_policies=not args.skip_policy_gen,
     )
