@@ -29,7 +29,7 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       type: 'Public'
     }
     confidentialComputeProperties: {
-      ccePolicy: ccePolicies[0]
+      ccePolicy: ccePolicies.example_non_terminating
     }
     imageRegistryCredentials: [
       {
