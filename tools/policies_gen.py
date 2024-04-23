@@ -52,9 +52,10 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
 
                     # Workaround for acipolicygen not supporting empty environment variables
                     for container in result["properties"]["containers"]:
-                        for env_var in container.get("environmentVariables", []):
-                            if env_var["value"] == "":
+                        for env_var in container["properties"].get("environmentVariables", []):
+                            if "value" in env_var and env_var["value"] == "":
                                 del env_var["value"]
+                            if "value" not in env_var:
                                 env_var["secureValue"] = ""
 
                     result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
