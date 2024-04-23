@@ -56,6 +56,8 @@ def target_run_ctx(
         )
     policies_gen(
         target=target,
+        subscription=subscription,
+        resource_group=resource_group,
         registry=registry,
         repository=repository,
         tag=tag,

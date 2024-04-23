@@ -14,81 +14,68 @@ import re
 from .aci_param_set import aci_param_set
 from .target_find_files import find_bicep_file, find_bicep_param_file
 
-def policies_gen(**kwargs):
-    target = kwargs.get("target")
-    registry = kwargs.get("registry")
-    repository = kwargs.get("repository")
-    tag = kwargs.get("tag")
-    debug = kwargs.get("debug") or False
+def policies_gen(target, subscription, resource_group, registry, repository, tag, debug=False):
 
     if debug:
         print("Generating debug policies, this should not be used in production")
 
-    assert target, "Target is required"
-    assert registry, "Registry is required"
+    assert registry, "Registry must be set"
+    assert tag, "Tag must be set"
     if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
-        kwargs["repository"] = repository
 
-    bicep_path = os.path.join(target, find_bicep_file(target))
-    with open(bicep_path, "r") as file:
-        if not any(line.startswith("param ccePolicies array") for line in file):
-            print("Bicep template has no policy parameter, skipping generation")
-            return
-
-    print("Generating intermediate ARM template as acipolicygen doesn't support bicep")
-    with tempfile.TemporaryDirectory() as arm_template_dir:
-        arm_template_path = os.path.join(arm_template_dir, "arm.json")
-        subprocess.run([
-            "az", "bicep", "build",
-            "-f", bicep_path,
-            "--outfile", arm_template_path
-        ], check=True)
-
-        with open(arm_template_path, "r") as file:
-            arm_template = json.load(file)
-
-        print("Baking image parameters into template as acipolicygen doesn't support parameters")
-        for resource in arm_template["resources"]:
-            if resource["type"] == "Microsoft.ContainerInstance/containerGroups":
-                resource["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
-                for container in resource["properties"]["containers"]:
-                    formatSearch = re.search(r"\[format\('([^']*)'.*\]", container["properties"]["image"])
-                    if formatSearch:
-                        imageString = formatSearch.group(1)
-                        for i, match in enumerate(re.findall(r"parameters\('([^']*)'\)", container["properties"]["image"])):
-                            imageString = imageString.replace("{" + str(i) + "}", kwargs.get(match))
-                        container["properties"]["image"] = imageString
-
-        with open(arm_template_path, "w") as file:
-            json.dump(arm_template, file, indent=2)
-
-        print("Calling acipolicygen and saving policy to file")
-        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-        res = subprocess.run(["az", "confcom", "acipolicygen",
-            "-a", arm_template_path,
-            "--outraw",
-            *(["--debug-mode"] if debug else []),
-        ], check=True, stdout=subprocess.PIPE)
-
-        delimiter = "package policy"
-        policies = [delimiter + policy for policy in res.stdout.decode().split(delimiter)[1:]]
-        policy_base64 = []
-        for idx, policy in enumerate(policies):
-            policy_filename = f"{target}/policy_{idx}.rego"
-            with open(policy_filename, "w") as file:
-                file.write(policy)
-            print(f"Saved policy to {policy_filename}")
-            policy_base64.append(base64.b64encode(policy.encode()).decode())
-
-    print("Setting the specified registry, tag and policy in the bicep parameters file")
+    print("Setting specified parameters")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
     aci_param_set(param_file_path, "registry", f"'{registry}'")
     aci_param_set(param_file_path, "repository", f"'{repository}'")
     aci_param_set(param_file_path, "tag", f"'{tag}'")
 
+    print("Resolving parameters using what-if deployment")
+    res = subprocess.run([
+        "az", "deployment", "group", "what-if",
+        "--no-pretty-print", "--mode", "Complete",
+        *(["--subscription", subscription] if subscription else []),
+        "--resource-group", resource_group,
+        "--template-file", os.path.join(target, find_bicep_file(target)),
+        "--parameters", param_file_path,
+    ], check=True, stdout=subprocess.PIPE)
+
+    container_group_prefix = "providers/Microsoft.ContainerInstance/containerGroups/"
+    policies = []
+
+    with tempfile.TemporaryDirectory() as arm_template_dir:
+        resolves_json = json.loads(res.stdout)
+        for change in resolves_json["changes"]:
+            result = change.get("after")
+            if result:
+                if container_group_prefix in result["id"]:
+
+                    # Workaround for acipolicygen not supporting empty environment variables
+                    for container in result["properties"]["containers"]:
+                        for env_var in container["properties"].get("environmentVariables", []):
+                            if "value" in env_var and env_var["value"] == "":
+                                del env_var["value"]
+                            if "value" not in env_var:
+                                env_var["secureValue"] = ""
+
+                    result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
+                    container_group_id = result["id"].split(container_group_prefix)[-1]
+                    arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
+                    with open(arm_template_path, "w") as file:
+                        json.dump({"resources": [result]}, file, indent=2)
+
+                    print("Calling acipolicygen and saving policy to file")
+                    subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+                    res = subprocess.run(["az", "confcom", "acipolicygen",
+                        "-a", arm_template_path,
+                        "--outraw",
+                        *(["--debug-mode"] if debug else []),
+                    ], check=True, stdout=subprocess.PIPE)
+
+                    policies.append(base64.b64encode(res.stdout).decode())
+
     aci_param_set(param_file_path, "ccePolicies", "[\n" + "\n".join([
-        f"  '{policy}'" for policy in policy_base64
+        f"  '{policy}'" for policy in policies
     ]) + "\n]")
 
 if __name__ == "__main__":
@@ -98,6 +85,17 @@ if __name__ == "__main__":
         help="Target directory", default=os.environ.get("TARGET"),
         nargs="?", # aka Optional
         type=lambda path: os.path.abspath(os.path.expanduser(path)))
+    parser.add_argument(
+        "--subscription",
+        help="Azure Subscription ID",
+        default=os.environ.get("SUBSCRIPTION"),
+    )
+    parser.add_argument(
+        "--resource-group",
+        "-g",
+        help="Azure Resource Group ID",
+        default=os.environ.get("RESOURCE_GROUP"),
+    )
     parser.add_argument("--registry",
         help="Container Registry", default=os.environ.get("REGISTRY"))
     parser.add_argument("--repository",
@@ -111,6 +109,8 @@ if __name__ == "__main__":
 
     policies_gen(
         target=args.target,
+        subscription=args.subscription,
+        resource_group=args.resource_group,
         registry=args.registry,
         repository=args.repository,
         tag=args.tag,
