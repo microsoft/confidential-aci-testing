@@ -14,7 +14,7 @@ import re
 from .aci_param_set import aci_param_set
 from .target_find_files import find_bicep_file, find_bicep_param_file
 
-def policies_gen(target, subscription, resource_group, registry, repository, tag, debug=False):
+def policies_gen(target, deployment_name, subscription, resource_group, registry, repository, tag, debug=False):
 
     if debug:
         print("Generating debug policies, this should not be used in production")
@@ -39,6 +39,7 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
     print("Resolving parameters using what-if deployment")
     res = subprocess.run([
         "az", "deployment", "group", "what-if",
+        "--name", deployment_name,
         "--no-pretty-print", "--mode", "Complete",
         *(["--subscription", subscription] if subscription else []),
         "--resource-group", resource_group,
@@ -69,8 +70,13 @@ def policies_gen(target, subscription, resource_group, registry, repository, tag
 
                         if "confidentialComputeProperties" not in result["properties"]:
                             result["properties"]["confidentialComputeProperties"] = {}
+
                         result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
-                        container_group_id = result["id"].split(prefix)[-1].replace("-", "_")
+                        container_group_id = result["id"] \
+                            .split(prefix)[-1] \
+                            .replace(deployment_name, target.split("/")[-1]) \
+                            .replace("-", "_")
+
                         arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
                         with open(arm_template_path, "w") as file:
                             json.dump({"resources": [result]}, file, indent=2)
@@ -99,6 +105,7 @@ if __name__ == "__main__":
         help="Target directory", default=os.environ.get("TARGET"),
         nargs="?", # aka Optional
         type=lambda path: os.path.abspath(os.path.expanduser(path)))
+    parser.add_argument("--deployment-name", help="Name of deployment", required=True)
     parser.add_argument(
         "--subscription",
         help="Azure Subscription ID",
@@ -123,6 +130,7 @@ if __name__ == "__main__":
 
     policies_gen(
         target=args.target,
+        deployment_name=args.deployment_name,
         subscription=args.subscription,
         resource_group=args.resource_group,
         registry=args.registry,

@@ -58,6 +58,7 @@ def target_run_ctx(
     if gen_policies:
         policies_gen(
             target=target,
+            deployment_name=name,
             subscription=subscription,
             resource_group=resource_group,
             registry=registry,
