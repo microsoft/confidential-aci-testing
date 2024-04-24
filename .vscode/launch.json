@@ -85,7 +85,9 @@
             "justMyCode": false,
             "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
             "args": [
-                "${input:cacitestingTargetPath}"
+                "${input:cacitestingTargetPath}",
+                "--deployment-name",
+                "${input:cacitestingTargetName}"
             ]
         },
         {
