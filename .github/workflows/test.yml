@@ -299,6 +299,7 @@ jobs:
         SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         REGISTRY: cacitesting.azurecr.io
+        DEP_NAME: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
         TAG: ${{ github.run_id }}-${{ github.job }}-${{ github.run_number }}
       run: python -m c_aci_testing.policies_gen individual_scripts_test --deployment-name $DEP_NAME
 
