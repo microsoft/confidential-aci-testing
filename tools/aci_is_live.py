@@ -23,9 +23,11 @@ def aci_is_live(
             "--query", "properties.outputs.ids.value",
             "-o", "tsv",
         ],
-        check=True,
         stdout=subprocess.PIPE,
     )
+
+    if res.returncode != 0:
+        return None
 
     ids = [id for id in res.stdout.decode().split(os.linesep) if id]
 
