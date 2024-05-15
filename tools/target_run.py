@@ -11,6 +11,7 @@ from .images_pull import images_pull
 from .images_build import images_build
 from .images_push import images_push
 from .policies_gen import policies_gen
+from .aci_is_live import aci_is_live
 from .aci_deploy import aci_deploy
 from .aci_monitor import aci_monitor
 from .aci_remove import aci_remove
@@ -34,47 +35,53 @@ def target_run_ctx(
     gen_policies=True,
 ):
     services_to_build = None
-    if prefer_pull:
-        services_to_build = images_pull(
-            target=target,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-        )
-    if not prefer_pull or services_to_build:
-        images_build(
-            target=target,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-            services_to_build=services_to_build,
-        )
-        images_push(
-            target=target,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-        )
-    if gen_policies:
-        policies_gen(
-            target=target,
-            deployment_name=name,
-            subscription=subscription,
-            resource_group=resource_group,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-        )
-    ids = aci_deploy(
-        target=target,
+    ids = aci_is_live(
         subscription=subscription,
         resource_group=resource_group,
         name=name,
-        location=location,
-        managed_identity=managed_identity,
-        tag=tag,
-        parameters=parameters,
     )
+    if not ids:
+        if prefer_pull:
+            services_to_build = images_pull(
+                target=target,
+                registry=registry,
+                repository=repository,
+                tag=tag,
+            )
+        if not prefer_pull or services_to_build:
+            images_build(
+                target=target,
+                registry=registry,
+                repository=repository,
+                tag=tag,
+                services_to_build=services_to_build,
+            )
+            images_push(
+                target=target,
+                registry=registry,
+                repository=repository,
+                tag=tag,
+            )
+        if gen_policies:
+            policies_gen(
+                target=target,
+                deployment_name=name,
+                subscription=subscription,
+                resource_group=resource_group,
+                registry=registry,
+                repository=repository,
+                tag=tag,
+            )
+        ids = aci_deploy(
+            target=target,
+            subscription=subscription,
+            resource_group=resource_group,
+            name=name,
+            location=location,
+            managed_identity=managed_identity,
+            tag=tag,
+            parameters=parameters,
+        )
     try:
         yield ids
         aci_monitor(
