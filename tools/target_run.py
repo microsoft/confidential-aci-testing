@@ -35,7 +35,11 @@ def target_run_ctx(
     gen_policies=True,
 ):
     services_to_build = None
-    ids = aci_is_live()
+    ids = aci_is_live(
+        subscription=subscription,
+        resource_group=resource_group,
+        name=name,
+    )
     if not ids:
         if prefer_pull:
             services_to_build = images_pull(
