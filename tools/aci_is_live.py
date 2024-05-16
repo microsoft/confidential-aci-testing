@@ -35,8 +35,13 @@ def aci_is_live(
         res = subprocess.run([
             "az", "container", "show", "--ids", id,
         ], stdout=subprocess.PIPE)
-        container_state = json.loads(res.stdout.decode())
-        if container_state["instanceView"]["state"] != "Running":
+        if res.returncode != 0:
+            return None
+        try:
+            container_state = json.loads(res.stdout.decode())
+            if container_state["instanceView"]["state"] != "Running":
+                return None
+        except Exception:
             return None
 
     return ids
