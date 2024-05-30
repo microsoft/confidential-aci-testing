@@ -77,6 +77,10 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
                             .replace(deployment_name, target.split("/")[-1]) \
                             .replace("-", "_")
 
+                        if "volumes" in result["properties"]:
+                            for volume in result["properties"]["volumes"]:
+                                volume["emptyDir"] = {}
+
                         arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
                         with open(arm_template_path, "w") as file:
                             json.dump({"resources": [result]}, file, indent=2)
