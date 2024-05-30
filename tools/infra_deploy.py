@@ -17,16 +17,66 @@ def infra_deploy(subscription, resource_group, registry, managed_identity, locat
 
     subprocess.run(["az", "account", "set", "--subscription", subscription])
 
-    result = subprocess.run([
-        "az", "deployment", "sub", "create",
-        "--location", location,
-        "--template-file", os.path.join(os.path.dirname(__file__), "aci", "resourceGroup.bicep"),
-        "--parameters", f"name={resource_group}",
-        "--parameters", f"registryName={registry}",
-        "--parameters", f"managedIdentityName={managed_identity}",
-        "--parameters", f"githubOrg={github_org}",
-        "--parameters", f"githubRepo={github_repo}",
-    ])
+    print("Checking if resource group exists")
+    result = subprocess.run(
+        ["az", "group", "exists", "--name", resource_group],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    rg_exists = result.stdout.strip().lower() == 'true'
+    print(f"{resource_group} " + ("exists" if rg_exists else "does not exist"))
+
+    if not rg_exists:
+        print("Creating resource group and all resources")
+        result = subprocess.run([
+            "az", "deployment", "sub", "create",
+            "--location", location,
+            "--template-file", os.path.join(os.path.dirname(__file__), "aci", "resourceGroup.bicep"),
+            "--parameters", f"name={resource_group}",
+            "--parameters", f"registryName={registry}",
+            "--parameters", f"managedIdentityName={managed_identity}",
+            "--parameters", f"githubOrg={github_org}",
+            "--parameters", f"githubRepo={github_repo}",
+        ])
+        return
+
+    print("Checking if container registry exists")
+    result = subprocess.run(
+        ["az", "acr", "show", "--name", registry, "--query", "name"],
+        capture_output=True,
+        text=True
+    )
+    deployed_name = result.stdout.rstrip(os.linesep).strip('"') + ".azurecr.io"
+    registry_exists = result is not None and deployed_name == registry
+    print(f"{registry} " + ("exists" if registry_exists else "does not exist"))
+
+    if not registry_exists:
+        print("Creating container registry")
+        result = subprocess.run([
+            "az", "deployment", "group", "create",
+            "--resource-group", resource_group,
+            "--template-file", os.path.join(os.path.dirname(__file__), "aci", "containerRegistry.bicep"),
+            "--parameters", f"name={registry}",
+            "--parameters", f"location={location}",
+        ], check=True)
+
+    print("Checking if managed identity exists")
+    result = subprocess.run(["az", "identity", "show", "--name", managed_identity, "--resource-group", resource_group, "--query", "name"], capture_output=True, text=True)
+    identity_exists = result is not None and result.stdout.strip('"') == managed_identity
+    print(f"{managed_identity} " + ("exists" if identity_exists else "does not exist"))
+
+    if not identity_exists:
+        print("Creating managed identity")
+        result = subprocess.run([
+            "az", "deployment", "group", "create",
+            "--resource-group", resource_group,
+            "--template-file", os.path.join(os.path.dirname(__file__), "aci", "managedIdentity.bicep"),
+            "--parameters", f"name={managed_identity}",
+            "--parameters", f"location={location}",
+            "--parameters", f"githubOrg={github_org}",
+            "--parameters", f"githubRepo={github_repo}",
+        ], check=True)
 
 
 if __name__ == "__main__":
@@ -50,8 +100,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("""
-This currently fails if you don't have the Owner role at the subscription level
-You can still manually deploy aci/resourceGroup.bicep with the bicep VS Code extension
+To run this successfully, you will need the following permissions in the account you log into the Azure CLI with:
+- To deploy everything you need the owner role at the subscription level
+- If the resource group already exists, you only need the owner role scoped to that resource group
     """)
 
     infra_deploy(
