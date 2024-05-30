@@ -100,8 +100,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("""
-This currently fails if you don't have the Owner role at the subscription level
-You can still manually deploy aci/resourceGroup.bicep with the bicep VS Code extension
+To run this successfully, you will need the following permissions in the account you log into the Azure CLI with:
+- To deploy everything you need the owner role at the subscription level
+- If the resource group already exists, you only need the owner role scoped to that resource group
     """)
 
     infra_deploy(
