@@ -85,7 +85,10 @@ def target_run_ctx(
             parameters=parameters,
         )
     try:
-        yield ids
+        try:
+            yield ids
+        except Exception as e:
+            return # Don't remove the ACI if there was an error
         aci_monitor(
             subscription=subscription,
             resource_group=resource_group,
