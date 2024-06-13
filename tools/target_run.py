@@ -33,6 +33,7 @@ def target_run_ctx(
     repository=None,
     prefer_pull=False,
     gen_policies=True,
+    debug=False,
 ):
     services_to_build = None
     ids = aci_is_live(
@@ -71,6 +72,7 @@ def target_run_ctx(
                 registry=registry,
                 repository=repository,
                 tag=tag,
+                debug=debug,
             )
         ids = aci_deploy(
             target=target,
