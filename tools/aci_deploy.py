@@ -4,6 +4,7 @@
 # Licensed under the MIT License.
 
 import argparse
+import json
 import os
 import subprocess
 
@@ -48,6 +49,10 @@ def aci_deploy(
         key = parameter.split("=")[0]
         value = "=".join(parameter.split("=")[1:]).strip('"')
         az_command.extend(["--parameters", f"{key}={value}"])
+
+    if not subscription:
+        output = subprocess.check_output(["az", "account", "show"])
+        subscription = json.loads(output)["id"]
 
     print(f"{os.linesep}Deploying to Azure, view deployment here:")
     print("%2F".join([
