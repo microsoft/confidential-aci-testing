@@ -14,6 +14,8 @@ def aci_param_set(file_path, key, value):
     with open(file_path, "r") as file:
         content = file.read().split(os.linesep)
 
+    param_found = False
+
     for i, line in enumerate(content):
         if line.startswith(f"param {key}="):
             statement_end = i
@@ -25,7 +27,11 @@ def aci_param_set(file_path, key, value):
                             break
             del content[i:statement_end]
             content[i] = f"param {key}={value}"
+            param_found = True
             break
+
+    if not param_found:
+        content.append(f"param {key}={value}")
 
     with open(file_path, "w") as file:
         file.write(os.linesep.join(content))
@@ -43,9 +49,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    param = args.param.split("=")
+    param = args.parameter.split("=")
+    print(os.path.join(args.target, find_bicep_param_file(args.target)))
     aci_param_set(
-        file=os.path.join(args.target, find_bicep_param_file(args.target)),
+        file_path=os.path.join(args.target, find_bicep_param_file(args.target)),
         key=param[0],
         value="=".join(param[1:]).replace(os.linesep, ""),
     )
