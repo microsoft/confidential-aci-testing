@@ -32,9 +32,16 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
 
     print("Setting specified parameters")
     param_file_path = os.path.join(target, find_bicep_param_file(target))
-    aci_param_set(param_file_path, "registry", f"'{registry}'")
-    aci_param_set(param_file_path, "repository", f"'{repository}'")
-    aci_param_set(param_file_path, "tag", f"'{tag}'")
+
+    with open(param_file_path, "r") as file:
+        content = file.read().split(os.linesep)
+
+    if any(line.startswith("param registry") for line in content):
+        aci_param_set(param_file_path, "registry", f"'{registry}'")
+    if any(line.startswith("param repository") for line in content):
+        aci_param_set(param_file_path, "repository", f"'{repository}'")
+    if any(line.startswith("param tag") for line in content):
+        aci_param_set(param_file_path, "tag", f"'{tag}'")
 
     print("Resolving parameters using what-if deployment")
     res = subprocess.run([
@@ -98,9 +105,10 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
 
                         policies[container_group_id] = base64.b64encode(res.stdout).decode()
 
-    aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
-        f"  {group_id}: '{policy}'" for group_id, policy in policies.items()
-    ]) + "\n}")
+    if any(line.startswith("param ccePolicies") for line in content):
+        aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
+            f"  {group_id}: '{policy}'" for group_id, policy in policies.items()
+        ]) + "\n}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate Security Policies for target")
