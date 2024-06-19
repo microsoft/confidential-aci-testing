@@ -42,6 +42,9 @@ if __name__ == "__main__":
         help="Azure Resource Group ID", default=os.environ.get("RESOURCE_GROUP"))
     parser.add_argument("--name", "-n", help="Name of deployment")
     parser.add_argument("--ids", help="ID of deployment")
+    parser.add_argument(
+        "--no-follow", help="Don't follow the container logs", action="store_true"
+    )
 
     args = parser.parse_args()
 
@@ -50,4 +53,5 @@ if __name__ == "__main__":
         resource_group=args.resource_group,
         name=args.name,
         ids=args.ids,
+        follow=not args.no_follow,
     )

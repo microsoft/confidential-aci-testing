@@ -162,10 +162,10 @@ if __name__ == "__main__":
     )
     parser.add_argument("--parameters", help="Path to parameters file")
     parser.add_argument(
-        "--no-cleanup", help="Path to parameters file", action="store_true"
+        "--no-cleanup", help="Don't clean ACI up after deployment", action="store_true"
     )
     parser.add_argument(
-        "--no-follow", help="Path to parameters file", action="store_true"
+        "--no-follow", help="Don't follow the container logs", action="store_true"
     )
     parser.add_argument("--prefer-pull",
         help="Attempt to pull image and only build if that fails", action="store_true"
