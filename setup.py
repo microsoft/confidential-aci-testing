@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="c-aci-testing",
-    version="0.1.19",
+    version="0.1.20",
     description="Utilities for testing workflows involving Confidential ACI.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
@@ -22,6 +22,7 @@ setup(
             "./.vscode/*",
             "./python_runner/*",
             "./github_actions/*",
+            "./security_policies/*",
         ],
     },
 )
