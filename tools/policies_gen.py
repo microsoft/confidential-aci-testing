@@ -14,7 +14,7 @@ import re
 from .aci_param_set import aci_param_set
 from .target_find_files import find_bicep_file, find_bicep_param_file
 
-def policies_gen(target, deployment_name, subscription, resource_group, registry, repository, tag, debug=False):
+def policies_gen(target, deployment_name, subscription, resource_group, registry, repository, tag, debug=False, allow_all=True):
 
     if debug:
         print("Generating debug policies, this should not be used in production")
@@ -84,26 +84,31 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
                             .replace(deployment_name, target.split("/")[-1]) \
                             .replace("-", "_")
 
-                        if "volumes" in result["properties"]:
-                            for volume in result["properties"]["volumes"]:
-                                volume["emptyDir"] = {}
+                        if allow_all:
+                            print("Generating an allow all policy")
+                            with open(os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego"), "r") as policy:
+                                policies[container_group_id] = base64.b64encode(policy.read().encode()).decode()
+                        else:
+                            if "volumes" in result["properties"]:
+                                for volume in result["properties"]["volumes"]:
+                                    volume["emptyDir"] = {}
 
-                        arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
-                        with open(arm_template_path, "w") as file:
-                            json.dump({"resources": [result]}, file, indent=2)
+                            arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
+                            with open(arm_template_path, "w") as file:
+                                json.dump({"resources": [result]}, file, indent=2)
 
-                        print("Calling acipolicygen and saving policy to file")
-                        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-                        res = subprocess.run(["az", "confcom", "acipolicygen",
-                            "-a", arm_template_path,
-                            "--outraw",
-                            *(["--debug-mode"] if debug else []),
-                        ], check=True, stdout=subprocess.PIPE)
+                            print("Calling acipolicygen and saving policy to file")
+                            subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+                            res = subprocess.run(["az", "confcom", "acipolicygen",
+                                "-a", arm_template_path,
+                                "--outraw",
+                                *(["--debug-mode"] if debug else []),
+                            ], check=True, stdout=subprocess.PIPE)
 
-                        with open(os.path.join(target, f"policy_{container_group_id}.rego"), "w") as file:
-                            file.write(res.stdout.decode())
+                            with open(os.path.join(target, f"policy_{container_group_id}.rego"), "w") as file:
+                                file.write(res.stdout.decode())
 
-                        policies[container_group_id] = base64.b64encode(res.stdout).decode()
+                            policies[container_group_id] = base64.b64encode(res.stdout).decode()
 
     if any(line.startswith("param ccePolicies") for line in content):
         aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
@@ -137,6 +142,8 @@ if __name__ == "__main__":
         help="Image Tag", default=os.environ.get("TAG") or "latest")
     parser.add_argument("--debug",
         help="Run in debug mode", action="store_true", default=os.environ.get("DEBUG_IMAGES") == "1")
+    parser.add_argument("--allow-all",
+        help="Run with allow all policy", action="store_true", default=os.environ.get("ALLOW_ALL") == "1")
 
     args = parser.parse_args()
 
@@ -149,4 +156,5 @@ if __name__ == "__main__":
         repository=args.repository,
         tag=args.tag,
         debug=args.debug,
+        allow_all=args.allow_all,
     )

@@ -34,6 +34,7 @@ def target_run_ctx(
     prefer_pull=False,
     gen_policies=True,
     debug=False,
+    allow_all=True,
 ):
     services_to_build = None
     ids = aci_is_live(
@@ -73,6 +74,7 @@ def target_run_ctx(
                 repository=repository,
                 tag=tag,
                 debug=debug,
+                allow_all=allow_all,
             )
         ids = aci_deploy(
             target=target,
@@ -175,6 +177,8 @@ if __name__ == "__main__":
         action="store_true",
         default=os.environ.get("SKIP_POLICY_GEN") == "1",
     )
+    parser.add_argument("--allow-all",
+        help="Run with allow all policy", action="store_true", default=os.environ.get("ALLOW_ALL") == "1")
 
     args = parser.parse_args()
 
@@ -193,4 +197,5 @@ if __name__ == "__main__":
         cleanup=not args.no_cleanup,
         prefer_pull=args.prefer_pull,
         gen_policies=not args.skip_policy_gen,
+        allow_all=args.allow_all,
     )
