@@ -86,8 +86,8 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
 
                         if allow_all:
                             print("Generating an allow all policy")
-                            with open(os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego"), "r") as policy:
-                                policies[container_group_id] = base64.b64encode(policy.read().encode()).decode()
+                            with open(os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego"), "r") as policy_file:
+                                policy = policy_file.read()
                         else:
                             if "volumes" in result["properties"]:
                                 for volume in result["properties"]["volumes"]:
@@ -105,10 +105,12 @@ def policies_gen(target, deployment_name, subscription, resource_group, registry
                                 *(["--debug-mode"] if debug else []),
                             ], check=True, stdout=subprocess.PIPE)
 
-                            with open(os.path.join(target, f"policy_{container_group_id}.rego"), "w") as file:
-                                file.write(res.stdout.decode())
+                            policy = res.stdout.decode()
 
-                            policies[container_group_id] = base64.b64encode(res.stdout).decode()
+                        with open(os.path.join(target, f"policy_{container_group_id}.rego"), "w") as file:
+                            file.write(policy)
+
+                        policies[container_group_id] = base64.b64encode(policy.encode()).decode()
 
     if any(line.startswith("param ccePolicies") for line in content):
         aci_param_set(param_file_path, "ccePolicies", "{\n" + "\n".join([
