@@ -3,11 +3,11 @@ requires = ["flit_core >=2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name =  "py-project-toml"
+name =  "c-aci-testing"
 authors = [
     {name = "Daniel Ciborowski", email = "dciborow@microsoft.com"},
 ]
-description = "Sample Python Project for creating a new Python Module"
+description = "Package for providing utilities for testing workflows involving Confidential ACI"
 readme = "README.md"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -21,6 +21,9 @@ classifiers = [
 ]
 requires-python = ">=3.8.1"
 dynamic = ["version"]
+
+[project.scripts]
+c-aci-testing = "c_aci_testing.main:main"
 
 [project.optional-dependencies]
 spark = [
