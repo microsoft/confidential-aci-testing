@@ -1,43 +1,10 @@
-name: Publish
-
-permissions:
-  contents: write
-  packages: write
-
+name: Python Publish Workflow
 on:
-  push:
-    tags:
-      - '*'
+  workflow_call:
 
 jobs:
-  python-package:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Build Python package
-      run: |
-        python packaging/package_build.py
-        echo "PACKAGE_NAME=$(ls *.tar.gz | xargs basename)" >> $GITHUB_ENV
-
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref_name }}
-        release_name: ${{ github.ref_name }}
-        draft: false
-        prerelease: true
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./${{ env.PACKAGE_NAME }}
-        asset_name: ${{ env.PACKAGE_NAME }}
-        asset_content_type: application/gzip
+  publish:
+    uses: microsoft/action-python/.github/workflows/publish.yml@0.6.4
+    secrets:
+      PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      TEST_PYPI_PASSWORD: ${{ secrets.TEST_PYPI_PASSWORD  }}

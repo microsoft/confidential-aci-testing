@@ -1,12 +1,29 @@
 {
-    "python.testing.unittestArgs": [
-        "-v",
-        "-s",
-        ".",
-        "-p",
-        "*.py"
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "files.trimTrailingWhitespace": true,
+    "files.autoSave": "onFocusChange",
+    "git.autofetch": true,
+    "[jsonc]": {
+        "editor.defaultFormatter": "vscode.json-language-features"
+    },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "python.defaultInterpreterPath": "/usr/local/bin/python",
+    "python.formatting.provider": "black",
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "pylint.args": [
+        "--rcfile=pyproject.toml"
     ],
-    "python.testing.pytestEnabled": false,
-    "python.testing.unittestEnabled": true,
-    "python.envFile": "${workspaceFolder}/cacitesting.env"
+    "black-formatter.args": [
+        "--config=pyproject.toml"
+    ],
+    "flake8.args": [
+        "--toml-config=pyproject.toml"
+    ],
+    "isort.args": [
+        "--settings-path=pyproject.toml"
+    ]
 }
