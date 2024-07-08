@@ -8,6 +8,4 @@ from __future__ import annotations
 import argparse
 
 
-def subparse_github(subparser):
-
-    env = subparser.add_parser("github")
+def subparse_github(github): ...

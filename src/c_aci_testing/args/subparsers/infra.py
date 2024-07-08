@@ -14,9 +14,7 @@ from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 
 
-def subparse_infra(subparser):
-
-    infra = subparser.add_parser("infra")
+def subparse_infra(infra):
 
     infra_subparser = infra.add_subparsers(dest="infra_command")
     deploy = infra_subparser.add_parser("deploy")

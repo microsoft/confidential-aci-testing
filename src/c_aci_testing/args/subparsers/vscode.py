@@ -8,6 +8,4 @@ from __future__ import annotations
 import argparse
 
 
-def subparse_vscode(subparser):
-
-    env = subparser.add_parser("vscode")
+def subparse_vscode(vscode): ...

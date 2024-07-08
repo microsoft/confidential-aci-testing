@@ -13,9 +13,7 @@ from ..parameters.tag import parse_tag
 from ..parameters.target_path import parse_target_path
 
 
-def subparse_images(subparser):
-
-    images = subparser.add_parser("images")
+def subparse_images(images):
 
     images_subparser = images.add_subparsers(dest="images_command")
 

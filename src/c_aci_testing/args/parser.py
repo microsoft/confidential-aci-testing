@@ -24,14 +24,36 @@ def parse():
     arg_parser = argparse.ArgumentParser()
 
     subparser = arg_parser.add_subparsers(dest="command")
-    subparse_aci(subparser)
-    subparse_env(subparser)
-    subparse_github(subparser)
-    subparse_infra(subparser)
-    subparse_images(subparser)
-    subparse_policies(subparser)
-    subparse_target(subparser)
-    subparse_vscode(subparser)
+    subparser.add_parser("aci")
+    subparser.add_parser("aci")
+    subparser.add_parser("env")
+    subparser.add_parser("github")
+    subparser.add_parser("infra")
+    subparser.add_parser("images")
+    subparser.add_parser("policies")
+    subparser.add_parser("target")
+    subparser.add_parser("vscode")
+
+    args, unknown = arg_parser.parse_known_args()
+
+    if args.command == "aci":
+        subparse_aci(subparser.choices["aci"])
+    elif args.command == "env":
+        subparse_env(subparser.choices["env"])
+    elif args.command == "github":
+        subparse_github(subparser.choices["github"])
+    elif args.command == "infra":
+        subparse_infra(subparser.choices["infra"])
+    elif args.command == "images":
+        subparse_images(subparser.choices["images"])
+    elif args.command == "policies":
+        subparse_policies(subparser.choices["policies"])
+    elif args.command == "target":
+        subparse_target(subparser.choices["target"])
+    elif args.command == "vscode":
+        subparse_vscode(subparser.choices["vscode"])
+    else:
+        raise argparse.ArgumentError(None, "command is required")
 
     args = arg_parser.parse_args()
 
@@ -42,6 +64,8 @@ def parse():
             missing_args.append(key)
 
     if missing_args:
-        raise argparse.ArgumentError(None, os.linesep.join(f"--{key.replace('_', '-')} is required" for key in missing_args))
+        raise argparse.ArgumentError(
+            None, os.linesep.join(f"--{key.replace('_', '-')} is required" for key in missing_args)
+        )
 
     return args

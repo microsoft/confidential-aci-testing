@@ -8,9 +8,7 @@ from __future__ import annotations
 import argparse
 
 
-def subparse_env(subparser):
-
-    env = subparser.add_parser("env")
+def subparse_env(env):
 
     env_subparser = env.add_subparsers(dest="env_command")
     env_subparser.add_parser("create")

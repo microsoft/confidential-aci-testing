@@ -16,9 +16,7 @@ from ..parameters.subscription import parse_subscription
 from ..parameters.target_path import parse_target_path
 
 
-def subparse_aci(subparser):
-
-    aci = subparser.add_parser("aci")
+def subparse_aci(aci):
 
     aci_subparser = aci.add_subparsers(dest="aci_command")
 
