@@ -52,24 +52,42 @@ def policies_gen(
     # Set required parameters in bicep param file
     aci_param_set(
         target_path,
-        parameters=[f"{k}='{v}'" for k, v in {
-            "registry": registry,
-            "repository": repository,
-            "tag": tag,
-        }.items()]
+        parameters=[
+            f"{k}='{v}'"
+            for k, v in {
+                "registry": registry,
+                "repository": repository,
+                "tag": tag,
+            }.items()
+        ],
+        add=False,  # If the user removed a field, don't re-add it
     )
 
     # Create an ARM template with parameters resolved
     print("Resolving parameters using what-if deployment")
-    res = subprocess.run([
-        "az", "deployment", "group", "what-if",
-        "--name", deployment_name,
-        "--no-pretty-print", "--mode", "Complete",
-        "--subscription", subscription,
-        "--resource-group", resource_group,
-        "--template-file", bicep_file_path,
-        "--parameters", bicepparam_file_path,
-    ], check=True, stdout=subprocess.PIPE)
+    res = subprocess.run(
+        [
+            "az",
+            "deployment",
+            "group",
+            "what-if",
+            "--name",
+            deployment_name,
+            "--no-pretty-print",
+            "--mode",
+            "Complete",
+            "--subscription",
+            subscription,
+            "--resource-group",
+            resource_group,
+            "--template-file",
+            bicep_file_path,
+            "--parameters",
+            bicepparam_file_path,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
 
     policies = {}
 
@@ -95,14 +113,18 @@ def policies_gen(
                         if "confidentialComputeProperties" not in result["properties"]:
                             result["properties"]["confidentialComputeProperties"] = {}
 
-                        result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ''
-                        container_group_id = result["id"] \
-                            .split(prefix)[-1] \
-                            .replace(deployment_name, bicep_file_path.split("/")[-1].split(".")[0]) \
+                        result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
+                        container_group_id = (
+                            result["id"]
+                            .split(prefix)[-1]
+                            .replace(deployment_name, bicep_file_path.split("/")[-1].split(".")[0])
                             .replace("-", "_")
+                        )
 
                         if policy_type == "allow_all":
-                            with open(os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego")) as policy_file:
+                            with open(
+                                os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego")
+                            ) as policy_file:
                                 policy = policy_file.read()
                         else:
                             if "volumes" in result["properties"]:
@@ -115,11 +137,19 @@ def policies_gen(
 
                             print("Calling acipolicygen and saving policy to file")
                             subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-                            res = subprocess.run(["az", "confcom", "acipolicygen",
-                                "-a", arm_template_path,
-                                "--outraw",
-                                *(["--debug-mode"] if policy_type == "debug" else []),
-                            ], check=True, stdout=subprocess.PIPE)
+                            res = subprocess.run(
+                                [
+                                    "az",
+                                    "confcom",
+                                    "acipolicygen",
+                                    "-a",
+                                    arm_template_path,
+                                    "--outraw",
+                                    *(["--debug-mode"] if policy_type == "debug" else []),
+                                ],
+                                check=True,
+                                stdout=subprocess.PIPE,
+                            )
 
                             policy = res.stdout.decode()
 
@@ -128,7 +158,12 @@ def policies_gen(
 
                         policies[container_group_id] = base64.b64encode(policy.encode()).decode()
 
-    aci_param_set(target_path,
-        parameters=["ccePolicies=" + "{\n" + "\n".join([
-        f"  {group_id}: '{policy}'" for group_id, policy in policies.items()
-    ]) + "\n}"])
+    aci_param_set(
+        target_path,
+        parameters=[
+            "ccePolicies="
+            + "{\n"
+            + "\n".join([f"  {group_id}: '{policy}'" for group_id, policy in policies.items()])
+            + "\n}"
+        ],
+    )
