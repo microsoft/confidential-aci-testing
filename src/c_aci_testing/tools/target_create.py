@@ -23,7 +23,8 @@ def target_create(
 
     # Copy the template files to the target path
     template_path = os.path.realpath(os.path.join(os.path.dirname(__file__), "..", "templates", "target"))
-    subprocess.run(["cp", "-r", template_path + "/.", target_path], check=True)
+    for file in os.listdir(template_path):
+        subprocess.run(["cp", "-r", file, target_path], check=True)
 
     if name != "example":
         for file_path in os.listdir(target_path):
