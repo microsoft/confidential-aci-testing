@@ -166,4 +166,7 @@ jobs:
       run: pip install flit && flit install
 
     - name: Run Test
-      run: pytest tests/test_target.py::test_target_run_steps -s
+      run: |
+        c-aci-testing target create test-target -n example
+        c-aci-testing target images build test-target
+        pytest tests/test_target.py::test_target_run_steps -s
