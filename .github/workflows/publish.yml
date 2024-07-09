@@ -19,7 +19,8 @@ jobs:
     - name: Build Python package
       run: |
         pip install flit && flit build
-        echo "PACKAGE_NAME=dist/$(ls dist/*.tar.gz | xargs basename)" >> $GITHUB_ENV
+        cp dist/*.tar.gz .
+        echo "PACKAGE_NAME=$(ls *.tar.gz | xargs basename)" >> $GITHUB_ENV
 
     - name: Create GitHub Release
       id: create_release
