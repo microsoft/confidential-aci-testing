@@ -15,15 +15,19 @@ def images_build(
     registry: str,
     repository: str | None,
     tag: str | None,
-    services=[],
+    services=None,
     **kwargs,
 ):
+    if services is None:
+        services = []
+
     build_command = ["docker-compose", "build", "--with-dependencies"]
     for service in services:
         build_command.append(service)
 
     print(f"Building images for {registry}")
-    subprocess.run(build_command,
+    subprocess.run(
+        build_command,
         env={
             **os.environ,
             "TARGET": target_path,

@@ -36,7 +36,7 @@ def aci_get_ids(
             check=True,
             stdout=subprocess.PIPE,
         )
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         return []
 
     ids = [id for id in res.stdout.decode().split(os.linesep) if id]

@@ -18,7 +18,7 @@ def target_create(
     # Ensure the target path is an empty directory
     os.makedirs(target_path, exist_ok=True)
     if os.listdir(target_path):
-        print(f"Target directory path must be empty")
+        print("Target directory path must be empty")
         return
 
     # Copy the template files to the target path

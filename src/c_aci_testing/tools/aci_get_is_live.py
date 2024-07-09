@@ -15,10 +15,10 @@ def aci_get_is_live(
     deployment_name: str,
     subscription: str,
     resource_group: str,
-    aci_ids: list[str] = [],
+    aci_ids: list[str] = None,
     **kwargs,
 ) -> bool:
-    if aci_ids == []:
+    if aci_ids is None:
         aci_ids = aci_get_ids(deployment_name, subscription, resource_group)
 
     if aci_ids == []:

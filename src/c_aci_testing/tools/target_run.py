@@ -91,8 +91,8 @@ def target_run_ctx(
     try:
         try:
             yield aci_ids
-        except Exception as e:
-            return # Don't remove the ACI if there was an error
+        except Exception:
+            return  # Don't remove the ACI if there was an error
         aci_monitor(
             deployment_name=deployment_name,
             subscription=subscription,

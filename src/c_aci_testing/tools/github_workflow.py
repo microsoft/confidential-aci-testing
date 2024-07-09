@@ -51,7 +51,7 @@ def github_workflow(
     with open(workflow_path, "w") as f:
         f.write(
             file_contents
-                .replace("example", target_name.replace("-", "").replace("_", ""))
-                .replace("Example", title_case_target_name.replace("-", "").replace("_", ""))
-                .replace("<TARGET_PATH>", os.path.relpath(target_path, repo_root))
-            )
+            .replace("example", target_name.replace("-", "").replace("_", ""))
+            .replace("Example", title_case_target_name.replace("-", "").replace("_", ""))
+            .replace("<TARGET_PATH>", os.path.relpath(target_path, repo_root))
+        )

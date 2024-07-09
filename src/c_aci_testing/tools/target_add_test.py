@@ -36,9 +36,9 @@ def target_add_test(
     with open(test_path, "w") as f:
         f.write(
             file_contents
-                .replace("example", target_name.replace("-", "").replace("_", ""))
-                .replace("Example", title_case_target_name.replace("-", "").replace("_", ""))
-            )
+            .replace("example", target_name.replace("-", "").replace("_", ""))
+            .replace("Example", title_case_target_name.replace("-", "").replace("_", ""))
+        )
 
     # If there isn't already a pytest configuration file create one
     vs_code_path = None
