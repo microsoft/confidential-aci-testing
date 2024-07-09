@@ -1,0 +1,43 @@
+name: Publish
+
+permissions:
+  contents: write
+  packages: write
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  python-package:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Python package
+      run: |
+        flit build
+        echo "PACKAGE_NAME=$(ls dist/*.tar.gz | xargs basename)" >> $GITHUB_ENV
+
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: ${{ github.ref_name }}
+        draft: false
+        prerelease: true
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./${{ env.PACKAGE_NAME }}
+        asset_name: ${{ env.PACKAGE_NAME }}
+        asset_content_type: application/gzip
