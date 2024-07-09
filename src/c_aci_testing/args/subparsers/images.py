@@ -13,7 +13,7 @@ from ..parameters.tag import parse_tag
 from ..parameters.target_path import parse_target_path
 
 
-def subparse_images(images):
+def subparse_images(images: argparse.ArgumentParser):
 
     images_subparser = images.add_subparsers(dest="images_command")
 

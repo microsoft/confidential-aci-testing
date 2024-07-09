@@ -17,7 +17,7 @@ from ..parameters.tag import parse_tag
 from ..parameters.target_path import parse_target_path
 
 
-def subparse_policies(policies):
+def subparse_policies(policies: argparse.ArgumentParser):
 
     policies_subparser = policies.add_subparsers(dest="policies_command")
 

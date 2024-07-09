@@ -10,7 +10,7 @@ import argparse
 from ..parameters.target_path import parse_target_path
 
 
-def subparse_vscode(vscode):
+def subparse_vscode(vscode: argparse.ArgumentParser):
 
     vscode_subparser = vscode.add_subparsers(dest="vscode_command")
     run_debug = vscode_subparser.add_parser("run_debug")

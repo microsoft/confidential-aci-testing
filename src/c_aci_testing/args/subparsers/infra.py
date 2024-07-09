@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import argparse
 import os
 
 from ..parameters.location import parse_location
@@ -14,7 +15,7 @@ from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 
 
-def subparse_infra(infra):
+def subparse_infra(infra: argparse.ArgumentParser):
 
     infra_subparser = infra.add_subparsers(dest="infra_command")
     deploy = infra_subparser.add_parser("deploy")
