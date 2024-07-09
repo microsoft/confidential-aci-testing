@@ -169,5 +169,5 @@ jobs:
       run: |
         source cacitesting.env
         c-aci-testing target create test-target -n example
-        c-aci-testing images build test-target
+        (cd test-target && docker-compose build primary)
         pytest tests/test_target.py::test_target_run_steps -s
