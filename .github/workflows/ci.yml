@@ -30,14 +30,11 @@ jobs:
     - name: Setup Docker
       run: sudo usermod -aG docker $USER
 
+    - name: Install package
+      run: pip install flit && flit install
+
     - name: Run Test
-      run: |
-        pip install flit && flit install
-        tree /home/runner/.local/lib/python3.10/site-packages/c_aci_testing
-        c-aci-testing target create test-target -n example
-        ls -la test-target
-        cat test-target/example.bicep
-        pytest tests/test_target.py::test_target_run -s
+      run: pytest tests/test_target.py::test_target_run -s
 
   test_target_test_runner:
     runs-on: ubuntu-latest

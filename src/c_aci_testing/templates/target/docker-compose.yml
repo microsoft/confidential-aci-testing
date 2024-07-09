@@ -1,0 +1,7 @@
+version: '3'
+services:
+  primary:
+    image: $REGISTRY/${REPOSITORY:-example}/primary:${TAG:-latest}
+    build:
+      context: .
+      dockerfile: primary.Dockerfile
