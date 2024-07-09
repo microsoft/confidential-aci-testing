@@ -21,8 +21,8 @@ def policies_gen(
     subscription: str,
     resource_group: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     policy_type: str,
     **kwargs,
 ):
@@ -56,8 +56,8 @@ def policies_gen(
             f"{k}='{v}'"
             for k, v in {
                 "registry": registry,
-                "repository": repository,
-                "tag": tag,
+                "repository": repository or "",
+                "tag": tag or "",
             }.items()
         ],
         add=False,  # If the user removed a field, don't re-add it
@@ -123,7 +123,7 @@ def policies_gen(
 
                         if policy_type == "allow_all":
                             with open(
-                                os.path.join(os.path.dirname(__file__), "security_policies", "allow_all.rego")
+                                os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego")
                             ) as policy_file:
                                 policy = policy_file.read()
                         else:

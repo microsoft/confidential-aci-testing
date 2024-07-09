@@ -13,8 +13,8 @@ import subprocess
 def images_build(
     target_path: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     services=[],
     **kwargs,
 ):

@@ -14,8 +14,8 @@ from typing import List
 def images_pull(
     target_path: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     **kwargs,
 ) -> list[str]:
     subprocess.run(["az", "acr", "login", "--name", registry], check=True)

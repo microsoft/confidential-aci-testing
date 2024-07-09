@@ -13,8 +13,8 @@ import subprocess
 def images_push(
     target_path: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     **kwargs,
 ):
     subprocess.run(["az", "acr", "login", "--name", registry], check=True)
