@@ -1,4 +1,9 @@
-name: Python CI
+name: CI
+
+permissions:
+  id-token: write
+  contents: read
+
 on:
   push:
     branches: [ main ]
