@@ -16,17 +16,29 @@ def aci_get_ids(
     resource_group: str,
     **kwargs,
 ) -> list[str]:
-    res = subprocess.run(
-        [
-            "az", "deployment", "group", "show",
-            "--name", deployment_name,
-            "--subscription", subscription,
-            "--resource-group", resource_group,
-            "--query", "properties.outputs.ids.value",
-            "-o", "tsv",
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
+    try:
+        res = subprocess.run(
+            [
+                "az",
+                "deployment",
+                "group",
+                "show",
+                "--name",
+                deployment_name,
+                "--subscription",
+                subscription,
+                "--resource-group",
+                resource_group,
+                "--query",
+                "properties.outputs.ids.value",
+                "-o",
+                "tsv",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+        )
+    except subprocess.CalledProcessError as e:
+        return []
+
     ids = [id for id in res.stdout.decode().split(os.linesep) if id]
     return ids
