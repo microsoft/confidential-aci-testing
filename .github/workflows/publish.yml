@@ -18,7 +18,7 @@ jobs:
 
     - name: Build Python package
       run: |
-        flit build
+        pip install flit && flit build
         echo "PACKAGE_NAME=$(ls dist/*.tar.gz | xargs basename)" >> $GITHUB_ENV
 
     - name: Create GitHub Release
