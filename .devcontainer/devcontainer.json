@@ -1,27 +1,48 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.222.0/containers/python-3-miniconda
 {
-	"image": "mcr.microsoft.com/devcontainers/universal:2",
+	"name": "Python Environment",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
 	"features": {
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
 		"ghcr.io/devcontainers/features/azure-cli:1": {}
 	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"eamodio.gitlens",
-				"GitHub.copilot",
-				"ms-python.black-formatter",
+				"editorconfig.editorconfig",
+				"github.vscode-pull-request-github",
+				"ms-azuretools.vscode-docker",
 				"ms-python.python",
-				"GitHub.vscode-github-actions",
-				"ms-vscode.vscode-node-azure-pack",
-				"ms-azuretools.vscode-bicep"
+				"ms-python.vscode-pylance",
+				"ms-python.pylint",
+				"ms-python.isort",
+				"ms-python.flake8",
+				"ms-python.black-formatter",
+				"ms-vsliveshare.vsliveshare",
+				"ryanluker.vscode-coverage-gutters",
+				"bungcip.better-toml",
+				"GitHub.copilot"
 			],
 			"settings": {
-				"editor.defaultFormatter": "ms-python.black-formatter",
-				"files.exclude": {
-					"**/__pycache__": true
-				},
-				"files.trimTrailingWhitespace": true
+				"python.defaultInterpreterPath": "/usr/local/bin/python",
+				"black-formatter.path": [
+					"/usr/local/py-utils/bin/black"
+				],
+				"pylint.path": [
+					"/usr/local/py-utils/bin/pylint"
+				],
+				"flake8.path": [
+					"/usr/local/py-utils/bin/flake8"
+				],
+				"isort.path": [
+					"/usr/local/py-utils/bin/isort"
+				]
 			}
 		}
 	},
-	"postCreateCommand": "pip install -r requirements.txt && pre-commit install"
+	"onCreateCommand": "pre-commit install-hooks"
 }

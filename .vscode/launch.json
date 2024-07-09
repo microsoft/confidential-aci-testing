@@ -1,154 +1,19 @@
 {
-    "version": "0.2.0",
+    "version": "0.1.0",
     "configurations": [
         {
-            "name": "c_aci_testing.env_create",
-            "type": "debugpy",
+            "name": "Python: Debug Tests",
+            "type": "python",
             "request": "launch",
-            "module": "c_aci_testing.env_create",
+            "program": "${file}",
+            "purpose": [
+                "debug-test"
+            ],
+            "console": "integratedTerminal",
             "justMyCode": false,
-            "args": [
-                "${input:cacitestingEnvPath}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.infra_deploy",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.infra_deploy",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}"
-        },
-        {
-            "name": "c_aci_testing.target_create",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.target_create",
-            "justMyCode": false,
-            "args": [
-                "${input:cacitestingTargetPath}",
-                "--name",
-                "${input:cacitestingTargetName}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.target_run",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.target_run",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}",
-                "--name",
-                "${input:cacitestingDeploymentName}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.images_pull",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.images_pull",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.images_build",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.images_build",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.images_push",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.images_push",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.policies_gen",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.policies_gen",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}",
-                "--deployment-name",
-                "${input:cacitestingTargetName}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.aci_deploy",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.aci_deploy",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "${input:cacitestingTargetPath}",
-                "-n",
-                "${input:cacitestingDeploymentName}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.aci_monitor",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.aci_monitor",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "-n",
-                "${input:cacitestingDeploymentName}"
-            ]
-        },
-        {
-            "name": "c_aci_testing.aci_remove",
-            "type": "debugpy",
-            "request": "launch",
-            "module": "c_aci_testing.aci_remove",
-            "justMyCode": false,
-            "envFile": "${workspaceFolder}/${input:cacitestingEnvPath}",
-            "args": [
-                "-n",
-                "${input:cacitestingDeploymentName}"
-            ]
-        }
-    ],
-    "inputs": [
-        {
-            "id": "cacitestingEnvPath",
-            "type": "promptString",
-            "description": "Enter the path to save the environment file:",
-            "default": ".env"
-        },
-        {
-            "id": "cacitestingTargetPath",
-            "type": "promptString",
-            "description": "Enter the path to the target:"
-        },
-        {
-            "id": "cacitestingTargetName",
-            "type": "promptString",
-            "description": "Enter the name of the target:"
-        },
-        {
-            "id": "cacitestingDeploymentName",
-            "type": "promptString",
-            "description": "Enter the name of the deployment:"
+            "env": {
+                "PYTEST_ADDOPTS": "--no-cov -n0 --dist no"
+            }
         }
     ]
 }

@@ -41,7 +41,7 @@ rm c-aci-testing*.tar.gz
 All scripts can be given call-time parameters, but for parameters which will be consistent across runs, it's easier to define an environment file to use. You can create a blank env file with:
 
 ```
-python -m c_aci_testing.env_create > cacitesting.env
+c-aci-testing env create > cacitesting.env
 ```
 
 Then just fill in the values you wish to use for your deployments, and source it
@@ -52,7 +52,7 @@ source cacitesting.env
 
 ### Deploy infrastructure to Azure
 ```
-python -m c_aci_testing.infra_deploy
+c-aci-testing infra deploy
 ```
 
 This will deploy/check the resources required to build images, generate security policies and deploy container instances.
@@ -65,7 +65,7 @@ export TARGET_PATH=./my_new_target
 export TARGET_NAME=my_new_target
 ```
 ```
-python -m c_aci_testing.target_create $TARGET_PATH -n $TARGET_NAME
+c-aci-testing target create $TARGET_PATH -n $TARGET_NAME
 ```
 
 This populates the directory with an example target, you can then modify the target for your specific workflow.
@@ -73,7 +73,7 @@ This populates the directory with an example target, you can then modify the tar
 ## Run the Target
 
 ```
-python -m c_aci_testing.target_run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
+c-aci-testing target run $TARGET_PATH -n <YOUR_DEPLOYMENT_NAME>
 ```
 This will:
 - Build any images defined in your target directory
@@ -90,15 +90,15 @@ This will:
 As well as running a given target end to end, each individual stage of the process can be run separately
 
 ```
-python -m c_aci_testing.images_build $TARGET_PATH
+c-aci-testing images build $TARGET_PATH
 ```
 
 ```
-python -m c_aci_testing.images_push $TARGET_PATH
+c-aci-testing images push $TARGET_PATH
 ```
 
 ```
-python -m c_aci_testing.policies_gen $TARGET_PATH
+c-aci-testing policies gen $TARGET_PATH
 ```
 
 ```
@@ -107,18 +107,22 @@ DEPLOYMENT_NAME=my-deployment
 
 ```
 # Deploy and monitor (Can be run separately)
-python -m c_aci_testing.aci_monitor --id \
-    $(python -m c_aci_testing.aci_deploy $TARGET_PATH --name $DEPLOYMENT_NAME)
+c-aci-testing aci_deploy $TARGET_PATH \
+    --deployment-name $DEPLOYMENT_NAME
+
+c-aci-testing aci_monitor \
+    --deployment-name $DEPLOYMENT_NAME
 
 # Cleanup
-python -m c_aci_testing.aci_remove --name $DEPLOYMENT_NAME
+c-aci-testing aci_remove \
+    --deployment-name $DEPLOYMENT_NAME
 ```
 
 ### Integrate with VS Code
 #### Add steps to Run and Debug
 
 ```
-python -m c_aci_testing.vscode_run_debug
+c-aci-testing vscode run_debug
 ```
 
 This adds launch configurations for each script in the python package for easy use.
@@ -126,13 +130,18 @@ This adds launch configurations for each script in the python package for easy u
 #### Add Targets to Testing
 
 ```
-python -m c_aci_testing.vscode_testing $TARGET_PATH
+c-aci-testing vscode testing $TARGET_PATH
 ```
 
 This creates a Python Unittest runner for a provided target, as well as populating a workspace level settings file which points unittest at the target. If there is already a workspace level target, it is left alone.
 
 ### Create a Github Actions workflow
-Coming Soon
+
+```
+c-aci-testing github workflow $TARGET_PATH
+```
+
+This adds a new workflow file to `.github/workflows` which runs the specified target.
 
 ## Contributing
 
