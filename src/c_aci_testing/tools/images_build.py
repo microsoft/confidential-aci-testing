@@ -26,6 +26,7 @@ def images_build(
         build_command.append(service)
 
     print(f"Building images for {registry}")
+    print(f"{build_command=}")
     subprocess.run(
         build_command,
         env={
