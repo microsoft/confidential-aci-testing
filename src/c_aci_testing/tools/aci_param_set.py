@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import os
 import re
-from typing import List
 
 
 def aci_param_set(

@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 import subprocess
-from typing import List
 
 from .aci_get_ids import aci_get_ids
 from .aci_param_set import aci_param_set
