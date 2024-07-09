@@ -19,7 +19,6 @@ def images_push(
 ):
     subprocess.run(["az", "acr", "login", "--name", registry], check=True)
 
-    subprocess.run(["docker", "image", "list"])
     print(f"Pushing images for {registry}")
     subprocess.run(
         ["docker-compose", "push"],
