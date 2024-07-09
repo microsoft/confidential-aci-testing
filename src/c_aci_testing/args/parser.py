@@ -19,7 +19,7 @@ from .subparsers.target import subparse_target
 from .subparsers.vscode import subparse_vscode
 
 
-def parse():
+def parse_command():
 
     arg_parser = argparse.ArgumentParser()
 

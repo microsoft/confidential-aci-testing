@@ -7,5 +7,11 @@ from __future__ import annotations
 
 import argparse
 
+from ..parameters.target_path import parse_target_path
 
-def subparse_github(github): ...
+
+def subparse_github(github):
+
+    github_subparser = github.add_subparsers(dest="github_command")
+    workflow = github_subparser.add_parser("workflow")
+    parse_target_path(workflow)

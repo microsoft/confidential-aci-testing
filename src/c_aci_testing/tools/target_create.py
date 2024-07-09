@@ -30,7 +30,7 @@ def target_create(
 
             # Rename files to match target name
             old_file_path = os.path.join(target_path, file_path)
-            new_file_path = os.path.join(target_path, file_path.replace("example", name))
+            new_file_path = os.path.join(target_path, file_path.replace("example", name.replace("-", "_")))
             if "example" in file_path:
                 subprocess.run(["mv", old_file_path, new_file_path], check=True)
 
@@ -38,4 +38,4 @@ def target_create(
             with open(new_file_path) as f:
                 file_contents = f.read()
             with open(new_file_path, "w") as f:
-                f.write(file_contents.replace("example", name))
+                f.write(file_contents.replace("example", name.replace("-", "_")))

@@ -34,6 +34,9 @@ def subparse_target(target):
         default="example",
     )
 
+    add_test = target_subparser.add_parser("add_test")
+    parse_target_path(add_test)
+
     run = target_subparser.add_parser("run")
     parse_target_path(run)
     parse_deployment_name(run)

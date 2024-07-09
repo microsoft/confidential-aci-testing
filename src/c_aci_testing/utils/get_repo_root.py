@@ -9,5 +9,8 @@ from __future__ import annotations
 import subprocess
 
 
-def get_repo_root() -> str:
-    return subprocess.check_output(["git", "rev-parse", "--show-toplevel"]).strip().decode()
+def get_repo_root(path: str) -> str:
+    return subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"],
+        cwd=path,
+    ).strip().decode()

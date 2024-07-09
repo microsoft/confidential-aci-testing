@@ -9,12 +9,13 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 
 from ..utils.get_repo_root import get_repo_root
 from ..utils.get_target_name import get_target_name
 
 
-def vscode_testing(
+def target_add_test(
     target_path: str,
     **kwargs,
 ):
@@ -35,12 +36,20 @@ def vscode_testing(
     with open(test_path, "w") as f:
         f.write(
             file_contents
-                .replace("example", target_name)
-                .replace("Example", title_case_target_name)
+                .replace("example", target_name.replace("-", "").replace("_", ""))
+                .replace("Example", title_case_target_name.replace("-", "").replace("_", ""))
             )
 
     # If there isn't already a pytest configuration file create one
-    vs_code_path = os.path.join(get_repo_root(), ".vscode")
+    vs_code_path = None
+    try:
+        vs_code_path = os.path.join(get_repo_root(target_path), ".vscode")
+    except subprocess.CalledProcessError:
+        print("Can't find workspace root, configure manually to continue")
+
+    if vs_code_path is None:
+        return
+
     if not os.path.exists(vs_code_path):
         os.mkdir(vs_code_path)
 
