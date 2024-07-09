@@ -167,6 +167,7 @@ jobs:
 
     - name: Run Test
       run: |
+        source cacitesting.env
         c-aci-testing target create test-target -n example
         c-aci-testing images build test-target
         pytest tests/test_target.py::test_target_run_steps -s
