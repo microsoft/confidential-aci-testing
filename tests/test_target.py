@@ -45,7 +45,7 @@ def parse_args():
     parse_tag(parser)
     parse_location(parser)
     parse_managed_identity(parser)
-    return parser.parse_known_args()[0]
+    return vars(parser.parse_known_args()[0])
 
 
 def test_target_run(unit_test_mocks: None):
