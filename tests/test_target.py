@@ -192,6 +192,8 @@ def test_target_run_steps(unit_test_mocks: None):
     # Define a temporary directory to use as a target
     with tempfile.TemporaryDirectory(prefix="target_") as target_path:
 
+        print(f"{target_path=}")
+
         # Create the target
         target_name = ''.join(random.choices(string.ascii_lowercase, k=8))
         target_create(target_path=target_path, name=target_name)

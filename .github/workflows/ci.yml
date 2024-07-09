@@ -166,8 +166,4 @@ jobs:
       run: pip install flit && flit install
 
     - name: Run Test
-      run: |
-        source cacitesting.env
-        c-aci-testing target create test-target -n example
-        (cd test-target && docker-compose build primary)
-        pytest tests/test_target.py::test_target_run_steps -s
+      run: pytest tests/test_target.py::test_target_run_steps -s

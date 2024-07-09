@@ -26,6 +26,7 @@ def images_build(
         build_command.append(service)
 
     print(f"Building images for {registry}")
+    subprocess.run(["docker", "image", "list"])
     subprocess.run(
         build_command,
         env={
@@ -38,5 +39,6 @@ def images_build(
         cwd=target_path,
         check=True,
     )
+    subprocess.run(["docker", "image", "list"])
 
     print("Built all images successfully")
