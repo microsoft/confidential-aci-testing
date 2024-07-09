@@ -1,0 +1,164 @@
+name: Python CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [created]
+  workflow_dispatch:
+
+jobs:
+  test_target_run:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run -s
+
+  test_target_test_runner:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_test_runner -s
+
+  test_target_run_debug_policy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run_debug_policy -s
+
+  test_target_run_allow_all_policy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run_allow_all_policy -s
+
+  test_target_run_no_cleanup:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run_no_cleanup -s
+
+  test_target_run_prefer_pull:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run_prefer_pull -s
+
+  test_target_run_steps:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: flit install
+
+    - name: Run Test
+      run: pytest tests/test_target.py::test_target_run_steps -s
