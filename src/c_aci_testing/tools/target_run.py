@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import subprocess
 from contextlib import contextmanager
 
 from .aci_deploy import aci_deploy
@@ -64,7 +63,6 @@ def target_run_ctx(
                 tag=tag,
                 services=unpulled_services,
             )
-            subprocess.run(["docker", "image", "list"])
             images_push(
                 target_path=target_path,
                 registry=registry,
