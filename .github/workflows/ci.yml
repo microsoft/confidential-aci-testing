@@ -34,7 +34,11 @@ jobs:
       run: pip install flit && flit install
 
     - name: Run Test
-      run: pytest tests/test_target.py::test_target_run -s
+      run: |
+        c-aci-testing target create test-target -n example
+        ls -la test-target
+        cat test-target/example.bicep
+        pytest tests/test_target.py::test_target_run -s
 
   test_target_test_runner:
     runs-on: ubuntu-latest
