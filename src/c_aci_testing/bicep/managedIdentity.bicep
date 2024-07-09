@@ -7,27 +7,38 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   location: location
 }
 
-resource AcrPull 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid('AcrPull', resourceGroup().id, managedIdentity.name)
+// Should ideally use custom fine grained roles, but our subscription doesn't
+// allow role creation so we need contributor access
+resource Contributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid('Contributor', resourceGroup().id, managedIdentity.name)
   scope: resourceGroup()
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
     principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
 
-resource AcrPush 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid('AcrPush', resourceGroup().id, managedIdentity.name)
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
-    principalId: managedIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
+// resource AcrPull 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+//   name: guid('AcrPull', resourceGroup().id, managedIdentity.name)
+//   scope: resourceGroup()
+//   properties: {
+//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')
+//     principalId: managedIdentity.properties.principalId
+//     principalType: 'ServicePrincipal'
+//   }
+// }
 
-// Should ideally use this custom role, but our subscription doesn't allow role creation
+// resource AcrPush 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
+//   name: guid('AcrPush', resourceGroup().id, managedIdentity.name)
+//   scope: resourceGroup()
+//   properties: {
+//     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '8311e382-0749-4cb8-b61a-304f252e45ec')
+//     principalId: managedIdentity.properties.principalId
+//     principalType: 'ServicePrincipal'
+//   }
+// }
+
 
 // resource AciDeployerRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' = {
 //   name: guid('AciDeployerRole', resourceGroup().id, managedIdentity.name)
@@ -51,16 +62,6 @@ resource AcrPush 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = 
 //     ]
 //   }
 // }
-
-resource AciCreate 'Microsoft.Authorization/roleAssignments@2020-04-01-preview' = {
-  name: guid('AciCreate', resourceGroup().id, managedIdentity.name)
-  scope: resourceGroup()
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
-    principalId: managedIdentity.properties.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
 
 resource federatedCredentialPR 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
   name: 'federatedCredentialPR'
