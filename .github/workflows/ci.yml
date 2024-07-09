@@ -168,5 +168,5 @@ jobs:
     - name: Run Test
       run: |
         c-aci-testing target create test-target -n example
-        c-aci-testing target images build test-target
+        c-aci-testing images build test-target
         pytest tests/test_target.py::test_target_run_steps -s
