@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name =  "c-aci-testing"
 authors = [
-    {name = "Daniel Ciborowski", email = "dciborow@microsoft.com"},
+    {name = "Dominic Ayre", email = "dominicayre@microsoft.com"},
 ]
 description = "Package for providing utilities for testing workflows involving Confidential ACI"
 readme = "README.md"
