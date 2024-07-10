@@ -148,7 +148,6 @@ def test_target_run_no_cleanup(unit_test_mocks: None):
             target_path=target_path,
             **deployment_info,
             cleanup=False,
-            follow=False,
         ) as target_ctx:
             aci_ids = target_ctx
 
