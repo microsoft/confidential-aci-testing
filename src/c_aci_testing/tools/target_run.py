@@ -30,7 +30,7 @@ def target_run_ctx(
     location: str,
     managed_identity: str,
     policy_type: str = "generated",
-    follow: bool = True,
+    follow: bool = False,
     cleanup: bool = True,
     prefer_pull: bool = False,
     **kwargs,
