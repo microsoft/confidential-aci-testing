@@ -14,7 +14,7 @@ def aci_monitor(
     deployment_name: str,
     subscription: str,
     resource_group: str,
-    follow: bool = True,
+    follow: bool = False,
     **kwargs,
 ):
     for id in aci_get_ids(deployment_name, subscription, resource_group):
