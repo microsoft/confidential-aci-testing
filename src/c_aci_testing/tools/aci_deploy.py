@@ -27,7 +27,8 @@ def aci_deploy(
         parameters=[f"{k}='{v}'" for k, v in {
             "location": location,
             "managedIDName": managed_identity,
-        }.items()]
+        }.items()],
+        add=False,
     )
 
     # Find the bicep files
