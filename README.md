@@ -32,8 +32,8 @@ This project provides utilities for testing workflows involving Confidential ACI
 ```
 latest=$(gh release list -R microsoft/confidential-aci-testing -L 1 --json tagName --jq '.[0].tagName')
 gh release download $latest -R microsoft/confidential-aci-testing
-pip install c-aci-testing*.tar.gz
-rm c-aci-testing*.tar.gz
+pip install c_aci_testing*.tar.gz
+rm c_aci_testing*.tar.gz
 ```
 
 ### Define your Azure Environment
