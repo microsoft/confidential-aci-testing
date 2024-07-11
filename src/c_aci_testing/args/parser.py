@@ -25,7 +25,6 @@ def parse_command():
 
     subparser = arg_parser.add_subparsers(dest="command")
     subparser.add_parser("aci")
-    subparser.add_parser("aci")
     subparser.add_parser("env")
     subparser.add_parser("github")
     subparser.add_parser("infra")
