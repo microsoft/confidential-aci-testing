@@ -25,7 +25,9 @@
 				"ms-vsliveshare.vsliveshare",
 				"ryanluker.vscode-coverage-gutters",
 				"bungcip.better-toml",
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"ms-azuretools.vscode-bicep",
+				"eamodio.gitlens"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/usr/local/bin/python",
