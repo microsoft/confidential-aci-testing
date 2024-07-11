@@ -10,5 +10,5 @@ import argparse
 
 def subparse_env(env: argparse.ArgumentParser):
 
-    env_subparser = env.add_subparsers(dest="env_command")
+    env_subparser = env.add_subparsers(dest="env_command", required=True)
     env_subparser.add_parser("create")

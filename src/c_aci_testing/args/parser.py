@@ -21,9 +21,11 @@ from .subparsers.vscode import subparse_vscode
 
 def parse_command():
 
-    arg_parser = argparse.ArgumentParser()
+    arg_parser = argparse.ArgumentParser(
+        "Utilities for testing workflows involving Confidential ACI."
+    )
 
-    subparser = arg_parser.add_subparsers(dest="command")
+    subparser = arg_parser.add_subparsers(dest="command", required=True)
     subparser.add_parser("aci")
     subparser.add_parser("env")
     subparser.add_parser("github")
@@ -33,7 +35,7 @@ def parse_command():
     subparser.add_parser("target")
     subparser.add_parser("vscode")
 
-    args, unknown = arg_parser.parse_known_args()
+    args, _ = arg_parser.parse_known_args()
 
     if args.command == "aci":
         subparse_aci(subparser.choices["aci"])

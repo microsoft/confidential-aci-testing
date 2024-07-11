@@ -12,6 +12,6 @@ from ..parameters.target_path import parse_target_path
 
 def subparse_github(github: argparse.ArgumentParser):
 
-    github_subparser = github.add_subparsers(dest="github_command")
+    github_subparser = github.add_subparsers(dest="github_command", required=True)
     workflow = github_subparser.add_parser("workflow")
     parse_target_path(workflow)

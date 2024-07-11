@@ -22,7 +22,7 @@ from ..parameters.target_path import parse_target_path
 
 def subparse_target(target: argparse.ArgumentParser):
 
-    target_subparser = target.add_subparsers(dest="target_command")
+    target_subparser = target.add_subparsers(dest="target_command", required=True)
 
     create = target_subparser.add_parser("create")
     parse_target_path(create)

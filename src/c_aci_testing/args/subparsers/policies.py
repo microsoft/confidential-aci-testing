@@ -19,7 +19,7 @@ from ..parameters.target_path import parse_target_path
 
 def subparse_policies(policies: argparse.ArgumentParser):
 
-    policies_subparser = policies.add_subparsers(dest="policies_command")
+    policies_subparser = policies.add_subparsers(dest="policies_command", required=True)
 
     gen = policies_subparser.add_parser("gen")
     parse_target_path(gen)

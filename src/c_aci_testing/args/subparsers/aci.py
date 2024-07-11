@@ -18,7 +18,7 @@ from ..parameters.target_path import parse_target_path
 
 def subparse_aci(aci: argparse.ArgumentParser):
 
-    aci_subparser = aci.add_subparsers(dest="aci_command")
+    aci_subparser = aci.add_subparsers(dest="aci_command", required=True)
 
     deploy = aci_subparser.add_parser("deploy")
     parse_target_path(deploy)
@@ -54,7 +54,7 @@ def subparse_aci(aci: argparse.ArgumentParser):
     )
 
     get = aci_subparser.add_parser("get")
-    get_subparser = get.add_subparsers(dest="get_command")
+    get_subparser = get.add_subparsers(dest="get_command", required=True)
 
     get_ids = get_subparser.add_parser("ids")
     parse_deployment_name(get_ids)

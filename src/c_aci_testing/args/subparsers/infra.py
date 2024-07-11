@@ -17,7 +17,7 @@ from ..parameters.subscription import parse_subscription
 
 def subparse_infra(infra: argparse.ArgumentParser):
 
-    infra_subparser = infra.add_subparsers(dest="infra_command")
+    infra_subparser = infra.add_subparsers(dest="infra_command", required=True)
     deploy = infra_subparser.add_parser("deploy")
 
     parse_subscription(deploy)
