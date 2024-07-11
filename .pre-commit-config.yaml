@@ -29,13 +29,6 @@ repos:
       - id: pyupgrade
         args: [--py37-plus]
 
-  - repo: https://github.com/hadialqattan/pycln
-    rev: v1.2.5
-    hooks:
-      - id: pycln
-        args: [--config=pyproject.toml]
-        stages: [manual]
-
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0
     hooks:
