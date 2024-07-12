@@ -27,7 +27,8 @@
 				"bungcip.better-toml",
 				"GitHub.copilot",
 				"ms-azuretools.vscode-bicep",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"ms-vscode.azure-account"
 			],
 			"settings": {
 				"python.defaultInterpreterPath": "/usr/local/bin/python",

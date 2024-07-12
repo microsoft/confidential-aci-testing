@@ -1,0 +1,35 @@
+#   ---------------------------------------------------------------------------------
+#   Copyright (c) Microsoft Corporation. All rights reserved.
+#   Licensed under the MIT License. See LICENSE in project root for information.
+#   ---------------------------------------------------------------------------------
+
+from __future__ import annotations
+
+import argparse
+
+from ..parameters.deployment_name import parse_deployment_name
+
+from ..parameters.location import parse_location
+from ..parameters.managed_identity import parse_managed_identity
+from ..parameters.resource_group import parse_resource_group
+from ..parameters.subscription import parse_subscription
+from ..parameters.target_path import parse_target_path
+
+
+def subparse_vm(vm: argparse.ArgumentParser):
+
+    vm_subparser = vm.add_subparsers(dest="vm_command", required=True)
+
+    deploy = vm_subparser.add_parser("deploy")
+    parse_target_path(deploy)
+    parse_deployment_name(deploy)
+    parse_subscription(deploy)
+    parse_resource_group(deploy)
+    parse_location(deploy)
+    parse_managed_identity(deploy)
+    deploy.add_argument(
+        "--vm-image",
+        type=str,
+        required=True,
+        help="The parameter key value pair to add in the format key=value",
+    )

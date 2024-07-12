@@ -16,6 +16,7 @@ from .subparsers.images import subparse_images
 from .subparsers.infra import subparse_infra
 from .subparsers.policies import subparse_policies
 from .subparsers.target import subparse_target
+from .subparsers.vm import subparse_vm
 from .subparsers.vscode import subparse_vscode
 
 
@@ -33,6 +34,7 @@ def parse_command():
     subparser.add_parser("images")
     subparser.add_parser("policies")
     subparser.add_parser("target")
+    subparser.add_parser("vm")
     subparser.add_parser("vscode")
 
     args, _ = arg_parser.parse_known_args()
@@ -51,6 +53,8 @@ def parse_command():
         subparse_policies(subparser.choices["policies"])
     elif args.command == "target":
         subparse_target(subparser.choices["target"])
+    elif args.command == "vm":
+        subparse_vm(subparser.choices["vm"])
     elif args.command == "vscode":
         subparse_vscode(subparser.choices["vscode"])
     else:
