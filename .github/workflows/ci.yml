@@ -33,6 +33,11 @@ jobs:
     - name: Install package
       run: pip install flit && flit install
 
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
+
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run -s
 
@@ -54,6 +59,11 @@ jobs:
 
     - name: Install package
       run: pip install flit && flit install
+
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
 
     - name: Run Test
       run: pytest tests/test_target.py::test_target_test_runner -s
@@ -77,6 +87,11 @@ jobs:
     - name: Install package
       run: pip install flit && flit install
 
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
+
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run_debug_policy -s
 
@@ -98,6 +113,11 @@ jobs:
 
     - name: Install package
       run: pip install flit && flit install
+
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
 
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run_allow_all_policy -s
@@ -121,6 +141,11 @@ jobs:
     - name: Install package
       run: pip install flit && flit install
 
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
+
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run_no_cleanup -s
 
@@ -143,6 +168,11 @@ jobs:
     - name: Install package
       run: pip install flit && flit install
 
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
+
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run_prefer_pull -s
 
@@ -164,6 +194,11 @@ jobs:
 
     - name: Install package
       run: pip install flit && flit install
+
+    - name: Install Azure CLI
+      env:
+        AZ_CLI_VERSION: 2.61.0
+      run: ./scripts/install-az-cli.sh
 
     - name: Run Test
       run: pytest tests/test_target.py::test_target_run_steps -s
