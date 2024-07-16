@@ -132,6 +132,20 @@ def main():
 
             vm_deploy(**vars(args))
 
+        elif args.vm_command == "remove":
+            from .tools.vm_remove import vm_remove
+
+            vm_remove(**vars(args))
+
+        elif args.vm_command == "get":
+            if args.get_command == "ids":
+                from .tools.aci_get_ids import aci_get_ids
+
+                print(aci_get_ids(**vars(args)))
+
+            else:
+                print(f"aci get command: {args.get_command} not recognised")
+
         else:
             print(f"vm command: {args.vm_command} not recognised")
 

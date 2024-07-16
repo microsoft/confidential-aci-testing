@@ -244,3 +244,13 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
     }
   }
 }
+
+output ids array = [
+  publicIPAddress.id
+  networkSecurityGroup.id
+  virtualNetwork.id
+  networkInterface.id
+  virtualMachine.id
+  shutdownSchedule.id
+  vmRunCommand.id
+]
