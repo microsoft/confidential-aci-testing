@@ -29,7 +29,7 @@ def aci_monitor(
         )
         group_json = json.loads(res.stdout)
         for container_json in group_json["containers"]:
-            print(f"Logs from {group_name} - {container_json["name"]}")
+            print(f"Logs from {group_name} - {container_json['name']}")
             subprocess.run([
                 "az", "container", "logs",
                 *(["--follow"] if follow else []),
