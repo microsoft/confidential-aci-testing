@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import subprocess
+import json
 
 from .aci_get_ids import aci_get_ids
 
@@ -22,6 +23,7 @@ def aci_monitor(
         res = subprocess.run(
             [
                 "az", "container", "show",
+                "--name", group_name,
                 "--subscription", subscription,
                 "--resource-group", resource_group,
             ],
