@@ -125,6 +125,30 @@ def main():
         else:
             print(f"aci command: {args.aci_command} not recognised")
 
+    elif args.command == "vm":
+
+        if args.vm_command == "deploy":
+            from .tools.vm_deploy import vm_deploy
+
+            vm_deploy(**vars(args))
+
+        elif args.vm_command == "remove":
+            from .tools.vm_remove import vm_remove
+
+            vm_remove(**vars(args))
+
+        elif args.vm_command == "get":
+            if args.get_command == "ids":
+                from .tools.aci_get_ids import aci_get_ids
+
+                print(aci_get_ids(**vars(args)))
+
+            else:
+                print(f"aci get command: {args.get_command} not recognised")
+
+        else:
+            print(f"vm command: {args.vm_command} not recognised")
+
     elif args.command == "vscode":
 
         if args.vscode_command == "run_debug":
@@ -133,7 +157,7 @@ def main():
             vscode_run_debug(**vars(args))
 
         else:
-            print(f"vscode command: {args.aci_command} not recognised")
+            print(f"vscode command: {args.vscode_command} not recognised")
 
     elif args.command == "github":
 
@@ -143,7 +167,7 @@ def main():
             github_workflow(**vars(args))
 
         else:
-            print(f"github command: {args.aci_command} not recognised")
+            print(f"github command: {args.github_command} not recognised")
 
     else:
         print(f"Command: {args.command} not recognised")

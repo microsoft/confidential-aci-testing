@@ -1,0 +1,14 @@
+{
+    "metadata": {
+        "name": "<CONTAINER_NAME>"
+    },
+    "image": {
+        "image": "<CONTAINER_IMAGE>"
+    },
+    "linux": {
+        "security_context": {
+            "privileged": true
+        }
+    },
+    "forwardPorts": []
+}
