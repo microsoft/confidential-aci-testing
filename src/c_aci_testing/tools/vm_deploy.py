@@ -5,12 +5,15 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import subprocess
 import tarfile
 import tempfile
 import uuid
+
+from c_aci_testing.utils.parse_bicep import parse_bicep
 
 
 def containerplat_cache(storage_account: str, container_name: str, blob_name: str):
@@ -75,42 +78,93 @@ def containerplat_cache(storage_account: str, container_name: str, blob_name: st
         )
 
 
-def upload_configs(storage_account: str, container_name: str, blob_name: str):
+def upload_configs(
+    target_path: str,
+    subscription: str,
+    resource_group: str,
+    deployment_name: str,
+    registry: str,
+    repository: str,
+    tag: str,
+    storage_account: str,
+    container_name: str,
+    blob_name: str,
+):
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        with open(os.path.join(temp_dir, "lcow-pull-config.json"), "w", encoding="utf-8") as f:
-            json.dump({"labels": {"sandbox-platform": "linux/amd64"}}, f)
 
-        with open(os.path.join(temp_dir, "pod.json"), "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "metadata": {
-                        "name": "sandbox",
-                        "namespace": "default",
-                        "attempt": 1,
-                    },
-                    "linux": {"security_context": {"privileged": True}},
-                    "annotations": {
-                        "io.microsoft.virtualmachine.computetopology.processor.count": "2",
-                        "io.microsoft.virtualmachine.computetopology.memory.sizeinmb": "8192",
-                        "io.microsoft.virtualmachine.lcow.securitypolicy": "cGFja2FnZSBwb2xpY3kKCmFwaV9zdm4gOj0gIjAuMTAuMCIKCm1vdW50X2RldmljZSA6PSB7ImFsbG93ZWQiOiB0cnVlfQptb3VudF9vdmVybGF5IDo9IHsiYWxsb3dlZCI6IHRydWV9CmNyZWF0ZV9jb250YWluZXIgOj0geyJhbGxvd2VkIjogdHJ1ZSwgImFsbG93X3N0ZGlvX2FjY2VzcyI6IHRydWV9CnVubW91bnRfZGV2aWNlIDo9IHsiYWxsb3dlZCI6IHRydWV9CnVubW91bnRfb3ZlcmxheSA6PSB7ImFsbG93ZWQiOiB0cnVlfQpleGVjX2luX2NvbnRhaW5lciA6PSB7ImFsbG93ZWQiOiB0cnVlfQpleGVjX2V4dGVybmFsIDo9IHsiYWxsb3dlZCI6IHRydWUsICJhbGxvd19zdGRpb19hY2Nlc3MiOiB0cnVlfQpzaHV0ZG93bl9jb250YWluZXIgOj0geyJhbGxvd2VkIjogdHJ1ZX0Kc2lnbmFsX2NvbnRhaW5lcl9wcm9jZXNzIDo9IHsiYWxsb3dlZCI6IHRydWV9CnBsYW45X21vdW50IDo9IHsiYWxsb3dlZCI6IHRydWV9CnBsYW45X3VubW91bnQgOj0geyJhbGxvd2VkIjogdHJ1ZX0KZ2V0X3Byb3BlcnRpZXMgOj0geyJhbGxvd2VkIjogdHJ1ZX0KZHVtcF9zdGFja3MgOj0geyJhbGxvd2VkIjogdHJ1ZX0KcnVudGltZV9sb2dnaW5nIDo9IHsiYWxsb3dlZCI6IHRydWV9CmxvYWRfZnJhZ21lbnQgOj0geyJhbGxvd2VkIjogdHJ1ZX0Kc2NyYXRjaF9tb3VudCA6PSB7ImFsbG93ZWQiOiB0cnVlfQpzY3JhdGNoX3VubW91bnQgOj0geyJhbGxvd2VkIjogdHJ1ZX0K",
-                    },
-                },
-                f,
-            )
+        lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
-        with open(os.path.join(temp_dir, "lcow-container.json"), "w", encoding="utf-8") as f:
-            json.dump(
-                {
-                    "metadata": {"name": "examples"},
-                    "image": {"image": "hello-world:latest"},
-                    "linux": {"security_context": {"privileged": True}},
-                    "forwardPorts": [],
-                },
-                f,
-            )
+        with open(
+            os.path.join(lcow_config_dir, "pull.json.template"),
+            encoding="utf-8",
+        ) as pull_template_file:
+            pull_template = json.load(pull_template_file)
+
+        with open(
+            os.path.join(lcow_config_dir, "container.json.template"),
+            encoding="utf-8",
+        ) as container_template_file:
+            container_template = json.load(container_template_file)
+
+        with open(
+            os.path.join(lcow_config_dir, "container_group.json.template"),
+            encoding="utf-8",
+        ) as container_group_template_file:
+            container_group_template = json.load(container_group_template_file)
+
+        with open(
+            os.path.join(temp_dir, "pull.json"),
+            encoding="utf-8",
+            mode="w",
+        ) as pull_file:
+            json.dump(pull_template, pull_file, separators=(",", ":"))
+
+        for container_group_id, container_group, containers in parse_bicep(
+            target_path, subscription, resource_group, deployment_name, registry, repository, tag,
+        ):
+            group_cpus = 0
+            group_memory = 0
+            for container in containers:
+                container_id = container["name"]
+                group_cpus += container["properties"]["resources"]["requests"]["cpu"]
+                group_memory += container["properties"]["resources"]["requests"]["memoryInGB"]
+                with open(
+                    os.path.join(temp_dir, f"container_{container_group_id}_{container_id}.json"),
+                    "w",
+                    encoding="utf-8",
+                ) as f:
+                    container_json = container_template.copy()
+                    container_json["metadata"]["name"] = container_id
+                    container_json["image"]["image"] = container["properties"]["image"]
+                    container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
+                    json.dump(container_json, f, separators=(",", ":"))
+
+            with open(
+                os.path.join(temp_dir, f"container_group_{container_group_id}.json"),
+                "w",
+                encoding="utf-8",
+            ) as f:
+                container_group_json = container_group_template.copy()
+                annotations = container_group_json["annotations"]
+                annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
+                annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
+
+                print("Until generated policies are supported, using the allow all policy")
+                # security_policy = container_group["properties"]["confidentialComputeProperties"]["ccePolicy"]
+                # if "parameters('ccePolicies')" in security_policy:
+                #     raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
+                with open(os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego"), "r") as policy_file:
+                    security_policy = base64.b64encode(policy_file.read().encode("utf-8")).decode("utf-8")
+
+                annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
+
+                json.dump(container_group_json, f, separators=(",", ":"))
 
         with tarfile.open(f"{temp_dir}/lcow_config.tar", "w:gz") as tar:
+            for file in os.listdir(temp_dir):
+                print(file)
+                print(open(os.path.join(temp_dir, file), "r").read())
             tar.add(temp_dir, arcname="lcow_config")
 
         subprocess.run(
@@ -135,12 +189,96 @@ def upload_configs(storage_account: str, container_name: str, blob_name: str):
         )
 
 
+def construct_command(
+    target_path: str,
+    subscription: str,
+    resource_group: str,
+    deployment_name: str,
+    registry: str,
+    repository: str,
+    tag: str,
+):
+
+    res = subprocess.run(
+        ["az", "acr", "login", "-n", "cacitesting", "--expose-token"],
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    token = json.loads(res.stdout)["accessToken"]
+
+    command = []
+
+    args = {
+        "target_path": target_path,
+        "subscription": subscription,
+        "resource_group": resource_group,
+        "deployment_name": deployment_name,
+        "registry": registry,
+        "repository": repository,
+        "tag": tag,
+    }
+
+    for _, _, containers in parse_bicep(**args):
+        for container in containers:
+            # Pull images
+            command.append(
+                " ".join(
+                    [
+                        "/containerplat/crictl.exe pull",
+                        f'--creds "00000000-0000-0000-0000-000000000000:{token}"',
+                        "--pod-config /lcow_config/pull.json",
+                        container["properties"]["image"],
+                    ]
+                )
+            )
+
+    for container_group_id, _, containers in parse_bicep(**args):
+        # Start Container Group
+        command.append(
+            " ".join(
+                [
+                    "$group_id = (/containerplat/crictl.exe runp",
+                    "--runtime runhcs-lcow",
+                    f"/lcow_config/container_group_{container_group_id}.json)",
+                ]
+            )
+        )
+
+        for container in containers:
+
+            # Create Container
+            command.append(
+                " ".join(
+                    [
+                        "$container_id = (/containerplat/crictl.exe create",
+                        "--no-pull",
+                        "$group_id",
+                        f'/lcow_config/container_{container_group_id}_{container["name"]}.json',
+                        f"/lcow_config/container_group_{container_group_id}.json)",
+                    ]
+                )
+            )
+
+            # Start Container
+            command.append(
+                " ".join(
+                    [
+                        "/containerplat/crictl.exe start",
+                        "$container_id",
+                    ]
+                )
+            )
+
+    return command
+
+
 def run_on_vm(
     vm_name: str,
     resource_group: str,
     command: str,
 ):
-    subprocess.run(
+    print(f"Running command on VM: {command}")
+    res = subprocess.run(
         [
             "az",
             "vm",
@@ -156,7 +294,13 @@ def run_on_vm(
             command,
         ],
         check=True,
+        stdout=subprocess.PIPE,
     )
+    print(res.stdout.decode("utf-8"))
+    for value in json.loads(res.stdout)["value"]:
+        if "StdOut" in value["code"]:
+            return value["message"]
+    raise Exception("No StdOut in response")
 
 
 def vm_deploy(
@@ -165,6 +309,9 @@ def vm_deploy(
     subscription: str,
     resource_group: str,
     location: str,
+    registry: str,
+    repository: str,
+    tag: str,
     managed_identity: str,
     vm_image: str,
     **kwargs,
@@ -177,10 +324,26 @@ def vm_deploy(
     )
 
     upload_configs(
+        target_path=target_path,
+        subscription=subscription,
+        resource_group=resource_group,
+        deployment_name=deployment_name,
+        registry=registry,
+        repository=repository,
+        tag=tag,
         storage_account="cacitestingstorage",
         container_name="container",
         blob_name="lcow_config",
     )
+
+    print(f"{os.linesep}Deploying to Azure, view deployment here:")
+    print("%2F".join([
+        "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
+        "subscriptions", subscription,
+        "resourceGroups", resource_group,
+        "providers", "Microsoft.Resources", "deployments", deployment_name,
+    ]))
+    print("")
 
     subprocess.run(
         [
@@ -210,17 +373,24 @@ def vm_deploy(
             "containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/containerplat",
             "--parameters",
             "lcowConfigUrl=https://cacitestingstorage.blob.core.windows.net/container/lcow_config",
+            "--parameters",
+            f"vmCustomCommands={construct_command(
+                target_path,
+                subscription,
+                resource_group,
+                deployment_name,
+                registry,
+                repository,
+                tag,
+            )}",
         ],
         check=True,
     )
 
-    def run_on_vm_cmd(command):
-        run_on_vm(
-            resource_group=resource_group,
-            vm_name=f"{deployment_name}-vm",
-            command=command,
-        )
-
-    run_on_vm_cmd("dir /containerplat")
+    run_on_vm(
+        resource_group=resource_group,
+        vm_name=f"{deployment_name}-vm",
+        command="/containerplat/crictl.exe ps",
+    )
 
     return []

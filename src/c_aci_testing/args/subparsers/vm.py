@@ -15,6 +15,9 @@ from ..parameters.managed_identity import parse_managed_identity
 from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 from ..parameters.target_path import parse_target_path
+from ..parameters.registry import parse_registry
+from ..parameters.repository import parse_repository
+from ..parameters.tag import parse_tag
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -28,6 +31,9 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_resource_group(deploy)
     parse_location(deploy)
     parse_managed_identity(deploy)
+    parse_registry(deploy)
+    parse_repository(deploy)
+    parse_tag(deploy)
     deploy.add_argument(
         "--vm-image",
         type=str,

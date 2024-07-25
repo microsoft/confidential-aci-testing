@@ -8,6 +8,7 @@ param vmImage string
 param managedIDName string
 param containerplatUrl string
 param lcowConfigUrl string
+param vmCustomCommands array = []
 
 var tokenUrl = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
 
@@ -103,7 +104,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-0
   }
 }
 
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-01-01' = {
   name: '${deployment().name}-vnet'
   location: location
   properties: {
@@ -132,11 +133,11 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-08-01' = {
         name: 'ipconfig1'
         properties: {
           subnet: {
-            id: virtualNetwork.properties.subnets[0].id
+            id: '${resourceId(resourceGroup().name, 'Microsoft.Network/virtualNetworks', '${deployment().name}-vnet')}/subnets/${deployment().name}-subnet'
           }
           privateIPAllocationMethod: 'Dynamic'
           publicIPAddress: {
-            id: publicIPAddress.id
+            id: resourceId(resourceGroup().name, 'Microsoft.Network/publicIpAddresses', '${deployment().name}-ip')
             properties: {
               deleteOption: 'Delete'
             }
@@ -145,9 +146,14 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-08-01' = {
       }
     ]
     networkSecurityGroup: {
-      id: networkSecurityGroup.id
+      id: resourceId(resourceGroup().name, 'Microsoft.Network/networkSecurityGroups', '${deployment().name}-nsg')
     }
   }
+  dependsOn: [
+    networkSecurityGroup
+    virtualNetwork
+    publicIPAddress
+  ]
 }
 
 resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
@@ -230,15 +236,18 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
   properties: {
     source: {
       script: join(
-        [
-          '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
-          '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
-          'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
-          'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
-          'tar -xf C:/containerplat.tar -C C:/'
-          'tar -xf C:/lcow_config.tar -C C:/'
-          'C:/containerplat_build/deploy.exe'
-        ],
+        union(
+          [
+            '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
+            '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
+            'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
+            'tar -xf C:/containerplat.tar -C C:/'
+            'C:/containerplat_build/deploy.exe'
+            'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
+            'tar -xf C:/lcow_config.tar -C C:/'
+          ],
+          vmCustomCommands
+        ),
         '; '
       )
     }
