@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import uuid
 
+from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.parse_bicep import parse_bicep
 
 
@@ -162,9 +163,6 @@ def upload_configs(
                 json.dump(container_group_json, f, separators=(",", ":"))
 
         with tarfile.open(f"{temp_dir}/lcow_config.tar", "w:gz") as tar:
-            for file in os.listdir(temp_dir):
-                print(file)
-                print(open(os.path.join(temp_dir, file), "r").read())
             tar.add(temp_dir, arcname="lcow_config")
 
         subprocess.run(
@@ -393,4 +391,14 @@ def vm_deploy(
         command="/containerplat/crictl.exe ps",
     )
 
-    return []
+    ids = vm_get_ids(
+        deployment_name=deployment_name,
+        subscription=subscription,
+        resource_group=resource_group,
+    )
+
+    for id in ids:
+        print(f'Deployed {os.linesep}{id.split("/")[-1]}, view here:')
+        print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource{id}")
+
+    return ids
