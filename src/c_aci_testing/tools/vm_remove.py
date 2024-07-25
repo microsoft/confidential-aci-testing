@@ -16,23 +16,45 @@ def vm_remove(
     resource_group: str,
     **kwargs,
 ):
-    for res_id in vm_get_ids(deployment_name, subscription, resource_group):
-        res_name = res_id.split("/")[-1]
-        subprocess.run(
-            [
-                "az",
-                "resource",
-                "delete",
-                "--no-wait",
-                "--subscription",
-                subscription,
-                "--resource-group",
-                resource_group,
-                "--resource-type",
-                "Microsoft.ContainerInstance/containerGroups",
-                "--name",
-                res_name,
-            ],
-            check=True,
-        )
-        print(f"Removed resource: {res_name}")
+    remaining_resources = set(vm_get_ids(deployment_name, subscription, resource_group))
+    deleted_resources = set()
+
+    while remaining_resources:
+        print(f"{remaining_resources=}")
+        print(f"{deleted_resources=}")
+        for res_id in remaining_resources:
+            res_name = res_id.split("/")[-1]
+            res = subprocess.run(
+                [
+                    "az",
+                    "resource",
+                    "show",
+                    "--ids",
+                    res_id,
+                ],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+
+            if res.returncode != 0:
+                deleted_resources.add(res_id)
+                print(f"Removed resource: {res_name}")
+
+            subprocess.run(
+                [
+                    "az",
+                    "resource",
+                    "delete",
+                    "--subscription",
+                    subscription,
+                    "--resource-group",
+                    resource_group,
+                    "--ids",
+                    res_id,
+                ],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        remaining_resources.difference_update(deleted_resources)
