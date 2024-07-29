@@ -315,10 +315,15 @@ def vm_deploy(
     **kwargs,
 ) -> list[str]:
 
+    input("Running targets with a VM is experimental, press Enter to continue...")
+
+    container_plat_blob_name = f"containerplat_{deployment_name}"
+    lcow_config_blob_name = f"lcow_config_{deployment_name}"
+
     containerplat_cache(
         storage_account="cacitestingstorage",
         container_name="container",
-        blob_name="containerplat",
+        blob_name=container_plat_blob_name,
     )
 
     upload_configs(
@@ -331,7 +336,7 @@ def vm_deploy(
         tag=tag,
         storage_account="cacitestingstorage",
         container_name="container",
-        blob_name="lcow_config",
+        blob_name=lcow_config_blob_name,
     )
 
     print(f"{os.linesep}Deploying to Azure, view deployment here:")
@@ -368,9 +373,9 @@ def vm_deploy(
             "--parameters",
             f"managedIDName={managed_identity}",
             "--parameters",
-            "containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/containerplat",
+            f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{container_plat_blob_name}",
             "--parameters",
-            "lcowConfigUrl=https://cacitestingstorage.blob.core.windows.net/container/lcow_config",
+            f"lcowConfigUrl=https://cacitestingstorage.blob.core.windows.net/container/{lcow_config_blob_name}",
             "--parameters",
             f"vmCustomCommands={construct_command(
                 target_path,
