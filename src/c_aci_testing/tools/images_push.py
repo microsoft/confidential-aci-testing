@@ -21,7 +21,7 @@ def images_push(
 
     print(f"Pushing images for {registry}")
     subprocess.run(
-        ["docker-compose", "push"],
+        ["docker", "compose", "push"],
         env={
             **os.environ,
             "TARGET": target_path,

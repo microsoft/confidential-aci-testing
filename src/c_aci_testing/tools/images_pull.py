@@ -22,7 +22,7 @@ def images_pull(
     print(f"Pulling images for {registry}")
     for stderr_val in (None, subprocess.PIPE):
         result = subprocess.run(
-            ["docker-compose", "pull"],
+            ["docker", "compose", "pull"],
             env={
                 **os.environ,
                 "TARGET": target_path,

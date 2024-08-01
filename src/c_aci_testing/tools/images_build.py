@@ -21,7 +21,7 @@ def images_build(
     if services is None:
         services = []
 
-    build_command = ["docker-compose", "build"]
+    build_command = ["docker", "compose", "build"]
     for service in services:
         build_command.append(service)
 
