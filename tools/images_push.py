@@ -18,7 +18,7 @@ def images_push(target, registry, repository, tag):
     subprocess.run(["az", "acr", "login", "--name", registry], check=True)
 
     subprocess.run(
-        ["docker-compose", "push"],
+        ["docker", "compose", "push"],
         env={
             **os.environ,
             "TARGET": os.path.realpath(target),

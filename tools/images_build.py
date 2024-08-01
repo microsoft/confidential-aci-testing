@@ -16,7 +16,7 @@ def images_build(target, registry, repository, tag="latest", services_to_build=N
     if not repository:
         repository = os.path.splitext(find_bicep_file(target))[0]
 
-    build_command = ["docker-compose", "build"]
+    build_command = ["docker", "compose", "build"]
     if services_to_build:
         build_command.extend(services_to_build)
         build_command.append("--with-dependencies")

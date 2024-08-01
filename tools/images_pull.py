@@ -26,7 +26,7 @@ def images_pull(target, registry, repository, tag="latest"):
     # get the stderr to check missing images
     for stderr_val in (None, subprocess.PIPE):
         res = subprocess.run(
-            ["docker-compose", "pull"],
+            ["docker", "compose", "pull"],
             env={
                 **os.environ,
                 "TARGET": os.path.realpath(target),
