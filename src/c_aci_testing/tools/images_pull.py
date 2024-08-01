@@ -31,7 +31,7 @@ def images_pull(
                 **({"TAG": tag} if tag else {}),
             },
             cwd=target_path,
-            check=True,
+            check=False,
             stderr=stderr_val,
         )
 
