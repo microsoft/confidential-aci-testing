@@ -8,16 +8,18 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 import subprocess
 import tarfile
 import tempfile
 import uuid
+import zipfile
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.parse_bicep import parse_bicep
 
 
-def containerplat_cache(storage_account: str, container_name: str, blob_name: str):
+def containerplat_cache(storage_account: str, container_name: str, blob_name: str, vmgs_file: str):
     with tempfile.TemporaryDirectory() as temp_dir:
         subprocess.run(
             [
@@ -53,6 +55,17 @@ def containerplat_cache(storage_account: str, container_name: str, blob_name: st
             f.seek(0)
             json.dump(data, f, indent=4)
             f.truncate()
+
+        # If custom VMGS file is specified, inject it into the containerplat package
+        if os.path.exists(vmgs_file):
+            shutil.move(f"{temp_dir}/package.zip", f"{temp_dir}/original_package.zip")
+            with zipfile.ZipFile(f"{temp_dir}/original_package.zip", "r") as containerplat_package:
+                with zipfile.ZipFile(f"{temp_dir}/package.zip", "w") as new_containerplat_package:
+                    for item in containerplat_package.infolist():
+                        if item.filename != "LinuxBootFiles/kernelinitrd.vmgs":
+                            with containerplat_package.open(item.filename) as source:
+                                new_containerplat_package.writestr(item, source.read())
+                    new_containerplat_package.write(vmgs_file, "LinuxBootFiles/kernelinitrd.vmgs")
 
         with tarfile.open(f"{temp_dir}/containerplat.tar", "w:gz") as tar:
             tar.add(temp_dir, arcname="containerplat_build")
@@ -312,6 +325,7 @@ def vm_deploy(
     tag: str,
     managed_identity: str,
     vm_image: str,
+    vmgs_file: str,
     **kwargs,
 ) -> list[str]:
 
@@ -324,6 +338,7 @@ def vm_deploy(
         storage_account="cacitestingstorage",
         container_name="container",
         blob_name=container_plat_blob_name,
+        vmgs_file=vmgs_file,
     )
 
     upload_configs(

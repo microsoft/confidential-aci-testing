@@ -40,6 +40,12 @@ def subparse_vm(vm: argparse.ArgumentParser):
         default=os.getenv("VM_IMAGE"),
         help="The image to use for the VM",
     )
+    deploy.add_argument(
+        "--vmgs-file",
+        type=str,
+        default=os.getenv("VMGS_FILE"),
+        help="The path to the VMGS file to use",
+    )
 
     remove = vm_subparser.add_parser("remove")
     parse_deployment_name(remove)

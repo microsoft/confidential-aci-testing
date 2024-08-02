@@ -22,9 +22,7 @@ from .subparsers.vscode import subparse_vscode
 
 def parse_command():
 
-    arg_parser = argparse.ArgumentParser(
-        "Utilities for testing workflows involving Confidential ACI."
-    )
+    arg_parser = argparse.ArgumentParser("Utilities for testing workflows involving Confidential ACI.")
 
     subparser = arg_parser.add_subparsers(dest="command", required=True)
     subparser.add_parser("aci")
@@ -63,7 +61,7 @@ def parse_command():
     args = arg_parser.parse_args()
 
     missing_args = []
-    exceptions = ["repository", "tag"]
+    exceptions = ["repository", "tag", "vmgs_file"]
     for key, value in vars(args).items():
         if value is None and key not in exceptions:
             missing_args.append(key)
