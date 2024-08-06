@@ -2,6 +2,8 @@
 
 This project provides utilities for testing workflows involving Confidential ACI.
 
+For more help, see [Getting Started with C-ACI-Testing](https://youtu.be/C0Svgx8Tiiw)
+
 ## Contents
 
 - [Dependencies](#dependencies)
