@@ -31,14 +31,14 @@ def aci_param_set(
         value = "=".join(value)
         print(f'Setting parameter {key} to {value[:50]}{"..." if len(value) > 50 else ""}')
 
-        biceparam_template = re.sub(f"param {key}='.*'", f"param {key}={value}", biceparam_template)
+        biceparam_template = re.sub(f"param {key}\s*=\s*'.*'", f"param {key}={value}", biceparam_template)
         biceparam_template = re.sub(
             f"param {key}\s*=\s*\\{{.*\\}}",
             f"param {key}={value}",
             biceparam_template,
             flags=re.DOTALL,
         )
-        biceparam_template = re.sub(f"param {key}=[.*]", f"param {key}={value}", biceparam_template)
+        biceparam_template = re.sub(rf"param {key}\s*=\s*\[.*\]", f"param {key}={value}", biceparam_template)
         if f"param {key}=" not in biceparam_template and add:
             biceparam_template += f"{os.linesep}param {key}={value}"
 
