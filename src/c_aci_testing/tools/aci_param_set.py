@@ -33,7 +33,7 @@ def aci_param_set(
 
         biceparam_template = re.sub(f"param {key}='.*'", f"param {key}={value}", biceparam_template)
         biceparam_template = re.sub(
-            f"param {key}=\\{{.*\\}}",
+            f"param {key}\s*=\s*\\{{.*\\}}",
             f"param {key}={value}",
             biceparam_template,
             flags=re.DOTALL,
