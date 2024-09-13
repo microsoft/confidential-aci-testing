@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import os
+
 
 def parse_policy_type(parser):
 
@@ -13,11 +15,11 @@ def parse_policy_type(parser):
         "--policy-type",
         help="The type of policy to use",
         type=str,
-        default="generated",
+        default=os.getenv("POLICY_TYPE", "generated"),
         choices=[
             "allow_all",
             "debug",
             "generated",
             "none",
-        ]
+        ],
     )
