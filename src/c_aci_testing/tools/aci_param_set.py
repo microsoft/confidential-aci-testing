@@ -40,7 +40,7 @@ def aci_param_set(
         key = key.strip()
         value = value.strip()
         escaped_key = re.escape(key)
-        print(f"Setting parameter '{key}' to '{value[:50]}'{'...' if len(value) > 50 else ''}")
+        print(f"Setting parameter '{key}' to {value[:50]}{'...' if len(value) > 50 else ''}")
 
         # Prepare regex patterns with parameter types
         patterns = [
