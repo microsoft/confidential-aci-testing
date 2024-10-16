@@ -25,6 +25,30 @@ def subparse_vm(vm: argparse.ArgumentParser):
 
     vm_subparser = vm.add_subparsers(dest="vm_command", required=True)
 
+    create = vm_subparser.add_parser("create")
+    parse_deployment_name(create)
+    parse_subscription(create)
+    parse_resource_group(create)
+    parse_location(create)
+    parse_managed_identity(create)
+    parse_cplat_args(create)
+    create.add_argument(
+        "--vm-image",
+        type=str,
+        default=os.getenv("VM_IMAGE"),
+        help="The image to use for the VM",
+    )
+
+    runc = vm_subparser.add_parser("runc")
+    parse_target_path(runc)
+    parse_deployment_name(runc)
+    parse_subscription(runc)
+    parse_resource_group(runc)
+    parse_managed_identity(runc)
+    parse_registry(runc)
+    parse_repository(runc)
+    parse_tag(runc)
+
     deploy = vm_subparser.add_parser("deploy")
     parse_target_path(deploy)
     parse_deployment_name(deploy)

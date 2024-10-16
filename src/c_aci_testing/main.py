@@ -127,7 +127,17 @@ def main():
 
     elif args.command == "vm":
 
-        if args.vm_command == "deploy":
+        if args.vm_command == "create":
+            from .tools.vm_create import vm_create
+
+            vm_create(**vars(args))
+
+        elif args.vm_command == "runc":
+            from .tools.vm_runc import vm_runc
+
+            vm_runc(**vars(args))
+
+        elif args.vm_command == "deploy":
             from .tools.vm_deploy import vm_deploy
 
             vm_deploy(**vars(args))

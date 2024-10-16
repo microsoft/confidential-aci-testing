@@ -7,7 +7,6 @@ param containerPorts array
 param vmImage string
 param managedIDName string
 param containerplatUrl string
-param lcowConfigUrl string
 param vmCustomCommands array = []
 
 var tokenUrl = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
@@ -252,11 +251,7 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
               'Write-Output "tar -xf C:/containerplat.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
               'C:/containerplat_build/deploy.exe'
               'Write-Output "C:/containerplat_build/deploy.exe   result: $LASTEXITCODE" >> C:/bootstrap.log'
-              'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
-              'Write-Output "LCOW config download done" >> C:/bootstrap.log'
-              'tar -xf C:/lcow_config.tar -C C:/'
-              'Write-Output "tar -xf C:/lcow_config.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
-              'Write-Output "Bootstrap done" >> C:/bootstrap.log'
+              'Write-Output "All done!" >> C:/bootstrap.log'
             ],
             vmCustomCommands
           ),

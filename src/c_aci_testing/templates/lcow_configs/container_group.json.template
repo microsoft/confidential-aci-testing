@@ -10,6 +10,7 @@
         }
     },
     "annotations": {
+        "io.microsoft.virtualmachine.lcow.hcl-enabled": "False",
         "io.microsoft.virtualmachine.computetopology.processor.count": "<CPU>",
         "io.microsoft.virtualmachine.computetopology.memory.sizeinmb": "<MEMORY_MB>",
         "io.microsoft.virtualmachine.lcow.securitypolicy": "<SECURITY_POLICY>"
