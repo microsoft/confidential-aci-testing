@@ -38,11 +38,13 @@ def make_configs(
 
     lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
-    # run_script = [r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe"]
-    # pull_commands = []
-    # start_commands = []
+    run_script = [r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe"]
+    pull_commands = run_script.copy()
+    start_pod_commands = run_script.copy()
+    start_container_commands = run_script.copy()
+    check_commands = run_script.copy()
 
-    # aci_pull_token = get_aci_token()
+    aci_pull_token = get_aci_token()
 
     with open(
         os.path.join(lcow_config_dir, "pull.json.template"),
@@ -80,17 +82,28 @@ def make_configs(
     ):
         group_cpus = 0
         group_memory = 0
+
+        start_pod_commands.append(
+            " ".join(
+                [
+                    "$group_id = (/containerplat/crictl.exe runp",
+                    "--runtime runhcs-lcow",
+                    f"./container_group_{container_group_id}.json)",
+                ]
+            )
+        )
+
         for container in containers:
-            # pull_commands.append(
-            #     " ".join(
-            #         [
-            #             "crictl pull",
-            #             f'--creds "00000000-0000-0000-0000-000000000000:{aci_pull_token}"',
-            #             "--pod-config ./pull.json",
-            #             container["properties"]["image"],
-            #         ]
-            #     )
-            # )
+            pull_commands.append(
+                " ".join(
+                    [
+                        "crictl pull",
+                        f'--creds "00000000-0000-0000-0000-000000000000:{aci_pull_token}"',
+                        "--pod-config ./pull.json",
+                        container["properties"]["image"],
+                    ]
+                )
+            )
 
             container_id = container["name"]
             group_cpus += container["properties"]["resources"]["requests"]["cpu"]
@@ -105,6 +118,24 @@ def make_configs(
                 container_json["image"]["image"] = container["properties"]["image"]
                 container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
                 json.dump(container_json, f, separators=(",", ":"))
+
+            # Create Container
+            start_container_commands.append(
+                " ".join(
+                    [
+                        "$container_id = (crictl create --no-pull",
+                        "(crictl pods --name sandbox -q)",  # TODO: support different pod names
+                        f'./container_{container_group_id}_{container["name"]}.json',
+                        f"./container_group_{container_group_id}.json)",
+                    ]
+                )
+            )
+
+            # Start Container
+            start_container_commands.append("crictl start $container_id")
+
+            check_commands.append(f"$res=(crictl exec (crictl ps --name {container_id} -q) echo Hello)")
+            check_commands.append(f"if ($res -ne 'Hello') {{ Write-Host 'ERROR: exec failed on {container_id}' }}")
 
         with open(
             os.path.join(output_conf_dir, f"container_group_{container_group_id}.json"),
@@ -129,88 +160,24 @@ def make_configs(
 
             json.dump(container_group_json, f, separators=(",", ":"))
 
+    def write_script(file, script):
+        with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
+            f.write("\r\n".join(script))
 
-def construct_command(
-    target_path: str,
-    subscription: str,
-    resource_group: str,
-    deployment_name: str,
-    registry: str,
-    repository: str,
-    tag: str,
-):
+    write_script("pull.ps1", pull_commands)
+    write_script("runp.ps1", start_pod_commands)
+    write_script("startc.ps1", start_container_commands)
+    write_script("check.ps1", check_commands)
 
-    res = subprocess.run(
-        ["az", "acr", "login", "-n", "cacitesting", "--expose-token"],
-        stdout=subprocess.PIPE,
-        check=True,
+    write_script(
+        "run.ps1",
+        [
+            ".\\pull.ps1",
+            ".\\runp.ps1",
+            ".\\startc.ps1",
+            ".\\check.ps1",
+        ],
     )
-    token = json.loads(res.stdout)["accessToken"]
-
-    command = []
-
-    args = {
-        "target_path": target_path,
-        "subscription": subscription,
-        "resource_group": resource_group,
-        "deployment_name": deployment_name,
-        "registry": registry,
-        "repository": repository,
-        "tag": tag,
-    }
-
-    for _, _, containers in parse_bicep(**args):
-        for container in containers:
-            # Pull images
-            command.append(
-                " ".join(
-                    [
-                        "/containerplat/crictl.exe pull",
-                        f'--creds "00000000-0000-0000-0000-000000000000:{token}"',
-                        "--pod-config ./pull.json",
-                        container["properties"]["image"],
-                    ]
-                )
-            )
-
-    for container_group_id, _, containers in parse_bicep(**args):
-        # Start Container Group
-        command.append(
-            " ".join(
-                [
-                    "$group_id = (/containerplat/crictl.exe runp",
-                    "--runtime runhcs-lcow",
-                    f"./container_group_{container_group_id}.json)",
-                ]
-            )
-        )
-
-        for container in containers:
-
-            # Create Container
-            command.append(
-                " ".join(
-                    [
-                        "$container_id = (/containerplat/crictl.exe create",
-                        "--no-pull",
-                        "$group_id",
-                        f'./container_{container_group_id}_{container["name"]}.json',
-                        f"./container_group_{container_group_id}.json)",
-                    ]
-                )
-            )
-
-            # Start Container
-            command.append(
-                " ".join(
-                    [
-                        "/containerplat/crictl.exe start",
-                        "$container_id",
-                    ]
-                )
-            )
-
-    return command
 
 
 def vm_runc(
@@ -242,22 +209,7 @@ def vm_runc(
             output_conf_dir=temp_dir,
         )
 
-        print("Constructing run.ps1")
-
-        commands = construct_command(
-            target_path=target_path,
-            subscription=subscription,
-            resource_group=resource_group,
-            deployment_name=deployment_name,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-        )
-
-        with open(f"{temp_dir}/run.ps1", "wb") as f:
-            f.write("\r\n".join(commands).encode("utf-8"))
-
-        print(f"Uploading LCOW config in {temp_dir} to {vm_name}...")
+        print(f"Uploading LCOW config and scripts in {temp_dir} to {vm_name}...")
 
         upload_to_vm_and_run(
             target_path=temp_dir,

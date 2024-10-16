@@ -149,6 +149,7 @@ def upload_to_vm_and_run(
                 f'$token = (Invoke-RestMethod -Uri "{tokenUrl}" -Headers @{{Metadata="true"}} -Method GET -UseBasicParsing).access_token',
                 'Write-Output "Token acquired"',
                 "if (Test-Path C:/upload.tar) { rm -Force C:/upload.tar }",
+                "if (Test-Path C:/upload) {{ rm -Recurse -Force C:/upload }}",
                 f"if (Test-Path {vm_path}) {{ rm -Recurse -Force {vm_path} }}",
                 '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }',
                 f'Invoke-RestMethod -Uri "{blobUrl}" -Method GET -Headers $headers -OutFile "C:/upload.tar"',
