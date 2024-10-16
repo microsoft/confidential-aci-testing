@@ -18,6 +18,7 @@ from ..parameters.target_path import parse_target_path
 from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
+from ..parameters.cplat import parse_cplat_args
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -34,6 +35,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_registry(deploy)
     parse_repository(deploy)
     parse_tag(deploy)
+    parse_cplat_args(deploy)
     deploy.add_argument(
         "--vm-image",
         type=str,

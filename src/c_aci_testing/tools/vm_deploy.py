@@ -16,8 +16,7 @@ import uuid
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.parse_bicep import parse_bicep
 
-
-def containerplat_cache(storage_account: str, container_name: str, blob_name: str):
+def containerplat_cache(storage_account: str, container_name: str, blob_name: str, cplat_feed: str, cplat_name: str, cplat_version: str):
     with tempfile.TemporaryDirectory() as temp_dir:
         subprocess.run(
             [
@@ -32,11 +31,11 @@ def containerplat_cache(storage_account: str, container_name: str, blob_name: st
                 "--scope",
                 "project",
                 "--feed",
-                "ContainerPlat-Prod",
+                cplat_feed,
                 "--name",
-                "containerplat-confidential-aci",
+                cplat_name,
                 "--version",
-                "0.1.3",
+                cplat_version,
                 "--path",
                 temp_dir,
             ],
@@ -312,19 +311,38 @@ def vm_deploy(
     tag: str,
     managed_identity: str,
     vm_image: str,
+    cplat_feed: str,
+    cplat_name: str,
+    cplat_version: str,
+    cplat_blob_name: str,
     **kwargs,
 ) -> list[str]:
+    """
+    :param cplat_feed: ADO feed name for containerplat, can be empty to use existing cache
+    :param cplat_name: Name of the containerplat package, can be empty
+    :param cplat_version: Version of the containerplat package, can be empty
+    :param cplat_blob_name: Name to use for the containerplat blob, can be empty for per-deployment blobs
+    """
 
-    input("Running targets with a VM is experimental, press Enter to continue...")
+    if not cplat_blob_name:
+        cplat_blob_name = f"containerplat_{deployment_name}"
 
-    container_plat_blob_name = f"containerplat_{deployment_name}"
     lcow_config_blob_name = f"lcow_config_{deployment_name}"
+
+    if cplat_feed or cplat_name or cplat_version:
+        if not cplat_feed or not cplat_name or not cplat_version:
+            raise Exception("Missing cplat_feed, cplat_name, or cplat_version (all must be set or all must be empty)")
 
     containerplat_cache(
         storage_account="cacitestingstorage",
         container_name="container",
-        blob_name=container_plat_blob_name,
+            blob_name=cplat_blob_name,
+            cplat_feed=cplat_feed,
+            cplat_name=cplat_name,
+            cplat_version=cplat_version,
     )
+    elif not cplat_blob_name:
+        raise Exception("An existing cplat_blob_name must be set if cplat_feed, cplat_name, and cplat_version are not set")
 
     upload_configs(
         target_path=target_path,
@@ -373,7 +391,7 @@ def vm_deploy(
             "--parameters",
             f"managedIDName={managed_identity}",
             "--parameters",
-            f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{container_plat_blob_name}",
+            f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{cplat_blob_name}",
             "--parameters",
             f"lcowConfigUrl=https://cacitestingstorage.blob.core.windows.net/container/{lcow_config_blob_name}",
             "--parameters",
