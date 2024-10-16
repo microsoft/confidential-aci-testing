@@ -137,6 +137,11 @@ def main():
 
             vm_runc(**vars(args))
 
+        elif args.vm_command == "check":
+            from .tools.vm_check import vm_check
+
+            vm_check(**vars(args))
+
         elif args.vm_command == "deploy":
             from .tools.vm_deploy import vm_deploy
 

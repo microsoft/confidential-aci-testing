@@ -1,6 +1,6 @@
 {
     "metadata": {
-        "name": "sandbox",
+        "name": "<CONTAINER_GROUP_NAME>",
         "namespace": "default",
         "attempt": 1
     },

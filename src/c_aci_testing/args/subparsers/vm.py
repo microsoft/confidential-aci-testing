@@ -50,6 +50,21 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_registry(runc)
     parse_repository(runc)
     parse_tag(runc)
+    runc.add_argument(
+        "--lcow-dir-name",
+        type=str,
+        default=os.getenv("LCOW_DIR_NAME", "lcow"),
+    )
+
+    check = vm_subparser.add_parser("check")
+    parse_deployment_name(check)
+    parse_subscription(check)
+    parse_resource_group(check)
+    check.add_argument(
+        "--lcow-dir-name",
+        type=str,
+        default=os.getenv("LCOW_DIR_NAME", "lcow"),
+    )
 
     deploy = vm_subparser.add_parser("deploy")
     parse_target_path(deploy)

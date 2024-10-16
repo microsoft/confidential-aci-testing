@@ -5,7 +5,6 @@
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 import subprocess
@@ -38,11 +37,16 @@ def make_configs(
 
     lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
-    run_script = [r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe"]
+    run_script = [
+        r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
+        r"Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe",
+    ]
     pull_commands = run_script.copy()
     start_pod_commands = run_script.copy()
     start_container_commands = run_script.copy()
     check_commands = run_script.copy()
+    stop_container_commands = run_script.copy()
+    stop_pod_commands = run_script.copy()
 
     aci_pull_token = get_aci_token()
 
@@ -71,6 +75,10 @@ def make_configs(
     ) as pull_file:
         json.dump(pull_template, pull_file, separators=(",", ":"))
 
+    def write_script(file, script):
+        with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
+            f.write("\r\n".join(script))
+
     for container_group_id, container_group, containers in parse_bicep(
         target_path,
         subscription,
@@ -92,6 +100,44 @@ def make_configs(
                 ]
             )
         )
+
+        shimdiag_exec_pod = f'shimdiag exec ("k8s.io-"+(crictl pods --name {container_group_id} -q))'
+
+        write_script(
+            f"stream_dmesg_{container_group_id}.ps1",
+            [f"{shimdiag_exec_pod} dmesg >> dmesg_{container_group_id}.txt"],
+        )
+
+        start_pod_commands.append(
+            f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1 -NoNewWindow"
+        )
+
+        stop_pod_commands.append(
+            "; ".join(
+                [
+                    f"$podId = crictl pods --name {container_group_id} -q",
+                    "if ($podId) { crictl stopp $podId",
+                    "crictl rmp $podId }",
+                ]
+            )
+        )
+
+        check_commands.append(f"$res=({shimdiag_exec_pod} echo 'PodAlive!!')")
+        check_commands.append(
+            f"if ($res -ne 'PodAlive!!') {{ Write-Output 'ERROR: exec failed on pod {container_group_id}' }}"
+        )
+
+        # check_commands.append(
+        #     "\r\n".join(
+        #         [
+        #             f'$dmesg={shimdiag_exec_pod} dmesg',
+        #             "if (-not $dmesg) {",
+        #             f"  Write-Output 'ERROR: dmesg failed on pod {container_group_id}'",
+        #             "}",
+        #             "Write-Output $dmesg",
+        #         ]
+        #     )
+        # )
 
         for container in containers:
             pull_commands.append(
@@ -124,7 +170,7 @@ def make_configs(
                 " ".join(
                     [
                         "$container_id = (crictl create --no-pull",
-                        "(crictl pods --name sandbox -q)",  # TODO: support different pod names
+                        f"(crictl pods --name {container_group_id} -q)",
                         f'./container_{container_group_id}_{container["name"]}.json',
                         f"./container_group_{container_group_id}.json)",
                     ]
@@ -134,8 +180,20 @@ def make_configs(
             # Start Container
             start_container_commands.append("crictl start $container_id")
 
-            check_commands.append(f"$res=(crictl exec (crictl ps --name {container_id} -q) echo Hello)")
-            check_commands.append(f"if ($res -ne 'Hello') {{ Write-Host 'ERROR: exec failed on {container_id}' }}")
+            check_commands.append(f"$res=(crictl exec (crictl ps --name {container_id} -q) echo 'ContainerAlive!!')")
+            check_commands.append(
+                f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_id}' }}"
+            )
+
+            stop_container_commands.append(
+                "; ".join(
+                    [
+                        f"$containerId=crictl ps --pod (crictl pods --name {container_group_id} -q) --name sidecar -q -a",
+                        "if ($containerId) { crictl stop $containerId",
+                        "crictl rm $containerId }",
+                    ]
+                )
+            )
 
         with open(
             os.path.join(output_conf_dir, f"container_group_{container_group_id}.json"),
@@ -143,6 +201,7 @@ def make_configs(
             encoding="utf-8",
         ) as f:
             container_group_json = container_group_template.copy()
+            container_group_json["metadata"]["name"] = container_group_id
             annotations = container_group_json["annotations"]
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
             annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
@@ -157,22 +216,23 @@ def make_configs(
 
             json.dump(container_group_json, f, separators=(",", ":"))
 
-    def write_script(file, script):
-        with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
-            f.write("\r\n".join(script))
+    check_commands.append("crictl pods")
+    check_commands.append("crictl ps -a")
 
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
     write_script("startc.ps1", start_container_commands)
     write_script("check.ps1", check_commands)
+    write_script("stopc.ps1", stop_container_commands)
+    write_script("stop.ps1", stop_pod_commands)
 
     write_script(
         "run.ps1",
         [
             ".\\pull.ps1",
+            ".\\stop.ps1",
             ".\\runp.ps1",
             ".\\startc.ps1",
-            ".\\check.ps1",
         ],
     )
 
@@ -186,6 +246,7 @@ def vm_runc(
     registry: str,
     repository: str,
     tag: str,
+    lcow_dir_name: str,
     **kwargs,
 ):
     lcow_config_blob_name = f"lcow_config_{deployment_name}"
@@ -211,7 +272,7 @@ def vm_runc(
 
     upload_to_vm_and_run(
         target_path=temp_dir,
-        vm_path="C:\\lcow",
+        vm_path="C:\\" + lcow_dir_name,
         subscription=subscription,
         resource_group=resource_group,
         vm_name=vm_name,
@@ -220,10 +281,4 @@ def vm_runc(
         blob_name=lcow_config_blob_name,
         managed_identity=managed_identity,
         run_script="run.ps1",
-    )
-
-    run_on_vm(
-        resource_group=resource_group,
-        vm_name=f"{deployment_name}-vm",
-        command="/containerplat/crictl.exe ps",
     )
