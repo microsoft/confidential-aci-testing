@@ -147,14 +147,11 @@ def make_configs(
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
             annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
 
-            print("Until generated policies are supported, using the allow all policy")
-            # security_policy = container_group["properties"]["confidentialComputeProperties"]["ccePolicy"]
-            # if "parameters('ccePolicies')" in security_policy:
-            #     raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
-            with open(
-                os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego"), "r"
-            ) as policy_file:
-                security_policy = base64.b64encode(policy_file.read().encode("utf-8")).decode("utf-8")
+            security_policy = (
+                container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
+            )
+            if not security_policy or "parameters('ccePolicies')" in security_policy:
+                raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
 
             annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
 
@@ -195,34 +192,35 @@ def vm_runc(
     storage_account = "cacitestingstorage"
     vm_name = f"{deployment_name}-vm"
 
-    with tempfile.TemporaryDirectory() as temp_dir:
-        print("Constructing LCOW configs")
+    temp_dir = tempfile.mkdtemp()
 
-        make_configs(
-            target_path=target_path,
-            subscription=subscription,
-            resource_group=resource_group,
-            deployment_name=deployment_name,
-            registry=registry,
-            repository=repository,
-            tag=tag,
-            output_conf_dir=temp_dir,
-        )
+    print(f"Constructing LCOW configs and scripts in {temp_dir}...")
 
-        print(f"Uploading LCOW config and scripts in {temp_dir} to {vm_name}...")
+    make_configs(
+        target_path=target_path,
+        subscription=subscription,
+        resource_group=resource_group,
+        deployment_name=deployment_name,
+        registry=registry,
+        repository=repository,
+        tag=tag,
+        output_conf_dir=temp_dir,
+    )
 
-        upload_to_vm_and_run(
-            target_path=temp_dir,
-            vm_path="C:\\lcow",
-            subscription=subscription,
-            resource_group=resource_group,
-            vm_name=vm_name,
-            storage_account=storage_account,
-            container_name="container",
-            blob_name=lcow_config_blob_name,
-            managed_identity=managed_identity,
-            run_script="run.ps1",
-        )
+    print(f"Uploading LCOW config and scripts to {vm_name}...")
+
+    upload_to_vm_and_run(
+        target_path=temp_dir,
+        vm_path="C:\\lcow",
+        subscription=subscription,
+        resource_group=resource_group,
+        vm_name=vm_name,
+        storage_account=storage_account,
+        container_name="container",
+        blob_name=lcow_config_blob_name,
+        managed_identity=managed_identity,
+        run_script="run.ps1",
+    )
 
     run_on_vm(
         resource_group=resource_group,
