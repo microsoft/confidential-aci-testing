@@ -90,3 +90,9 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(run_script)
     parse_resource_group(run_script)
     parse_managed_identity(run_script)
+
+    exec = vm_subparser.add_parser("exec")
+    parse_deployment_name(exec)
+    parse_subscription(exec)
+    parse_resource_group(exec)
+    exec.add_argument("cmd", type=str)

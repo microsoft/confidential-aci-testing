@@ -161,6 +161,11 @@ def main():
 
             vm_run_script(**vars(args))
 
+        elif args.vm_command == "exec":
+            from .tools.vm_exec import vm_exec
+
+            vm_exec(**vars(args))
+
         else:
             print(f"vm command: {args.vm_command} not recognised")
 
