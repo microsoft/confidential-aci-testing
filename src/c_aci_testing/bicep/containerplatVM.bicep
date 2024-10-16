@@ -235,20 +235,34 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
   parent: virtualMachine
   properties: {
     source: {
-      script: join(
-        union(
-          [
-            '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
-            '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
-            'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
-            'tar -xf C:/containerplat.tar -C C:/'
-            'C:/containerplat_build/deploy.exe'
-            'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
-            'tar -xf C:/lcow_config.tar -C C:/'
-          ],
-          vmCustomCommands
+      #disable-next-line prefer-interpolation
+      script: concat(
+        'try { ',
+        join(
+          union(
+            [
+              '$ProgressPreference = "SilentlyContinue"' // otherwise invoke-restmethod is very slow to download large files
+              '$ErrorActionPreference = "Continue"'
+              '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
+              'Write-Output "Token acquired" >> C:/bootstrap.log'
+              '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
+              'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
+              'Write-Output "Containerplat download done" >> C:/bootstrap.log'
+              'tar -xf C:/containerplat.tar -C C:/'
+              'Write-Output "tar -xf C:/containerplat.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
+              'C:/containerplat_build/deploy.exe'
+              'Write-Output "C:/containerplat_build/deploy.exe   result: $LASTEXITCODE" >> C:/bootstrap.log'
+              'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
+              'Write-Output "LCOW config download done" >> C:/bootstrap.log'
+              'tar -xf C:/lcow_config.tar -C C:/'
+              'Write-Output "tar -xf C:/lcow_config.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
+              'Write-Output "Bootstrap done" >> C:/bootstrap.log'
+            ],
+            vmCustomCommands
+          ),
+          '; '
         ),
-        '; '
+        ' } catch { Write-Output $_.Exception.ToString() >> C:/bootstrap.log }'
       )
     }
   }
