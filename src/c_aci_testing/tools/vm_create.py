@@ -14,7 +14,7 @@ import uuid
 import time
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
-from c_aci_testing.utils.run_on_vm import run_on_vm
+from c_aci_testing.utils.vm import run_on_vm
 
 
 def containerplat_cache(
@@ -93,6 +93,7 @@ def vm_create(
     cplat_name: str,
     cplat_version: str,
     cplat_blob_name: str,
+    vm_size: str,
     **kwargs,
 ) -> list[str]:
     """
@@ -174,6 +175,8 @@ def vm_create(
             f"managedIDName={managed_identity}",
             "--parameters",
             f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{cplat_blob_name}",
+            "--parameters",
+            f"vmSize={vm_size}",
         ],
         check=True,
     )

@@ -24,6 +24,7 @@ def vm_deploy(
     cplat_name: str,
     cplat_version: str,
     cplat_blob_name: str,
+    vm_size: str,
     **kwargs,
 ):
     """
@@ -44,6 +45,7 @@ def vm_deploy(
         cplat_name=cplat_name,
         cplat_version=cplat_version,
         cplat_blob_name=cplat_blob_name,
+        vm_size=vm_size,
     )
 
     vm_runc(

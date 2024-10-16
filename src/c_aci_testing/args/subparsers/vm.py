@@ -19,6 +19,7 @@ from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
+from ..parameters.vm_size import parse_vm_size
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -38,6 +39,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
         default=os.getenv("VM_IMAGE"),
         help="The image to use for the VM",
     )
+    parse_vm_size(create)
 
     runc = vm_subparser.add_parser("runc")
     parse_target_path(runc)
@@ -66,6 +68,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
         default=os.getenv("VM_IMAGE"),
         help="The image to use for the VM",
     )
+    parse_vm_size(deploy)
 
     remove = vm_subparser.add_parser("remove")
     parse_deployment_name(remove)
@@ -79,3 +82,11 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_deployment_name(get_ids)
     parse_subscription(get_ids)
     parse_resource_group(get_ids)
+
+    run_script = vm_subparser.add_parser("run_script")
+    parse_target_path(run_script)
+    run_script.add_argument("script_file", type=str)
+    parse_deployment_name(run_script)
+    parse_subscription(run_script)
+    parse_resource_group(run_script)
+    parse_managed_identity(run_script)

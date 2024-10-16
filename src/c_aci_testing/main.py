@@ -156,6 +156,11 @@ def main():
             else:
                 print(f"aci get command: {args.get_command} not recognised")
 
+        elif args.vm_command == "run_script":
+            from .tools.vm_run_script import vm_run_script
+
+            vm_run_script(**vars(args))
+
         else:
             print(f"vm command: {args.vm_command} not recognised")
 
