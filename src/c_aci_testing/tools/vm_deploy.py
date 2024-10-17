@@ -25,6 +25,7 @@ def vm_deploy(
     cplat_version: str,
     cplat_blob_name: str,
     vm_size: str,
+    lcow_dir_name: str,
     **kwargs,
 ):
     """
@@ -57,4 +58,5 @@ def vm_deploy(
         registry=registry,
         repository=repository,
         tag=tag,
+        lcow_dir_name=lcow_dir_name,
     )

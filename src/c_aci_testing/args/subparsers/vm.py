@@ -83,6 +83,11 @@ def subparse_vm(vm: argparse.ArgumentParser):
         default=os.getenv("VM_IMAGE"),
         help="The image to use for the VM",
     )
+    deploy.add_argument(
+        "--lcow-dir-name",
+        type=str,
+        default=os.getenv("LCOW_DIR_NAME", "lcow"),
+    )
     parse_vm_size(deploy)
 
     remove = vm_subparser.add_parser("remove")
