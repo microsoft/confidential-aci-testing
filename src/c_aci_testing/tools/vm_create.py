@@ -212,12 +212,25 @@ def vm_create(
     vm_name = f"{deployment_name}-vm"
 
     tries = 0
+    finished = False
     while tries < 12:
         output = run_on_vm(vm_name, resource_group, "cat C:\\bootstrap.log")
         tries += 1
         if "All done!" in output:
-            return ids
+            finished = True
+            break
         print("Waiting for VM to finish bootstrapping...")
         time.sleep(5)
 
-    raise Exception("VM did not finish bootstrapping in 1m")
+    if not finished:
+        raise Exception("VM did not finish bootstrapping in 1m")
+
+    output = run_on_vm(
+        vm_name=vm_name,
+        resource_group=resource_group,
+        command="C:/ContainerPlat/crictl.exe version; C:/ContainerPlat/crictl.exe ps",
+    )
+    if "containerd" not in output:
+        raise Exception("ContainerPlat check failed")
+
+    return ids
