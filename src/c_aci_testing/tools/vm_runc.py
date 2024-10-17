@@ -37,16 +37,16 @@ def make_configs(
 
     lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
-    run_script = [
+    run_script_common = [
         r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
         r"Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe",
     ]
-    pull_commands = run_script.copy()
-    start_pod_commands = run_script.copy()
-    start_container_commands = run_script.copy()
-    check_commands = run_script.copy()
-    stop_container_commands = run_script.copy()
-    stop_pod_commands = run_script.copy()
+    pull_commands = run_script_common.copy()
+    start_pod_commands = run_script_common.copy()
+    start_container_commands = run_script_common.copy()
+    check_commands = run_script_common.copy()
+    stop_container_commands = run_script_common.copy()
+    stop_pod_commands = run_script_common.copy()
 
     aci_pull_token = get_aci_token()
 
@@ -94,7 +94,7 @@ def make_configs(
         start_pod_commands.append(
             " ".join(
                 [
-                    "$group_id = (/containerplat/crictl.exe runp",
+                    "$group_id = (crictl runp",
                     "--runtime runhcs-lcow",
                     f"./container_group_{container_group_id}.json)",
                 ]
@@ -105,7 +105,7 @@ def make_configs(
 
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
-            [f"{shimdiag_exec_pod} dmesg >> dmesg_{container_group_id}.txt"],
+            run_script_common + [f"{shimdiag_exec_pod} dmesg >> dmesg_{container_group_id}.txt"],
         )
 
         start_pod_commands.append(
@@ -216,9 +216,6 @@ def make_configs(
 
             json.dump(container_group_json, f, separators=(",", ":"))
 
-    check_commands.append("crictl pods")
-    check_commands.append("crictl ps -a")
-
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
     write_script("startc.ps1", start_container_commands)
@@ -281,4 +278,10 @@ def vm_runc(
         blob_name=lcow_config_blob_name,
         managed_identity=managed_identity,
         run_script="run.ps1",
+    )
+
+    run_on_vm(
+        vm_name=vm_name,
+        resource_group=resource_group,
+        command="C:/containerplat/crictl.exe pods; C:/containerplat/crictl.exe ps -a",
     )
