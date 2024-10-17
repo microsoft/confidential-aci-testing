@@ -41,7 +41,10 @@ class ExampleTest(unittest.TestCase):
             deployment_name=id,
             **vars(args),
         ) as deployment_ids:
-            print(f"Executing test body, container group IP: {aci_get_ips(ids=deployment_ids[0])}")
+            print(f"Executing test body, container group IP: {aci_get_ips(
+                ids=deployment_ids[0],
+                **vars(args)
+            )}")
 
         # Cleanup happens after block has finished
 
