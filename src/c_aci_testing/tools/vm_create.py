@@ -17,7 +17,47 @@ from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.vm import run_on_vm
 
 
-def containerplat_cache(
+def containerplat_cache(storage_account: str, container_name: str, blob_name: str, cplat_path: str):
+    with open(f"{cplat_path}/deploy.json", "r+", encoding="utf-8") as f:
+        data = json.load(f)
+        data["Force"] = True
+        data["SevSnpEnabled"] = True
+        data["EnableLayerIntegrity"] = True
+        data["NoLCOWGPU"] = True
+        data["RuntimeOptions"][0]["ShareScratch"] = True
+        data["SkipSandboxPull"] = True  # we don't need WCOW sandbox, not pulling it makes bootstrap faster
+        f.seek(0)
+        json.dump(data, f, indent=4)
+        f.truncate()
+
+    tar_path = tempfile.mktemp(".tar", "cplat-")
+
+    with tarfile.open(tar_path, "w:gz") as tar:
+        tar.add(cplat_path, arcname="containerplat_build")
+
+    subprocess.run(
+        [
+            "az",
+            "storage",
+            "blob",
+            "upload",
+            "--account-name",
+            storage_account,
+            "--container-name",
+            container_name,
+            "--name",
+            blob_name,
+            "--file",
+            tar_path,
+            "--auth-mode",
+            "login",
+            "--overwrite",
+        ],
+        check=True,
+    )
+
+
+def containerplat_cache_from_ado(
     storage_account: str, container_name: str, blob_name: str, cplat_feed: str, cplat_name: str, cplat_version: str
 ):
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -45,41 +85,7 @@ def containerplat_cache(
             check=True,
         )
 
-        with open(f"{temp_dir}/deploy.json", "r+", encoding="utf-8") as f:
-            data = json.load(f)
-            data["Force"] = True
-            data["SevSnpEnabled"] = True
-            data["EnableLayerIntegrity"] = True
-            data["NoLCOWGPU"] = True
-            data["RuntimeOptions"][0]["ShareScratch"] = True
-            data["SkipSandboxPull"] = True  # we don't need WCOW sandbox, not pulling it makes bootstrap faster
-            f.seek(0)
-            json.dump(data, f, indent=4)
-            f.truncate()
-
-        with tarfile.open(f"{temp_dir}/containerplat.tar", "w:gz") as tar:
-            tar.add(temp_dir, arcname="containerplat_build")
-
-        subprocess.run(
-            [
-                "az",
-                "storage",
-                "blob",
-                "upload",
-                "--account-name",
-                storage_account,
-                "--container-name",
-                container_name,
-                "--name",
-                blob_name,
-                "--file",
-                f"{temp_dir}/containerplat.tar",
-                "--auth-mode",
-                "login",
-                "--overwrite",
-            ],
-            check=True,
-        )
+        containerplat_cache(storage_account, container_name, blob_name, temp_dir)
 
 
 def vm_create(
@@ -93,6 +99,7 @@ def vm_create(
     cplat_name: str,
     cplat_version: str,
     cplat_blob_name: str,
+    cplat_path: str,
     vm_size: str,
     **kwargs,
 ) -> list[str]:
@@ -100,17 +107,27 @@ def vm_create(
     :param cplat_feed: ADO feed name for containerplat, can be empty to use existing cache
     :param cplat_name: Name of the containerplat package, can be empty
     :param cplat_version: Version of the containerplat package, can be empty
+    :param cplat_path: Path to an already downloaded containerplat package, can be empty
     :param cplat_blob_name: Name to use for the containerplat blob, can be empty for per-deployment blobs
     """
 
     if not cplat_blob_name:
         cplat_blob_name = f"containerplat_{deployment_name}"
 
-    if cplat_feed or cplat_name or cplat_version:
+    if cplat_path:
+        print(f"Updating deploy.json and uploading containerplat in {cplat_path}")
+        containerplat_cache(
+            storage_account="cacitestingstorage",
+            container_name="container",
+            blob_name=cplat_blob_name,
+            cplat_path=cplat_path,
+        )
+    elif cplat_feed or cplat_name or cplat_version:
         if not cplat_feed or not cplat_name or not cplat_version:
             raise Exception("Missing cplat_feed, cplat_name, or cplat_version (all must be set or all must be empty)")
 
-        containerplat_cache(
+        print(f"Downloading containerplat from ADO {cplat_feed}: {cplat_name} {cplat_version}")
+        containerplat_cache_from_ado(
             storage_account="cacitestingstorage",
             container_name="container",
             blob_name=cplat_blob_name,

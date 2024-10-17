@@ -24,6 +24,7 @@ def vm_deploy(
     cplat_name: str,
     cplat_version: str,
     cplat_blob_name: str,
+    cplat_path: str,
     vm_size: str,
     lcow_dir_name: str,
     **kwargs,
@@ -45,6 +46,7 @@ def vm_deploy(
         cplat_feed=cplat_feed,
         cplat_name=cplat_name,
         cplat_version=cplat_version,
+        cplat_path=cplat_path,
         cplat_blob_name=cplat_blob_name,
         vm_size=vm_size,
     )
