@@ -46,6 +46,7 @@ def make_configs(
     registry: str,
     repository: str,
     tag: str,
+    lcow_path: str,
     output_conf_dir: str,
 ):
 
@@ -125,7 +126,7 @@ def make_configs(
 
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
-            run_script_common + [f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.txt"],
+            run_script_common + [f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log"],
         )
 
         start_pod_commands.append(
@@ -183,6 +184,14 @@ def make_configs(
                 container_json["metadata"]["name"] = container_id
                 container_json["image"]["image"] = container["properties"]["image"]
                 container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
+                if "command" in container["properties"]:
+                    container_json["command"] = container["properties"]["command"]
+                if "environmentVariables" in container["properties"]:
+                    container_json["envs"] = [
+                        {"key": env["name"], "value": env["value"]}
+                        for env in container["properties"]["environmentVariables"]
+                    ]
+                container_json["log_path"] = f"{lcow_path}\\container_log_{container_group_id}_{container_id}.log"
                 json.dump(container_json, f, separators=(",", ":"))
 
             # Create Container
@@ -284,6 +293,7 @@ def vm_runc(
         registry=registry,
         repository=repository,
         tag=tag,
+        lcow_path="C:\\" + lcow_dir_name,
         output_conf_dir=temp_dir,
     )
 
