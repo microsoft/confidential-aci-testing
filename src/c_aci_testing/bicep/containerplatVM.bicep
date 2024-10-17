@@ -209,20 +209,6 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
   }
 }
 
-resource shutdownSchedule 'Microsoft.DevTestLab/schedules@2018-09-15' = {
-  name: 'shutdown-computevm-${deployment().name}-vm'
-  location: location
-  properties: {
-    status: 'Enabled'
-    taskType: 'ComputeVmShutdownTask'
-    dailyRecurrence: {
-      time: '19:00'
-    }
-    timeZoneId: 'UTC'
-    targetResourceId: virtualMachine.id
-  }
-}
-
 resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01' = {
   name: '${deployment().name}-vm-RunPowerShellScript'
   location: location
@@ -264,6 +250,5 @@ output ids array = [
   virtualNetwork.id
   networkInterface.id
   virtualMachine.id
-  shutdownSchedule.id
   vmRunCommand.id
 ]
