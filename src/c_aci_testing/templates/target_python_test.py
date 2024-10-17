@@ -9,8 +9,7 @@ import unittest
 import uuid
 
 from c_aci_testing.args.parameters.location import parse_location
-from c_aci_testing.args.parameters.managed_identity import \
-    parse_managed_identity
+from c_aci_testing.args.parameters.managed_identity import parse_managed_identity
 from c_aci_testing.args.parameters.registry import parse_registry
 from c_aci_testing.args.parameters.repository import parse_repository
 from c_aci_testing.args.parameters.resource_group import parse_resource_group
@@ -34,14 +33,16 @@ class ExampleTest(unittest.TestCase):
         args = parser.parse_args()
 
         target_path = os.path.realpath(os.path.dirname(__file__))
-        id = str(uuid.uuid4())
+        deployment_name = str(uuid.uuid4())
 
         with target_run_ctx(
             target_path=target_path,
-            deployment_name=id,
+            deployment_name=deployment_name,
             **vars(args),
-        ) as deployment_ids:
-            print(f"Executing test body, container group IP: {aci_get_ips(ids=deployment_ids[0])}")
+        ):
+            print(
+                f"Executing test body, container group IP: {aci_get_ips(deployment_name=deployment_name, **vars(args))}"
+            )
 
         # Cleanup happens after block has finished
 

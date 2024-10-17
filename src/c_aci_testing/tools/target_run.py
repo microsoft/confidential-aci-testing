@@ -88,11 +88,13 @@ def target_run_ctx(
             managed_identity=managed_identity,
         )
 
+    error = None
     try:
         try:
             yield aci_ids
-        except Exception:
-            return  # Don't remove the ACI if there was an error
+        except Exception as e:
+            cleanup = False
+            error = e
         aci_monitor(
             deployment_name=deployment_name,
             subscription=subscription,
@@ -106,6 +108,8 @@ def target_run_ctx(
                 subscription=subscription,
                 resource_group=resource_group,
             )
+        if error:
+            raise error
 
 
 def target_run(**kwargs):
