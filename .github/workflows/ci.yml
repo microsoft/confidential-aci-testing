@@ -66,7 +66,9 @@ jobs:
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
-      run: pytest tests/test_target.py::test_target_test_runner -s
+      run: |
+        source cacitesting.env
+        pytest tests/test_target.py::test_target_test_runner -s
 
   test_target_run_debug_policy:
     runs-on: ubuntu-latest
