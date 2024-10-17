@@ -209,7 +209,9 @@ def make_configs(
             # Start Container
             start_container_commands.append("crictl start $container_id")
 
-            check_commands.append(f"$res=(crictl exec (crictl ps --name {container_id} -q) echo 'ContainerAlive!!')")
+            check_commands.append(
+                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {container_group_id} -q) --name {container_id} -q) echo 'ContainerAlive!!')"
+            )
             check_commands.append(
                 f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_id}' }}"
             )
@@ -217,7 +219,7 @@ def make_configs(
             stop_container_commands.append(
                 "; ".join(
                     [
-                        f"$containerId=crictl ps --pod (crictl pods --name {container_group_id} -q) --name sidecar -q -a",
+                        f"$containerId=crictl ps --pod (crictl pods --name {container_group_id} -q) --name {container_id} -q -a",
                         "if ($containerId) { crictl stop $containerId",
                         "crictl rm $containerId }",
                     ]
