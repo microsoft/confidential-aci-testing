@@ -105,11 +105,11 @@ def make_configs(
 
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
-            run_script_common + [f"{shimdiag_exec_pod} dmesg >> dmesg_{container_group_id}.txt"],
+            run_script_common + [f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.txt"],
         )
 
         start_pod_commands.append(
-            f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1 -NoNewWindow"
+            f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1"
         )
 
         stop_pod_commands.append(
