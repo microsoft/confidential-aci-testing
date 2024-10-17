@@ -25,9 +25,6 @@ resource publicIPAddress 'Microsoft.Network/publicIpAddresses@2020-08-01' = {
   sku: {
     name: 'Standard'
   }
-  zones: [
-    '2'
-  ]
 }
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-01' = {
@@ -210,9 +207,6 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       }
     }
   }
-  zones: [
-    '2'
-  ]
 }
 
 resource shutdownSchedule 'Microsoft.DevTestLab/schedules@2018-09-15' = {
