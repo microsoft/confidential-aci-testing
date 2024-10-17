@@ -250,7 +250,7 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
               'Write-Output "Containerplat download done" >> C:/bootstrap.log'
               'tar -xf C:/containerplat.tar -C C:/'
               'Write-Output "tar -xf C:/containerplat.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
-              'C:/containerplat_build/deploy.exe'
+              'C:/containerplat_build/deploy.exe >> C:/bootstrap.log 2>&1'
               'Write-Output "C:/containerplat_build/deploy.exe   result: $LASTEXITCODE" >> C:/bootstrap.log'
               'Write-Output "All done!" >> C:/bootstrap.log'
             ],
