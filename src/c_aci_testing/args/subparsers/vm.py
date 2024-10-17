@@ -19,7 +19,7 @@ from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
-from ..parameters.vm_size import parse_vm_size
+from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -33,12 +33,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_location(create)
     parse_managed_identity(create)
     parse_cplat_args(create)
-    create.add_argument(
-        "--vm-image",
-        type=str,
-        default=os.getenv("VM_IMAGE"),
-        help="The image to use for the VM",
-    )
+    parse_vm_image(create)
     parse_vm_size(create)
 
     runc = vm_subparser.add_parser("runc")
@@ -47,6 +42,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(runc)
     parse_resource_group(runc)
     parse_managed_identity(runc)
+    parse_vm_win_flavor(runc)
     parse_registry(runc)
     parse_repository(runc)
     parse_tag(runc)
@@ -77,18 +73,14 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_repository(deploy)
     parse_tag(deploy)
     parse_cplat_args(deploy)
-    deploy.add_argument(
-        "--vm-image",
-        type=str,
-        default=os.getenv("VM_IMAGE"),
-        help="The image to use for the VM",
-    )
+    parse_vm_image(deploy)
     deploy.add_argument(
         "--lcow-dir-name",
         type=str,
         default=os.getenv("LCOW_DIR_NAME", "lcow"),
     )
     parse_vm_size(deploy)
+    parse_vm_win_flavor(deploy)
 
     remove = vm_subparser.add_parser("remove")
     parse_deployment_name(remove)

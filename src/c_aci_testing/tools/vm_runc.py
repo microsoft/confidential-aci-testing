@@ -42,6 +42,7 @@ def make_configs(
     subscription: str,
     resource_group: str,
     deployment_name: str,
+    win_flavor: str,
     registry: str,
     repository: str,
     tag: str,
@@ -83,6 +84,9 @@ def make_configs(
         encoding="utf-8",
     ) as container_group_template_file:
         container_group_template = json.load(container_group_template_file)
+
+    if win_flavor == "ws2022":
+        del container_group_template["annotations"]["io.microsoft.virtualmachine.lcow.hcl-enabled"]
 
     with open(
         os.path.join(output_conf_dir, "pull.json"),
@@ -256,6 +260,7 @@ def vm_runc(
     subscription: str,
     resource_group: str,
     managed_identity: str,
+    win_flavor: str,
     registry: str,
     repository: str,
     tag: str,
@@ -275,6 +280,7 @@ def vm_runc(
         subscription=subscription,
         resource_group=resource_group,
         deployment_name=deployment_name,
+        win_flavor=win_flavor,
         registry=registry,
         repository=repository,
         tag=tag,

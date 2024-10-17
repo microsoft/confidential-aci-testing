@@ -7,6 +7,27 @@ from __future__ import annotations
 
 import os
 
+from argparse import ArgumentParser
+
+
+def parse_vm_image(parser: ArgumentParser):
+    parser.add_argument(
+        "--vm-image",
+        type=str,
+        default=os.getenv("VM_IMAGE"),
+        help="The image to use for the VM",
+    )
+
+
+def parse_vm_win_flavor(parser: ArgumentParser):
+    parser.add_argument(
+        "--win-flavor",
+        type=str,
+        default=os.getenv("WIN_FLAVOR"),
+        choices=["ws2022", "ws2025"],
+        help="Provide the Windows version for the image",
+    )
+
 
 def parse_vm_size(parser):
 
