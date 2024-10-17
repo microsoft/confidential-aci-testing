@@ -12,6 +12,7 @@ import tarfile
 import tempfile
 import uuid
 import time
+import re
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.vm import run_on_vm
@@ -166,6 +167,12 @@ def vm_create(
         f.write(password)
     print(f"VM password written to {password_file}")
 
+    hostname = re.sub(r"[^a-zA-Z0-9\-]", "", re.sub("_", "-", deployment_name))
+    if not hostname or re.fullmatch(r"^[0-9]+$", hostname):
+        hostname = "atlas-" + hostname
+    if len(hostname) > 15:
+        hostname = hostname[:15]
+
     subprocess.run(
         [
             "az",
@@ -194,6 +201,8 @@ def vm_create(
             f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{cplat_blob_name}",
             "--parameters",
             f"vmSize={vm_size}",
+            "--parameters",
+            f"vmHostname={hostname}",
         ],
         check=True,
     )

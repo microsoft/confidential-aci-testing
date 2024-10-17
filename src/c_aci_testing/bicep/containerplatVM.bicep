@@ -1,3 +1,4 @@
+param vmHostname string = 'atlas-vm'
 param vmUsername string = 'atlas'
 @secure()
 param vmPassword string
@@ -189,7 +190,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       ]
     }
     osProfile: {
-      computerName: 'test-machine'
+      computerName: vmHostname
       adminUsername: vmUsername
       adminPassword: vmPassword
       windowsConfiguration: {
