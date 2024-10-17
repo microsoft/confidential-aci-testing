@@ -73,10 +73,10 @@ def run_on_vm(
         if "StdOut" in value["code"]:
             stdout = value["message"]
 
-    if stderr:
-        print(f"StdErr:\n{stderr}")
     if stdout:
         print(stdout)
+    if stderr:
+        print(f"StdErr:\n{stderr}")
 
     if stdout is None:
         raise Exception("No StdOut in response")
