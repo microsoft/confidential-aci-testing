@@ -9,19 +9,32 @@ import json
 import os
 import subprocess
 import tempfile
+import time
 
 from c_aci_testing.utils.parse_bicep import parse_bicep
 from c_aci_testing.utils.vm import run_on_vm
 from ..utils.vm import upload_to_vm_and_run
 
 
-def get_aci_token():
-    res = subprocess.run(
-        ["az", "acr", "login", "-n", "cacitesting", "--expose-token"],
-        stdout=subprocess.PIPE,
-        check=True,
-    )
-    return json.loads(res.stdout)["accessToken"]
+# TODO: ideally all of this should happen within the VM, and there can be powershell logic to use the correct ACR instance even if "registry" is wrong etc.
+def get_acr_token(registry: str):
+    if registry.endswith(".azurecr.io"):
+        registry = registry[: -len(".azurecr.io")]
+
+    tries = 0
+    while tries < 5:
+        try:
+            res = subprocess.run(
+                ["az", "acr", "login", "-n", registry, "--expose-token"],
+                stdout=subprocess.PIPE,
+                stderr=None,  # inherit
+                check=True,
+            )
+            return json.loads(res.stdout)["accessToken"]
+        except subprocess.CalledProcessError:
+            tries += 1
+            time.sleep(1)
+    raise Exception("Failed to get ACR token in 5 tries")
 
 
 def make_configs(
@@ -48,7 +61,10 @@ def make_configs(
     stop_container_commands = run_script_common.copy()
     stop_pod_commands = run_script_common.copy()
 
-    aci_pull_token = get_aci_token()
+    if registry.endswith(".azurecr.io"):
+        aci_pull_token = get_acr_token(registry)
+    else:
+        aci_pull_token = ""
 
     with open(
         os.path.join(lcow_config_dir, "pull.json.template"),
@@ -144,7 +160,7 @@ def make_configs(
                 " ".join(
                     [
                         "crictl pull",
-                        f'--creds "00000000-0000-0000-0000-000000000000:{aci_pull_token}"',
+                        (f'--creds "00000000-0000-0000-0000-000000000000:{aci_pull_token}"' if aci_pull_token else ""),
                         "--pod-config ./pull.json",
                         container["properties"]["image"],
                     ]
