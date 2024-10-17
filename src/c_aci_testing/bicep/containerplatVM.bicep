@@ -1,4 +1,4 @@
-param vmUsername string = 'test-user'
+param vmUsername string = 'atlas'
 @secure()
 param vmPassword string
 param location string
