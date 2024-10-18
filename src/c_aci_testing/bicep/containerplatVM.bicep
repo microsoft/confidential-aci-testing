@@ -211,7 +211,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
 }
 
 resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01' = {
-  name: '${deployment().name}-vm-RunPowerShellScript'
+  name: 'RunPowerShellScript'
   location: location
   parent: virtualMachine
   properties: {
