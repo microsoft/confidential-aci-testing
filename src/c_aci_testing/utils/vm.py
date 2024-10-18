@@ -11,6 +11,7 @@ import json
 import tempfile
 import tarfile
 import datetime
+import time
 
 
 def tokenImdsUrl(client_id: str, resource: str):
@@ -118,15 +119,25 @@ def async_delete_storage_blob(storage_account: str, container_name: str, blob_na
     )
 
 def download_as_string(url: str):
-    res = subprocess.run(
-        [
-            "curl",
-            "-sL",
-            url,
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
+    tries = 0
+    while True:
+        try:
+            res = subprocess.run(
+                [
+                    "curl",
+                    "-sL",
+                    "--fail",  # e.g. 404
+                    url,
+                ],
+                check=True,
+                stdout=subprocess.PIPE,
+            )
+            break
+        except subprocess.CalledProcessError as e:
+            if tries == 3:
+                raise e
+            tries += 1
+            time.sleep(5)
 
     return res.stdout.decode("utf-8")
 
