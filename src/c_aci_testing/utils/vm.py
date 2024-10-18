@@ -11,7 +11,7 @@ import json
 import tempfile
 import tarfile
 import datetime
-import time
+import os
 
 
 def tokenImdsUrl(client_id: str, resource: str):
@@ -39,65 +39,6 @@ def getManagedIdentityClientId(subscription: str, resource_group: str, managed_i
     return json.loads(res.stdout)["properties"]["clientId"]
 
 
-def generate_storage_sas_key(storage_account: str, container_name: str, path: str):
-    res = subprocess.run(
-        [
-            "az",
-            "storage",
-            "blob",
-            "generate-sas",
-            "--as-user",
-            "--auth-mode",
-            "login",
-            "--account-name",
-            storage_account,
-            "--container-name",
-            container_name,
-            "--name",
-            path,
-            "--full-uri",
-            "--permissions",
-            "acdrw",
-            "--expiry",
-            (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%MZ"),
-            "--full-uri",
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
-
-    return json.loads(res.stdout.decode("utf-8"))
-
-
-vm_location_cache = {}
-
-
-def get_vm_location(resource_group: str, vm_name: str):
-    if (resource_group, vm_name) in vm_location_cache:
-        return vm_location_cache[(resource_group, vm_name)]
-
-    res = subprocess.run(
-        [
-            "az",
-            "vm",
-            "show",
-            "-g",
-            resource_group,
-            "-n",
-            vm_name,
-            "--query",
-            "location",
-            "-o",
-            "tsv",
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
-    location = res.stdout.decode("utf-8").strip()
-    vm_location_cache[(resource_group, vm_name)] = location
-    return location
-
-
 def async_delete_storage_blob(storage_account: str, container_name: str, blob_name: str):
     subprocess.Popen(
         [
@@ -118,29 +59,45 @@ def async_delete_storage_blob(storage_account: str, container_name: str, blob_na
         stderr=subprocess.DEVNULL,
     )
 
-def download_as_string(url: str):
-    tries = 0
-    while True:
-        try:
-            res = subprocess.run(
-                [
-                    "curl",
-                    "-sL",
-                    "--fail",  # e.g. 404
-                    url,
-                ],
-                check=True,
-                stdout=subprocess.PIPE,
-            )
-            break
-        except subprocess.CalledProcessError as e:
-            if tries == 3:
-                raise e
-            tries += 1
-            time.sleep(5)
 
-    return res.stdout.decode("utf-8")
+def download_storage_blob(storage_account: str, container_name: str, blob_name: str) -> bytes:
+    temp_file = tempfile.mktemp()
+    subprocess.run(
+        [
+            "az",
+            "storage",
+            "blob",
+            "download",
+            "--account-name",
+            storage_account,
+            "--container-name",
+            container_name,
+            "--name",
+            blob_name,
+            "--auth-mode",
+            "login",
+            "--file",
+            temp_file,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
 
+    with open(temp_file, "rb") as f:
+        data = f.read()
+
+    os.remove(temp_file)
+
+    return data
+
+
+### NOTE on output truncation ###
+# az vm run-command invoke does not give you the full output.
+# There is a way to stream output to a storage account via az vm run-command create --output-blob-uri,
+# but it is very unreliable - sometimes the output file just doesn't show up in the storage account at
+# all.
+# Therefore I've simply gave up on trying to obtain the full output. You might be able to wrap the
+# command in powershell and redirect output to a file, then upload that file to the storage account.
 
 def run_on_vm(
     vm_name: str,
@@ -148,74 +105,35 @@ def run_on_vm(
     command: str,
 ):
     print(f"Running command on VM: {command}")
-
-    STORAGE_ACCOUNT = "cacitestingstorage"
-    CONTAINER_NAME = "container"
-
-    run_name = "caciVmRun"  # we can only have one at a time anyway
-    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
-    stdout_blob_name = f"{vm_name}_{run_name}_{ts}_stdout.txt"
-    stderr_blob_name = f"{vm_name}_{run_name}_{ts}_stderr.txt"
-    output_blob_url = generate_storage_sas_key(
-        storage_account=STORAGE_ACCOUNT,
-        container_name=CONTAINER_NAME,
-        path=stdout_blob_name,
-    )
-    error_blob_url = generate_storage_sas_key(
-        storage_account=STORAGE_ACCOUNT,
-        container_name=CONTAINER_NAME,
-        path=stderr_blob_name,
-    )
-
-    subprocess.run(
+    res = subprocess.run(
         [
             "az",
             "vm",
             "run-command",
-            "create",
+            "invoke",
             "-g",
             resource_group,
-            "--vm-name",
+            "-n",
             vm_name,
-            "--location",
-            get_vm_location(resource_group, vm_name),  # for some reason it needs this
-            "--name",
-            run_name,
-            "--script",
+            "--command-id",
+            "RunPowerShellScript",
+            "--scripts",
             command,
-            "--output-blob-uri",
-            output_blob_url,
-            "--error-blob-uri",
-            error_blob_url,
         ],
         check=True,
         stdout=subprocess.PIPE,
     )
+    out = json.loads(res.stdout)
 
-    stdout = download_as_string(output_blob_url)
-    stderr = download_as_string(error_blob_url)
+    stderr = ""
+    for value in out["value"]:
+        if "StdErr" in value["code"]:
+            stderr = value["message"]
 
-    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stdout_blob_name)
-    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stderr_blob_name)
-
-    subprocess.run(
-        [
-            "az",
-            "vm",
-            "run-command",
-            "delete",
-            "--vm-name",
-            vm_name,
-            "--resource-group",
-            resource_group,
-            "--name",
-            run_name,
-            "--yes",
-        ],
-        check=False,
-        stdout=None,
-        stderr=None,
-    )
+    stdout = None
+    for value in out["value"]:
+        if "StdOut" in value["code"]:
+            stdout = value["message"]
 
     if stdout:
         print(stdout)
@@ -226,6 +144,45 @@ def run_on_vm(
         raise Exception("No StdOut in response")
 
     return stdout
+
+
+def download_single_file_from_vm(
+    vm_name: str,
+    subscription: str,
+    resource_group: str,
+    managed_identity: str,
+    file_path: str,
+) -> bytes:
+
+    STORAGE_ACCOUNT = "cacitestingstorage"
+    CONTAINER_NAME = "container"
+
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    blob_name = f"{vm_name}_{ts}_download"
+    blobUrl = f"https://{STORAGE_ACCOUNT}.blob.core.windows.net/{CONTAINER_NAME}/{blob_name}"
+    tokenUrl = tokenImdsUrl(
+        getManagedIdentityClientId(subscription, resource_group, managed_identity), "https://storage.azure.com/"
+    )
+    date_str = datetime.datetime.now(datetime.timezone.utc).strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+    # -InFile requires file to not be open by ">>", but for some reason `Get-Content` works
+
+    run_on_vm(
+        vm_name=vm_name,
+        resource_group=resource_group,
+        command=" ; ".join(
+            [
+                '$ProgressPreference = "SilentlyContinue"',  # otherwise invoke-restmethod is very slow to download large files
+                f'$token = (Invoke-RestMethod -Uri "{tokenUrl}" -Headers @{{Metadata="true"}} -Method GET -UseBasicParsing).access_token',
+                f'$headers = @{{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12"; "x-ms-blob-type"="BlockBlob"; "x-ms-date"="{date_str}" }}',
+                f'Invoke-RestMethod -Uri "{blobUrl}" -Method PUT -Headers $headers -Body (Get-Content -Raw "{file_path}")',
+            ]
+        ),
+    )
+
+    data = download_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, blob_name)
+    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, blob_name)
+    return data
 
 
 def upload_to_vm_and_run(

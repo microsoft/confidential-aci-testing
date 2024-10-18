@@ -96,3 +96,10 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(exec)
     parse_resource_group(exec)
     exec.add_argument("cmd", type=str)
+
+    cat = vm_subparser.add_parser("cat")
+    cat.add_argument("file_path", type=str)
+    parse_deployment_name(cat)
+    parse_subscription(cat)
+    parse_resource_group(cat)
+    parse_managed_identity(cat)

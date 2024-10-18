@@ -171,6 +171,11 @@ def main():
 
             vm_exec(**vars(args))
 
+        elif args.vm_command == "cat":
+            from .tools.vm_cat import vm_cat
+
+            vm_cat(**vars(args))
+
         else:
             print(f"vm command: {args.vm_command} not recognised")
 
