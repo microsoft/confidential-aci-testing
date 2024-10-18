@@ -18,7 +18,7 @@ def vm_check(
     check_output = run_on_vm(
         vm_name=f"{deployment_name}-vm",
         resource_group=resource_group,
-        command=f"try {{ cd C:\\{prefix}; .\\check.ps1 }} catch {{ Write-Output 'ERROR: failed to run check' $_.Exception.ToString() }}",
+        command=f"C:\\{prefix}\\check.ps1",
     )
 
     if "ERROR" in check_output:

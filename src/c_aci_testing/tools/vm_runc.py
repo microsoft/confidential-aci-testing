@@ -253,7 +253,16 @@ def make_configs(
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
     write_script("startc.ps1", start_container_commands)
-    write_script("check.ps1", check_commands)
+    write_script(
+        "check.ps1",
+        [
+            "try {",
+            *check_commands,
+            "} catch {",
+            "  Write-Output 'ERROR: failed to run check' $_.Exception.ToString()",
+            "}",
+        ],
+    )
     write_script("stopc.ps1", stop_container_commands)
     write_script("stop.ps1", stop_pod_commands)
 
