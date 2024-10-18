@@ -146,7 +146,8 @@ def make_configs(
             )
         )
 
-        check_commands.append(f"$res=({shimdiag_exec_pod} echo 'PodAlive!!')")
+        # With just a simple echo, very occasionally, the exec won't return any output, but the pod is still fine.
+        check_commands.append(f"$res=({shimdiag_exec_pod} sh -c 'echo PodAlive!!; sleep 1')")
         check_commands.append(f"if ($res -ne 'PodAlive!!') {{ Write-Output 'ERROR: exec failed on pod {pod_name}' }}")
 
         # check_commands.append(
@@ -213,7 +214,8 @@ def make_configs(
             start_container_commands.append("crictl start $container_id")
 
             check_commands.append(
-                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q) echo 'ContainerAlive!!')"
+                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q) "
+                + "sh -c 'echo ContainerAlive!!; sleep 1')"
             )
             check_commands.append(
                 f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_name}' }}"
