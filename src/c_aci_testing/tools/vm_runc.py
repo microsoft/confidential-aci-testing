@@ -46,7 +46,7 @@ def make_configs(
     registry: str,
     repository: str,
     tag: str,
-    lcow_path: str,
+    prefix: str,
     output_conf_dir: str,
 ):
 
@@ -112,6 +112,8 @@ def make_configs(
         group_cpus = 0
         group_memory = 0
 
+        pod_name = f"{prefix}_{container_group_id}"
+
         start_pod_commands.append(
             " ".join(
                 [
@@ -122,7 +124,7 @@ def make_configs(
             )
         )
 
-        shimdiag_exec_pod = f'shimdiag exec ("k8s.io-"+(crictl pods --name {container_group_id} -q))'
+        shimdiag_exec_pod = f'shimdiag exec ("k8s.io-"+(crictl pods --name {pod_name} -q))'
 
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
@@ -136,7 +138,7 @@ def make_configs(
         stop_pod_commands.append(
             "; ".join(
                 [
-                    f"$podId = crictl pods --name {container_group_id} -q",
+                    f"$podId = crictl pods --name {pod_name} -q",
                     "if ($podId) { crictl stopp $podId",
                     "crictl rmp $podId }",
                 ]
@@ -144,16 +146,14 @@ def make_configs(
         )
 
         check_commands.append(f"$res=({shimdiag_exec_pod} echo 'PodAlive!!')")
-        check_commands.append(
-            f"if ($res -ne 'PodAlive!!') {{ Write-Output 'ERROR: exec failed on pod {container_group_id}' }}"
-        )
+        check_commands.append(f"if ($res -ne 'PodAlive!!') {{ Write-Output 'ERROR: exec failed on pod {pod_name}' }}")
 
         # check_commands.append(
         #     "\r\n".join(
         #         [
         #             f'$dmesg={shimdiag_exec_pod} dmesg',
         #             "if (-not $dmesg) {",
-        #             f"  Write-Output 'ERROR: dmesg failed on pod {container_group_id}'",
+        #             f"  Write-Output 'ERROR: dmesg failed on pod {pod_name}'",
         #             "}",
         #             "Write-Output $dmesg",
         #         ]
@@ -173,6 +173,7 @@ def make_configs(
             )
 
             container_id = container["name"]
+            container_name = f"{prefix}_{container_group_id}_{container_id}"
             group_cpus += container["properties"]["resources"]["requests"]["cpu"]
             group_memory += container["properties"]["resources"]["requests"]["memoryInGB"]
             with open(
@@ -181,7 +182,7 @@ def make_configs(
                 encoding="utf-8",
             ) as f:
                 container_json = container_template.copy()
-                container_json["metadata"]["name"] = container_id
+                container_json["metadata"]["name"] = container_name
                 container_json["image"]["image"] = container["properties"]["image"]
                 container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
                 if "command" in container["properties"]:
@@ -191,7 +192,7 @@ def make_configs(
                         {"key": env["name"], "value": env["value"]}
                         for env in container["properties"]["environmentVariables"]
                     ]
-                container_json["log_path"] = f"{lcow_path}\\container_log_{container_group_id}_{container_id}.log"
+                container_json["log_path"] = f"C:\\{prefix}\\container_log_{container_group_id}_{container_id}.log"
                 json.dump(container_json, f, separators=(",", ":"))
 
             # Create Container
@@ -199,8 +200,8 @@ def make_configs(
                 " ".join(
                     [
                         "$container_id = (crictl create --no-pull",
-                        f"(crictl pods --name {container_group_id} -q)",
-                        f'./container_{container_group_id}_{container["name"]}.json',
+                        f"(crictl pods --name {pod_name} -q)",
+                        f"./container_{container_group_id}_{container_id}.json",
                         f"./container_group_{container_group_id}.json)",
                     ]
                 )
@@ -210,16 +211,16 @@ def make_configs(
             start_container_commands.append("crictl start $container_id")
 
             check_commands.append(
-                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {container_group_id} -q) --name {container_id} -q) echo 'ContainerAlive!!')"
+                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q) echo 'ContainerAlive!!')"
             )
             check_commands.append(
-                f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_id}' }}"
+                f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_name}' }}"
             )
 
             stop_container_commands.append(
                 "; ".join(
                     [
-                        f"$containerId=crictl ps --pod (crictl pods --name {container_group_id} -q) --name {container_id} -q -a",
+                        f"$containerId=crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q -a",
                         "if ($containerId) { crictl stop $containerId",
                         "crictl rm $containerId }",
                     ]
@@ -232,7 +233,7 @@ def make_configs(
             encoding="utf-8",
         ) as f:
             container_group_json = container_group_template.copy()
-            container_group_json["metadata"]["name"] = container_group_id
+            container_group_json["metadata"]["name"] = pod_name
             annotations = container_group_json["annotations"]
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
             annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
@@ -275,7 +276,7 @@ def vm_runc(
     registry: str,
     repository: str,
     tag: str,
-    lcow_dir_name: str,
+    prefix: str,
     **kwargs,
 ):
     lcow_config_blob_name = f"lcow_config_{deployment_name}"
@@ -295,7 +296,7 @@ def vm_runc(
         registry=registry,
         repository=repository,
         tag=tag,
-        lcow_path="C:\\" + lcow_dir_name,
+        prefix=prefix,
         output_conf_dir=temp_dir,
     )
 
@@ -303,7 +304,7 @@ def vm_runc(
 
     upload_to_vm_and_run(
         target_path=temp_dir,
-        vm_path="C:\\" + lcow_dir_name,
+        vm_path="C:\\" + prefix,
         subscription=subscription,
         resource_group=resource_group,
         vm_name=vm_name,

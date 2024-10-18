@@ -19,7 +19,7 @@ from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
-from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor
+from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -46,21 +46,13 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_registry(runc)
     parse_repository(runc)
     parse_tag(runc)
-    runc.add_argument(
-        "--lcow-dir-name",
-        type=str,
-        default=os.getenv("LCOW_DIR_NAME", "lcow"),
-    )
+    parse_runc_prefix(runc)
 
     check = vm_subparser.add_parser("check")
     parse_deployment_name(check)
     parse_subscription(check)
     parse_resource_group(check)
-    check.add_argument(
-        "--lcow-dir-name",
-        type=str,
-        default=os.getenv("LCOW_DIR_NAME", "lcow"),
-    )
+    parse_runc_prefix(check)
 
     deploy = vm_subparser.add_parser("deploy")
     parse_target_path(deploy)
@@ -74,11 +66,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_tag(deploy)
     parse_cplat_args(deploy)
     parse_vm_image(deploy)
-    deploy.add_argument(
-        "--lcow-dir-name",
-        type=str,
-        default=os.getenv("LCOW_DIR_NAME", "lcow"),
-    )
+    parse_runc_prefix(deploy)
     parse_vm_size(deploy)
     parse_vm_win_flavor(deploy)
 

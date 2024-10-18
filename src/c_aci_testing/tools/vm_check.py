@@ -12,13 +12,13 @@ def vm_check(
     deployment_name: str,
     subscription: str,
     resource_group: str,
-    lcow_dir_name: str,
+    prefix: str,
     **kwargs,
 ):
     check_output = run_on_vm(
         vm_name=f"{deployment_name}-vm",
         resource_group=resource_group,
-        command=f"try {{ cd C:\\{lcow_dir_name}; .\\check.ps1 }} catch {{ Write-Output 'ERROR: failed to run check' $_.Exception.ToString() }}",
+        command=f"try {{ cd C:\\{prefix}; .\\check.ps1 }} catch {{ Write-Output 'ERROR: failed to run check' $_.Exception.ToString() }}",
     )
 
     if "ERROR" in check_output:

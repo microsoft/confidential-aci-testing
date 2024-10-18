@@ -37,3 +37,11 @@ def parse_vm_size(parser):
         type=str,
         default=os.getenv("VM_SIZE"),
     )
+
+
+def parse_runc_prefix(parser: ArgumentParser):
+    parser.add_argument(
+        "--prefix",
+        type=str,
+        default=os.getenv("RUNC_PREFIX", "lcow"),
+    )
