@@ -187,6 +187,25 @@ def run_on_vm(
     async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stdout_blob_name)
     async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stderr_blob_name)
 
+    subprocess.run(
+        [
+            "az",
+            "vm",
+            "run-command",
+            "delete",
+            "--vm-name",
+            vm_name,
+            "--resource-group",
+            resource_group,
+            "--name",
+            run_name,
+            "--yes",
+        ],
+        check=False,
+        stdout=None,
+        stderr=None,
+    )
+
     if stdout:
         print(stdout)
     if stderr:
