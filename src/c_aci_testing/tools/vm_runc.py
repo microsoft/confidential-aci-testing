@@ -184,7 +184,8 @@ def make_configs(
                 container_json = container_template.copy()
                 container_json["metadata"]["name"] = container_name
                 container_json["image"]["image"] = container["properties"]["image"]
-                container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
+                if "ports" in container["properties"]:
+                    container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
                 if "command" in container["properties"]:
                     container_json["command"] = container["properties"]["command"]
                 if "environmentVariables" in container["properties"]:
