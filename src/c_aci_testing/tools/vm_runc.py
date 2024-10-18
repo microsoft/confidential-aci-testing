@@ -55,6 +55,7 @@ def make_configs(
     run_script_common = [
         r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
         r"Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe",
+        f"cd C:\\{prefix}",
     ]
     pull_commands = run_script_common.copy()
     start_pod_commands = run_script_common.copy()
@@ -259,6 +260,7 @@ def make_configs(
     write_script(
         "run.ps1",
         [
+            f"cd C:\\{prefix}",
             ".\\pull.ps1",
             ".\\stop.ps1",
             ".\\runp.ps1",
