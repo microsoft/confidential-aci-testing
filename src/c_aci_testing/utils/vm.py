@@ -10,6 +10,7 @@ import subprocess
 import json
 import tempfile
 import tarfile
+import datetime
 
 
 def tokenImdsUrl(client_id: str, resource: str):
@@ -37,41 +38,154 @@ def getManagedIdentityClientId(subscription: str, resource_group: str, managed_i
     return json.loads(res.stdout)["properties"]["clientId"]
 
 
+def generate_storage_sas_key(storage_account: str, container_name: str, path: str):
+    res = subprocess.run(
+        [
+            "az",
+            "storage",
+            "blob",
+            "generate-sas",
+            "--as-user",
+            "--auth-mode",
+            "login",
+            "--account-name",
+            storage_account,
+            "--container-name",
+            container_name,
+            "--name",
+            path,
+            "--full-uri",
+            "--permissions",
+            "acdrw",
+            "--expiry",
+            (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=1)).strftime("%Y-%m-%dT%H:%MZ"),
+            "--full-uri",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+
+    return json.loads(res.stdout.decode("utf-8"))
+
+
+vm_location_cache = {}
+
+
+def get_vm_location(resource_group: str, vm_name: str):
+    if (resource_group, vm_name) in vm_location_cache:
+        return vm_location_cache[(resource_group, vm_name)]
+
+    res = subprocess.run(
+        [
+            "az",
+            "vm",
+            "show",
+            "-g",
+            resource_group,
+            "-n",
+            vm_name,
+            "--query",
+            "location",
+            "-o",
+            "tsv",
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+    location = res.stdout.decode("utf-8").strip()
+    vm_location_cache[(resource_group, vm_name)] = location
+    return location
+
+
+def async_delete_storage_blob(storage_account: str, container_name: str, blob_name: str):
+    subprocess.Popen(
+        [
+            "az",
+            "storage",
+            "blob",
+            "delete",
+            "--account-name",
+            storage_account,
+            "--container-name",
+            container_name,
+            "--name",
+            blob_name,
+            "--auth-mode",
+            "login",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+def download_as_string(url: str):
+    res = subprocess.run(
+        [
+            "curl",
+            "-sL",
+            url,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
+
+    return res.stdout.decode("utf-8")
+
+
 def run_on_vm(
     vm_name: str,
     resource_group: str,
     command: str,
 ):
     print(f"Running command on VM: {command}")
-    res = subprocess.run(
+
+    STORAGE_ACCOUNT = "cacitestingstorage"
+    CONTAINER_NAME = "container"
+
+    run_name = "caciVmRun"  # we can only have one at a time anyway
+    ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
+    stdout_blob_name = f"{vm_name}_{run_name}_{ts}_stdout.txt"
+    stderr_blob_name = f"{vm_name}_{run_name}_{ts}_stderr.txt"
+    output_blob_url = generate_storage_sas_key(
+        storage_account=STORAGE_ACCOUNT,
+        container_name=CONTAINER_NAME,
+        path=stdout_blob_name,
+    )
+    error_blob_url = generate_storage_sas_key(
+        storage_account=STORAGE_ACCOUNT,
+        container_name=CONTAINER_NAME,
+        path=stderr_blob_name,
+    )
+
+    subprocess.run(
         [
             "az",
             "vm",
             "run-command",
-            "invoke",
+            "create",
             "-g",
             resource_group,
-            "-n",
+            "--vm-name",
             vm_name,
-            "--command-id",
-            "RunPowerShellScript",
-            "--scripts",
+            "--location",
+            get_vm_location(resource_group, vm_name),  # for some reason it needs this
+            "--name",
+            run_name,
+            "--script",
             command,
+            "--output-blob-uri",
+            output_blob_url,
+            "--error-blob-uri",
+            error_blob_url,
         ],
         check=True,
         stdout=subprocess.PIPE,
     )
-    out = json.loads(res.stdout)
 
-    stderr = ""
-    for value in out["value"]:
-        if "StdErr" in value["code"]:
-            stderr = value["message"]
+    stdout = download_as_string(output_blob_url)
+    stderr = download_as_string(error_blob_url)
 
-    stdout = None
-    for value in out["value"]:
-        if "StdOut" in value["code"]:
-            stdout = value["message"]
+    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stdout_blob_name)
+    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, stderr_blob_name)
 
     if stdout:
         print(stdout)
