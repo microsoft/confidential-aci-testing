@@ -164,6 +164,7 @@ def make_configs(
             [
                 *run_script_common,
                 checked_shimdiag_exec_pod_fn,
+                f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
                 f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
             ],
         )
