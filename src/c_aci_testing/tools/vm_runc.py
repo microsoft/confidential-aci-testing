@@ -72,10 +72,27 @@ def make_configs(
             "}",
         ]
     )
+    checked_container_exec_fn = "\r\n".join(
+        [
+            "function container_exec {",
+            "  param(",
+            "    [string]$podName,",
+            "    [string]$containerName,",
+            "    [parameter(ValueFromRemainingArguments=$true)]",
+            "    [string[]]$argv",  # can't use $args
+            "  )",
+            "  $podId=(crictl pods --name $podName -q)",
+            '  if (!$podId) { throw "Pod $podName not found"; }',
+            "  $containerId=(crictl ps --pod $podId --name $containerName -q)",
+            '  if (!$containerId) { throw "Container $containerName not found in pod $podName"; }',
+            "  crictl exec $containerId $argv",
+            "}",
+        ]
+    )
     pull_commands = run_script_common.copy()
     start_pod_commands = run_script_common.copy()
     start_container_commands = run_script_common.copy()
-    check_commands = run_script_common + [checked_shimdiag_exec_pod_fn]
+    check_commands = [*run_script_common, checked_shimdiag_exec_pod_fn, checked_container_exec_fn]
     stop_container_commands = run_script_common.copy()
     stop_pod_commands = run_script_common.copy()
 
@@ -233,7 +250,7 @@ def make_configs(
             start_container_commands.append("crictl start $container_id")
 
             check_commands.append(
-                f"$res=(crictl exec (crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q) "
+                f"$res=(container_exec -podName {pod_name} -containerName {container_name} -- "
                 + "sh -c 'echo ContainerAlive!!; sleep 1')"
             )
             check_commands.append(
