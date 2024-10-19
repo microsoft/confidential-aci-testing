@@ -54,13 +54,28 @@ def make_configs(
 
     run_script_common = [
         r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
-        r"Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe",
         f"cd C:\\{prefix}",
     ]
+
+    checked_shimdiag_exec_pod_fn = "\r\n".join(
+        [
+            "Set-Alias -Name shimdiag -Value C:\\ContainerPlat\\shimdiag.exe",
+            "function shimdiag_exec_pod {",
+            "  param(",
+            "    [string]$podName,",
+            "    [parameter(ValueFromRemainingArguments=$true)]",
+            "    [string[]]$argv",  # can't use $args
+            "  )",
+            "  $podId=(crictl pods --name $podName -q)",
+            '  if (!$podId) { throw "Pod $podName not found"; }',
+            '  shimdiag exec ("k8s.io-"+$podId) $argv',
+            "}",
+        ]
+    )
     pull_commands = run_script_common.copy()
     start_pod_commands = run_script_common.copy()
     start_container_commands = run_script_common.copy()
-    check_commands = run_script_common.copy()
+    check_commands = run_script_common + [checked_shimdiag_exec_pod_fn]
     stop_container_commands = run_script_common.copy()
     stop_pod_commands = run_script_common.copy()
 
@@ -125,11 +140,15 @@ def make_configs(
             )
         )
 
-        shimdiag_exec_pod = f'shimdiag exec ("k8s.io-"+(crictl pods --name {pod_name} -q))'
+        shimdiag_exec_pod = f'shimdiag_exec_pod -podName "{pod_name}" --'
 
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
-            run_script_common + [f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log"],
+            [
+                *run_script_common,
+                checked_shimdiag_exec_pod_fn,
+                f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
+            ],
         )
 
         start_pod_commands.append(
