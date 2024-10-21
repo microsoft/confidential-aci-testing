@@ -194,11 +194,11 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       adminUsername: vmUsername
       adminPassword: vmPassword
       windowsConfiguration: {
-        enableAutomaticUpdates: true
+        enableAutomaticUpdates: false
         provisionVMAgent: true
         patchSettings: {
           enableHotpatching: false
-          patchMode: 'AutomaticByOS'
+          patchMode: 'Manual'
         }
       }
     }
