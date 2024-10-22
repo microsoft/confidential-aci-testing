@@ -3,7 +3,7 @@ param vmUsername string = 'atlas'
 @secure()
 param vmPassword string
 param location string
-param containerPorts array
+param containerPorts array = ['80']
 @secure()
 param vmImage string
 param managedIDName string
@@ -33,32 +33,6 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-0
   location: location
   properties: {
     securityRules: [
-      {
-        name: 'RDP'
-        properties: {
-          priority: 300
-          protocol: 'TCP'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefix: '*'
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '3389'
-        }
-      }
-      {
-        name: 'SSH'
-        properties: {
-          priority: 320
-          protocol: 'TCP'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefix: '*'
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '22'
-        }
-      }
       {
         name: 'HTTPS'
         properties: {

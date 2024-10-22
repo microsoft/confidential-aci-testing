@@ -192,8 +192,6 @@ def vm_create(
             "--parameters",
             f"location={location}",  # To be determined by bicep template
             "--parameters",
-            "containerPorts=['80']",  # To be determined by bicep template
-            "--parameters",
             f"vmImage={vm_image}",
             "--parameters",
             f"managedIDName={managed_identity}",
