@@ -92,7 +92,11 @@ def make_configs(
     pull_commands = run_script_common.copy()
     start_pod_commands = run_script_common.copy()
     start_container_commands = run_script_common.copy()
-    check_commands = [*run_script_common, checked_shimdiag_exec_pod_fn, checked_container_exec_fn]
+    check_commands = [
+        *run_script_common,
+        checked_shimdiag_exec_pod_fn,
+        checked_container_exec_fn,
+    ]
     stop_container_commands = run_script_common.copy()
     stop_pod_commands = run_script_common.copy()
 
@@ -185,7 +189,14 @@ def make_configs(
 
         # With just a simple echo, very occasionally, the exec won't return any output, but the pod is still fine.
         check_commands.append(f"$res=({shimdiag_exec_pod} sh -c 'echo PodAlive!!; sleep 1')")
-        check_commands.append(f"if ($res -ne 'PodAlive!!') {{ Write-Output 'ERROR: exec failed on pod {pod_name}' }}")
+        check_commands.extend(
+            [
+                "if ($res -ne 'PodAlive!!') {",
+                f"  Write-Output 'ERROR: exec failed on pod {pod_name}'",
+                "  $hasError = $true",
+                "}",
+            ]
+        )
 
         # check_commands.append(
         #     "\r\n".join(
@@ -193,6 +204,7 @@ def make_configs(
         #             f'$dmesg={shimdiag_exec_pod} dmesg',
         #             "if (-not $dmesg) {",
         #             f"  Write-Output 'ERROR: dmesg failed on pod {pod_name}'",
+        #             "  $hasError = $true",
         #             "}",
         #             "Write-Output $dmesg",
         #         ]
@@ -254,8 +266,13 @@ def make_configs(
                 f"$res=(container_exec -podName {pod_name} -containerName {container_name} -- "
                 + "sh -c 'echo ContainerAlive!!; sleep 1')"
             )
-            check_commands.append(
-                f"if ($res -ne 'ContainerAlive!!') {{ Write-Output 'ERROR: exec failed on {container_name}' }}"
+            check_commands.extend(
+                [
+                    "if ($res -ne 'ContainerAlive!!') {",
+                    f"  Write-Output 'ERROR: exec failed on {container_name}'",
+                    "  $hasError = $true",
+                    "}",
+                ]
             )
 
             stop_container_commands.append(
@@ -295,11 +312,14 @@ def make_configs(
     write_script(
         "check.ps1",
         [
+            "$hasError = $false",
             "try {",
             *check_commands,
             "} catch {",
             "  Write-Output 'ERROR: failed to run check' $_.Exception.ToString()",
+            "  $hasError = $true",
             "}",
+            "if ($hasError) { exit 1 }",
         ],
     )
     write_script("stopc.ps1", stop_container_commands)
