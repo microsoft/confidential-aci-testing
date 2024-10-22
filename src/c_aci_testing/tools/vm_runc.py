@@ -319,7 +319,8 @@ def make_configs(
             "  Write-Output 'ERROR: failed to run check' $_.Exception.ToString()",
             "  $hasError = $true",
             "}",
-            "if ($hasError) { exit 1 }",
+            # exit 0 is actually required to sets $LASTEXITCODE in powershell
+            "if ($hasError) { exit 1 } else { exit 0 }",
         ],
     )
     write_script("stopc.ps1", stop_container_commands)
