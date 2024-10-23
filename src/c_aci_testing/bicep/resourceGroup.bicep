@@ -3,6 +3,7 @@ param registryName string
 param managedIdentityName string
 param githubRepo string
 param location string = deployment().location
+param storageAccountName string = ''
 
 targetScope = 'subscription'
 
@@ -27,5 +28,18 @@ module managedIdentity './managedIdentity.bicep' = {
     name: managedIdentityName
     location: location
     githubRepo: githubRepo
+  }
+}
+
+module storageAccount './blobStorage.bicep' = if (storageAccountName != '') {
+  name: 'storageAccountModule'
+  scope: resourceGroup
+  dependsOn: [
+    managedIdentity
+  ]
+  params: {
+    name: storageAccountName
+    location: location
+    managedIdName: managedIdentityName
   }
 }

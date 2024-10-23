@@ -8,7 +8,7 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   name: managedIdName
 }
 
-resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: name
   location: location
   kind: 'StorageV2'
@@ -18,7 +18,11 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   properties: {
     accessTier: 'Hot'
     allowSharedKeyAccess: false
+    allowBlobPublicAccess: false
     minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+    defaultToOAuthAuthentication: true
+    publicNetworkAccess:'Disabled'
     networkAcls: {
       defaultAction: 'Deny'
       ipRules: [

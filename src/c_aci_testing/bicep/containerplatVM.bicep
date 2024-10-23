@@ -1,14 +1,15 @@
-param vmUsername string = 'test-user'
+param vmHostname string = 'atlas-vm'
+param vmUsername string = 'atlas'
 @secure()
 param vmPassword string
 param location string
-param containerPorts array
+param containerPorts array = ['80']
 @secure()
 param vmImage string
 param managedIDName string
 param containerplatUrl string
-param lcowConfigUrl string
 param vmCustomCommands array = []
+param vmSize string = 'Standard_DC4ads_cc_v5'
 
 var tokenUrl = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
 
@@ -25,9 +26,6 @@ resource publicIPAddress 'Microsoft.Network/publicIpAddresses@2020-08-01' = {
   sku: {
     name: 'Standard'
   }
-  zones: [
-    '2'
-  ]
 }
 
 resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-01' = {
@@ -35,32 +33,6 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-0
   location: location
   properties: {
     securityRules: [
-      {
-        name: 'RDP'
-        properties: {
-          priority: 300
-          protocol: 'TCP'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefix: '*'
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '3389'
-        }
-      }
-      {
-        name: 'SSH'
-        properties: {
-          priority: 320
-          protocol: 'TCP'
-          access: 'Allow'
-          direction: 'Inbound'
-          sourceAddressPrefix: '*'
-          sourcePortRange: '*'
-          destinationAddressPrefix: '*'
-          destinationPortRange: '22'
-        }
-      }
       {
         name: 'HTTPS'
         properties: {
@@ -167,7 +139,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
   }
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_DC4ads_cc_v5'
+      vmSize: vmSize
     }
     storageProfile: {
       osDisk: {
@@ -192,15 +164,15 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       ]
     }
     osProfile: {
-      computerName: 'test-machine'
+      computerName: vmHostname
       adminUsername: vmUsername
       adminPassword: vmPassword
       windowsConfiguration: {
-        enableAutomaticUpdates: true
+        enableAutomaticUpdates: false
         provisionVMAgent: true
         patchSettings: {
           enableHotpatching: false
-          patchMode: 'AutomaticByOS'
+          patchMode: 'Manual'
         }
       }
     }
@@ -210,45 +182,38 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       }
     }
   }
-  zones: [
-    '2'
-  ]
-}
-
-resource shutdownSchedule 'Microsoft.DevTestLab/schedules@2018-09-15' = {
-  name: 'shutdown-computevm-${deployment().name}-vm'
-  location: location
-  properties: {
-    status: 'Enabled'
-    taskType: 'ComputeVmShutdownTask'
-    dailyRecurrence: {
-      time: '19:00'
-    }
-    timeZoneId: 'UTC'
-    targetResourceId: virtualMachine.id
-  }
 }
 
 resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01' = {
-  name: '${deployment().name}-vm-RunPowerShellScript'
+  name: 'RunPowerShellScript'
   location: location
   parent: virtualMachine
   properties: {
     source: {
-      script: join(
-        union(
-          [
-            '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
-            '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
-            'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
-            'tar -xf C:/containerplat.tar -C C:/'
-            'C:/containerplat_build/deploy.exe'
-            'Invoke-RestMethod -Uri "${lcowConfigUrl}" -Method GET -Headers $headers -OutFile "C:/lcow_config.tar"'
-            'tar -xf C:/lcow_config.tar -C C:/'
-          ],
-          vmCustomCommands
+      #disable-next-line prefer-interpolation
+      script: concat(
+        'try { ',
+        join(
+          union(
+            [
+              '$ProgressPreference = "SilentlyContinue"' // otherwise invoke-restmethod is very slow to download large files
+              '$ErrorActionPreference = "Continue"'
+              '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
+              'Write-Output "Token acquired" >> C:/bootstrap.log'
+              '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
+              'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
+              'Write-Output "Containerplat download done" >> C:/bootstrap.log'
+              'tar -xf C:/containerplat.tar -C C:/'
+              'Write-Output "tar -xf C:/containerplat.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
+              'C:/containerplat_build/deploy.exe >> C:/bootstrap.log 2>&1'
+              'Write-Output "C:/containerplat_build/deploy.exe   result: $LASTEXITCODE" >> C:/bootstrap.log'
+              'Write-Output "All done!" >> C:/bootstrap.log'
+            ],
+            vmCustomCommands
+          ),
+          '; '
         ),
-        '; '
+        ' } catch { Write-Output $_.Exception.ToString() >> C:/bootstrap.log }'
       )
     }
   }
@@ -260,6 +225,5 @@ output ids array = [
   virtualNetwork.id
   networkInterface.id
   virtualMachine.id
-  shutdownSchedule.id
   vmRunCommand.id
 ]

@@ -13,6 +13,7 @@ from ..parameters.managed_identity import parse_managed_identity
 from ..parameters.registry import parse_registry
 from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
+from ..parameters.storage_account import parse_storage_account
 
 
 def subparse_infra(infra: argparse.ArgumentParser):
@@ -25,6 +26,7 @@ def subparse_infra(infra: argparse.ArgumentParser):
     parse_registry(deploy)
     parse_managed_identity(deploy)
     parse_location(deploy)
+    parse_storage_account(deploy, allow_empty=True)
 
     deploy.add_argument(
         "--github-repo",

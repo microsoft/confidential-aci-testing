@@ -127,7 +127,22 @@ def main():
 
     elif args.command == "vm":
 
-        if args.vm_command == "deploy":
+        if args.vm_command == "create":
+            from .tools.vm_create import vm_create
+
+            vm_create(**vars(args))
+
+        elif args.vm_command == "runc":
+            from .tools.vm_runc import vm_runc
+
+            vm_runc(**vars(args))
+
+        elif args.vm_command == "check":
+            from .tools.vm_check import vm_check
+
+            vm_check(**vars(args))
+
+        elif args.vm_command == "deploy":
             from .tools.vm_deploy import vm_deploy
 
             vm_deploy(**vars(args))
@@ -145,6 +160,26 @@ def main():
 
             else:
                 print(f"aci get command: {args.get_command} not recognised")
+
+        elif args.vm_command == "cp_into":
+            from .tools.vm_cp_into import vm_cp_into
+
+            vm_cp_into(**vars(args))
+
+        elif args.vm_command == "exec":
+            from .tools.vm_exec import vm_exec
+
+            vm_exec(**vars(args))
+
+        elif args.vm_command == "cat":
+            from .tools.vm_cat import vm_cat
+
+            vm_cat(**vars(args))
+
+        elif args.vm_command == "cache_cplat":
+            from .tools.vm_cache_cplat import vm_cache_cplat
+
+            vm_cache_cplat(**vars(args))
 
         else:
             print(f"vm command: {args.vm_command} not recognised")

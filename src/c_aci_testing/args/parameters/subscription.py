@@ -21,6 +21,8 @@ def parse_subscription(parser):
                 ["az", "account", "show", "--query", "id", "--output", "tsv"],
                 stdout=subprocess.PIPE,
                 check=True,
-            ).stdout.decode()
+            )
+            .stdout.decode()
+            .rstrip(os.linesep),
         ),
     )
