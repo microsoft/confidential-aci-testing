@@ -23,6 +23,10 @@ def vm_cp_into(
     storage_account = "cacitestingstorage"
     ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
+    commands = [run_command]
+    if not run_command:
+        commands = []
+
     upload_to_vm_and_run(
         src=src,
         dst=dst,
@@ -33,5 +37,5 @@ def vm_cp_into(
         container_name="container",
         blob_name=f"{deployment_name}vm_cp_into_{ts}",
         managed_identity=managed_identity,
-        commands=[run_command],
+        commands=commands,
     )
