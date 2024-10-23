@@ -16,77 +16,9 @@ import re
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.vm import run_on_vm, download_single_file_from_vm, decode_utf8_or_utf16
+from c_aci_testing.tools.vm_cache_cplat import containerplat_cache
 
-
-def containerplat_cache(storage_account: str, container_name: str, blob_name: str, cplat_path: str):
-    with open(f"{cplat_path}/deploy.json", "r+", encoding="utf-8") as f:
-        data = json.load(f)
-        data["Force"] = True
-        data["SevSnpEnabled"] = True
-        data["EnableLayerIntegrity"] = True
-        data["NoLCOWGPU"] = True
-        data["RuntimeOptions"][0]["ShareScratch"] = True
-        data["SkipSandboxPull"] = True  # we don't need WCOW sandbox, not pulling it makes bootstrap faster
-        f.seek(0)
-        json.dump(data, f, indent=4)
-        f.truncate()
-
-    tar_path = tempfile.mktemp(".tar", "cplat-")
-
-    with tarfile.open(tar_path, "w:gz") as tar:
-        tar.add(cplat_path, arcname="containerplat_build")
-
-    subprocess.run(
-        [
-            "az",
-            "storage",
-            "blob",
-            "upload",
-            "--account-name",
-            storage_account,
-            "--container-name",
-            container_name,
-            "--name",
-            blob_name,
-            "--file",
-            tar_path,
-            "--auth-mode",
-            "login",
-            "--overwrite",
-        ],
-        check=True,
-    )
-
-
-def containerplat_cache_from_ado(
-    storage_account: str, container_name: str, blob_name: str, cplat_feed: str, cplat_name: str, cplat_version: str
-):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        subprocess.run(
-            [
-                "az",
-                "artifacts",
-                "universal",
-                "download",
-                "--organization",
-                "https://dev.azure.com/msazure/",
-                "--project",
-                "dcf1de98-e135-4121-8a6c-99b73705f581",
-                "--scope",
-                "project",
-                "--feed",
-                cplat_feed,
-                "--name",
-                cplat_name,
-                "--version",
-                cplat_version,
-                "--path",
-                temp_dir,
-            ],
-            check=True,
-        )
-
-        containerplat_cache(storage_account, container_name, blob_name, temp_dir)
+VM_CONTAINER_NAME = "container"
 
 
 def vm_create(
@@ -101,6 +33,7 @@ def vm_create(
     cplat_version: str,
     cplat_blob_name: str,
     cplat_path: str,
+    storage_account: str,
     vm_size: str,
     **kwargs,
 ) -> list[str]:
@@ -111,37 +44,21 @@ def vm_create(
     :param cplat_path: Path to an already downloaded containerplat package, can be empty
     :param cplat_blob_name: Name to use for the containerplat blob, can be empty for per-deployment blobs
     """
-
     if not cplat_blob_name:
         cplat_blob_name = f"containerplat_{deployment_name}"
 
-    if cplat_path:
-        print(f"Updating deploy.json and uploading containerplat in {cplat_path}")
+    if cplat_path or cplat_feed or cplat_name or cplat_version or not cplat_blob_name:
         containerplat_cache(
-            storage_account="cacitestingstorage",
-            container_name="container",
-            blob_name=cplat_blob_name,
-            cplat_path=cplat_path,
-        )
-    elif cplat_feed or cplat_name or cplat_version:
-        if not cplat_feed or not cplat_name or not cplat_version:
-            raise Exception("Missing cplat_feed, cplat_name, or cplat_version (all must be set or all must be empty)")
-
-        print(f"Downloading containerplat from ADO {cplat_feed}: {cplat_name} {cplat_version}")
-        containerplat_cache_from_ado(
-            storage_account="cacitestingstorage",
-            container_name="container",
-            blob_name=cplat_blob_name,
+            cplat_blob_name=cplat_blob_name,
+            storage_account=storage_account,
+            container_name=VM_CONTAINER_NAME,
             cplat_feed=cplat_feed,
             cplat_name=cplat_name,
             cplat_version=cplat_version,
+            cplat_path=cplat_path,
         )
-    elif not cplat_blob_name:
-        raise Exception(
-            "An existing cplat_blob_name must be set if cplat_feed, cplat_name, and cplat_version are not set"
-        )
-    else:
-        print(f"Using existing containerplat blob: {cplat_blob_name}")
+
+    cplat_blob_url = f"https://{storage_account}.blob.core.windows.net/{VM_CONTAINER_NAME}/{cplat_blob_name}"
 
     print(f"{os.linesep}Deploying VM to Azure, view deployment here:")
     print(
@@ -196,7 +113,7 @@ def vm_create(
             "--parameters",
             f"managedIDName={managed_identity}",
             "--parameters",
-            f"containerplatUrl=https://cacitestingstorage.blob.core.windows.net/container/{cplat_blob_name}",
+            f"containerplatUrl={cplat_blob_url}",
             "--parameters",
             f"vmSize={vm_size}",
             "--parameters",
@@ -226,6 +143,8 @@ def vm_create(
                 vm_name=vm_name,
                 subscription=subscription,
                 resource_group=resource_group,
+                storage_account=storage_account,
+                container_name=VM_CONTAINER_NAME,
                 managed_identity=managed_identity,
                 file_path="C:\\bootstrap.log",
             )
@@ -243,6 +162,7 @@ def vm_create(
 
     output = run_on_vm(
         vm_name=vm_name,
+        subscription=subscription,
         resource_group=resource_group,
         command="C:/ContainerPlat/crictl.exe version; C:/ContainerPlat/crictl.exe ps",
     )

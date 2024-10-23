@@ -14,6 +14,7 @@ import time
 from c_aci_testing.utils.parse_bicep import parse_bicep
 from c_aci_testing.utils.vm import run_on_vm
 from ..utils.vm import upload_to_vm_and_run
+from c_aci_testing.tools.vm_create import VM_CONTAINER_NAME
 
 
 # TODO: ideally all of this should happen within the VM, and there can be powershell logic to use the correct ACR instance even if "registry" is wrong etc.
@@ -380,6 +381,7 @@ def vm_runc(
     subscription: str,
     resource_group: str,
     managed_identity: str,
+    storage_account: str,
     win_flavor: str,
     registry: str,
     repository: str,
@@ -388,7 +390,6 @@ def vm_runc(
     **kwargs,
 ):
     lcow_config_blob_name = f"lcow_config_{deployment_name}"
-    storage_account = "cacitestingstorage"
     vm_name = f"{deployment_name}-vm"
 
     temp_dir = tempfile.mkdtemp()
@@ -417,7 +418,7 @@ def vm_runc(
         resource_group=resource_group,
         vm_name=vm_name,
         storage_account=storage_account,
-        container_name="container",
+        container_name=VM_CONTAINER_NAME,
         blob_name=lcow_config_blob_name,
         managed_identity=managed_identity,
         commands=[f"cd C:\\{prefix}", ".\\run.ps1", 'Write-Output "run.ps1 result: $LASTEXITCODE"'],
@@ -425,6 +426,7 @@ def vm_runc(
 
     run_on_vm(
         vm_name=vm_name,
+        subscription=subscription,
         resource_group=resource_group,
         command="C:/containerplat/crictl.exe pods; C:/containerplat/crictl.exe ps -a",
     )

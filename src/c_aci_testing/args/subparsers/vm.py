@@ -20,6 +20,7 @@ from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
 from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix
+from ..parameters.storage_account import parse_storage_account
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -33,6 +34,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_location(create)
     parse_managed_identity(create)
     parse_cplat_args(create)
+    parse_storage_account(create)
     parse_vm_image(create)
     parse_vm_size(create)
 
@@ -42,6 +44,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(runc)
     parse_resource_group(runc)
     parse_managed_identity(runc)
+    parse_storage_account(runc)
     parse_vm_win_flavor(runc)
     parse_registry(runc)
     parse_repository(runc)
@@ -65,6 +68,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_repository(deploy)
     parse_tag(deploy)
     parse_cplat_args(deploy)
+    parse_storage_account(deploy)
     parse_vm_image(deploy)
     parse_runc_prefix(deploy)
     parse_vm_size(deploy)
@@ -91,6 +95,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(cp_into)
     parse_resource_group(cp_into)
     parse_managed_identity(cp_into)
+    parse_storage_account(cp_into)
 
     exec = vm_subparser.add_parser("exec")
     parse_deployment_name(exec)
@@ -104,3 +109,8 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_subscription(cat)
     parse_resource_group(cat)
     parse_managed_identity(cat)
+    parse_storage_account(cat)
+
+    cache_cplat = vm_subparser.add_parser("cache_cplat")
+    parse_cplat_args(cache_cplat)
+    parse_storage_account(cache_cplat)

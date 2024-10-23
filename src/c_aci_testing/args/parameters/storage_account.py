@@ -5,20 +5,12 @@
 
 from __future__ import annotations
 
-from ..utils.vm import run_on_vm
+import os
 
 
-def vm_exec(
-    cmd: str,
-    deployment_name: str,
-    subscription: str,
-    resource_group: str,
-    **kwargs,
-):
-    vm_name = f"{deployment_name}-vm"
-    run_on_vm(
-        vm_name=vm_name,
-        subscription=subscription,
-        resource_group=resource_group,
-        command=cmd,
+def parse_storage_account(parser):
+    parser.add_argument(
+        "--storage-account",
+        type=str,
+        default=os.getenv("STORAGE_ACCOUNT", ""),
     )

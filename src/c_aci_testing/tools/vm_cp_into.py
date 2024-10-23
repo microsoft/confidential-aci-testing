@@ -8,6 +8,7 @@ from __future__ import annotations
 import datetime
 
 from ..utils.vm import upload_to_vm_and_run
+from c_aci_testing.tools.vm_create import VM_CONTAINER_NAME
 
 
 def vm_cp_into(
@@ -18,9 +19,9 @@ def vm_cp_into(
     subscription: str,
     resource_group: str,
     managed_identity: str,
+    storage_account: str,
     **kwargs,
 ):
-    storage_account = "cacitestingstorage"
     ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
     commands = [run_command]
@@ -34,7 +35,7 @@ def vm_cp_into(
         subscription=subscription,
         resource_group=resource_group,
         storage_account=storage_account,
-        container_name="container",
+        container_name=VM_CONTAINER_NAME,
         blob_name=f"{deployment_name}vm_cp_into_{ts}",
         managed_identity=managed_identity,
         commands=commands,

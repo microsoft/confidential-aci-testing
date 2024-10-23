@@ -104,6 +104,7 @@ def download_storage_blob(storage_account: str, container_name: str, blob_name: 
 
 def run_on_vm(
     vm_name: str,
+    subscription: str,
     resource_group: str,
     command: str,
 ):
@@ -114,6 +115,8 @@ def run_on_vm(
             "vm",
             "run-command",
             "invoke",
+            "--subscription",
+            subscription,
             "-g",
             resource_group,
             "-n",
@@ -154,15 +157,13 @@ def download_single_file_from_vm(
     subscription: str,
     resource_group: str,
     managed_identity: str,
+    storage_account: str,
+    container_name: str,
     file_path: str,
 ) -> bytes:
-
-    STORAGE_ACCOUNT = "cacitestingstorage"
-    CONTAINER_NAME = "container"
-
     ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
     blob_name = f"{vm_name}_{ts}_download"
-    blobUrl = f"https://{STORAGE_ACCOUNT}.blob.core.windows.net/{CONTAINER_NAME}/{blob_name}"
+    blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
     tokenUrl = tokenImdsUrl(
         getManagedIdentityClientId(subscription, resource_group, managed_identity), "https://storage.azure.com/"
     )
@@ -172,6 +173,7 @@ def download_single_file_from_vm(
 
     run_on_vm(
         vm_name=vm_name,
+        subscription=subscription,
         resource_group=resource_group,
         command=" ; ".join(
             [
@@ -183,8 +185,8 @@ def download_single_file_from_vm(
         ),
     )
 
-    data = download_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, blob_name)
-    async_delete_storage_blob(STORAGE_ACCOUNT, CONTAINER_NAME, blob_name)
+    data = download_storage_blob(storage_account, container_name, blob_name)
+    async_delete_storage_blob(storage_account, container_name, blob_name)
     return data
 
 
@@ -242,9 +244,10 @@ def upload_to_vm_and_run(
     blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
 
     run_on_vm(
-        vm_name,
-        resource_group,
-        "try { "
+        vm_name=vm_name,
+        subscription=subscription,
+        resource_group=resource_group,
+        command="try { "
         + "\r\n".join(
             [
                 f'$ProgressPreference = "SilentlyContinue"',  # otherwise invoke-restmethod is very slow to download large files
@@ -264,7 +267,7 @@ def upload_to_vm_and_run(
                 *commands,
             ]
         )
-        + " } catch { Write-Output $_.Exception.ToString(); throw }",
+        + " } catch {\r\n  Write-Output $_.Exception.ToString()\r\nthrow\r\n}",
     )
 
 

@@ -26,6 +26,7 @@ def vm_deploy(
     cplat_version: str,
     cplat_blob_name: str,
     cplat_path: str,
+    storage_account: str,
     vm_size: str,
     prefix: str,
     **kwargs,
@@ -50,6 +51,7 @@ def vm_deploy(
         cplat_version=cplat_version,
         cplat_path=cplat_path,
         cplat_blob_name=cplat_blob_name,
+        storage_account=storage_account,
         vm_size=vm_size,
     )
 
@@ -59,6 +61,7 @@ def vm_deploy(
         subscription=subscription,
         resource_group=resource_group,
         managed_identity=managed_identity,
+        storage_account=storage_account,
         win_flavor=win_flavor,
         registry=registry,
         repository=repository,

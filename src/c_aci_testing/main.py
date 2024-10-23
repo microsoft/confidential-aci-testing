@@ -176,6 +176,11 @@ def main():
 
             vm_cat(**vars(args))
 
+        elif args.vm_command == "cache_cplat":
+            from .tools.vm_cache_cplat import vm_cache_cplat
+
+            vm_cache_cplat(**vars(args))
+
         else:
             print(f"vm command: {args.vm_command} not recognised")
 
