@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 
-from ..utils.vm import download_single_file_from_vm
+from ..utils.vm import download_single_file_from_vm, decode_utf8_or_utf16
 
 
 def vm_cat(
@@ -26,13 +26,4 @@ def vm_cat(
         managed_identity=managed_identity,
         file_path=file_path,
     )
-
-    try:
-        str_data = raw_data.decode("utf-8")
-        sys.stdout.write(str_data)
-    except UnicodeDecodeError:
-        try:
-            str_data = raw_data.decode("utf-16")
-            sys.stdout.write(str_data)
-        except UnicodeDecodeError:
-            sys.stdout.buffer.write(raw_data)
+    sys.stdout.write(decode_utf8_or_utf16(raw_data))

@@ -15,7 +15,7 @@ import time
 import re
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
-from c_aci_testing.utils.vm import run_on_vm
+from c_aci_testing.utils.vm import run_on_vm, download_single_file_from_vm, decode_utf8_or_utf16
 
 
 def containerplat_cache(storage_account: str, container_name: str, blob_name: str, cplat_path: str):
@@ -221,10 +221,19 @@ def vm_create(
     tries = 0
     finished = False
     while tries < 12:
-        output = run_on_vm(vm_name, resource_group, "cat C:\\bootstrap.log")
+        output = decode_utf8_or_utf16(
+            download_single_file_from_vm(
+                vm_name=vm_name,
+                subscription=subscription,
+                resource_group=resource_group,
+                managed_identity=managed_identity,
+                file_path="C:\\bootstrap.log",
+            )
+        )
         tries += 1
         if "All done!" in output:
             finished = True
+            print(output)
             break
         print("Waiting for VM to finish bootstrapping...")
         time.sleep(5)

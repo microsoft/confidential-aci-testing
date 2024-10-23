@@ -15,6 +15,7 @@ import datetime
 import os
 import re
 
+
 def tokenImdsUrl(client_id: str, resource: str):
     return f"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource={resource}&client_id={client_id}"
 
@@ -99,6 +100,7 @@ def download_storage_blob(storage_account: str, container_name: str, blob_name: 
 # all.
 # Therefore I've simply gave up on trying to obtain the full output. You might be able to wrap the
 # command in powershell and redirect output to a file, then upload that file to the storage account.
+
 
 def run_on_vm(
     vm_name: str,
@@ -264,3 +266,10 @@ def upload_to_vm_and_run(
         )
         + " } catch { Write-Output $_.Exception.ToString(); throw }",
     )
+
+
+def decode_utf8_or_utf16(data: bytes) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        return data.decode("utf-16")
