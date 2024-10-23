@@ -5,14 +5,15 @@
 
 from __future__ import annotations
 
-from os import path
+import datetime
 
 from ..utils.vm import upload_to_vm_and_run
 
 
-def vm_run_script(
-    target_path: str,
-    script_file: str,
+def vm_cp_into(
+    src: str,
+    dst: str,
+    run_command: str,
     deployment_name: str,
     subscription: str,
     resource_group: str,
@@ -20,23 +21,17 @@ def vm_run_script(
     **kwargs,
 ):
     storage_account = "cacitestingstorage"
-
-    if "/" in script_file or "\\" in script_file:
-        raise ValueError("script_file must be a file name within target_path, not a path")
-
-    dir_name = path.split(target_path)[-1]
-    if not dir_name:
-        dir_name = "run_script"
+    ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 
     upload_to_vm_and_run(
-        target_path=target_path,
-        vm_path="C:\\" + dir_name,
+        src=src,
+        dst=dst,
         vm_name=f"{deployment_name}-vm",
         subscription=subscription,
         resource_group=resource_group,
         storage_account=storage_account,
         container_name="container",
-        blob_name=f"{deployment_name}_vm_run_script_{dir_name}",
+        blob_name=f"{deployment_name}vm_cp_into_{ts}",
         managed_identity=managed_identity,
-        run_script=script_file,
+        commands=[run_command],
     )

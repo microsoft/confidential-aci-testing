@@ -63,12 +63,15 @@ def make_configs(
             "function shimdiag_exec_pod {",
             "  param(",
             "    [string]$podName,",
+            "    [switch]$t,",
             "    [parameter(ValueFromRemainingArguments=$true)]",
             "    [string[]]$argv",  # can't use $args
             "  )",
             "  $podId=(crictl pods --name $podName -q)",
             '  if (!$podId) { throw "Pod $podName not found"; }',
-            '  shimdiag exec ("k8s.io-"+$podId) $argv',
+            "  $opts = @()",
+            "  if ($t) { $opts += '-t' }",
+            '  shimdiag exec @opts ("k8s.io-"+$podId) $argv',
             "}",
         ]
     )
@@ -78,6 +81,7 @@ def make_configs(
             "  param(",
             "    [string]$podName,",
             "    [string]$containerName,",
+            "    [switch]$it,",
             "    [parameter(ValueFromRemainingArguments=$true)]",
             "    [string[]]$argv",  # can't use $args
             "  )",
@@ -85,7 +89,9 @@ def make_configs(
             '  if (!$podId) { throw "Pod $podName not found"; }',
             "  $containerId=(crictl ps --pod $podId --name $containerName -q)",
             '  if (!$containerId) { throw "Container $containerName not found in pod $podName"; }',
-            "  crictl exec $containerId $argv",
+            "  $opts = @()",
+            "  if ($it) { $opts += '-it' }",
+            "  crictl exec @opts $containerId $argv",
             "}",
         ]
     )
@@ -187,6 +193,21 @@ def make_configs(
             )
         )
 
+        write_script(
+            f"connect_{container_group_id}.ps1",
+            [
+                "param(",
+                "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
+                ")",
+                *run_script_common,
+                checked_shimdiag_exec_pod_fn,
+                "if (!$argv) {",
+                "  $argv = @('bash')",
+                "}",
+                f"shimdiag_exec_pod -podName '{pod_name}' -t -- $argv",
+            ],
+        )
+
         # With just a simple echo, very occasionally, the exec won't return any output, but the pod is still fine.
         check_commands.append(f"$res=({shimdiag_exec_pod} sh -c 'echo PodAlive!!; sleep 1')")
         check_commands.extend(
@@ -285,6 +306,21 @@ def make_configs(
                 )
             )
 
+            write_script(
+                f"container_exec_{container_group_id}_{container_id}.ps1",
+                [
+                    "param(",
+                    "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
+                    ")",
+                    *run_script_common,
+                    checked_container_exec_fn,
+                    "if (!$argv) {",
+                    "  $argv = @('bash')",
+                    "}",
+                    f"container_exec -podName {pod_name} -containerName {container_name} -it -- $argv",
+                ],
+            )
+
         with open(
             os.path.join(output_conf_dir, f"container_group_{container_group_id}.json"),
             "w",
@@ -375,8 +411,8 @@ def vm_runc(
     print(f"Uploading LCOW config and scripts to {vm_name}...")
 
     upload_to_vm_and_run(
-        target_path=temp_dir,
-        vm_path="C:\\" + prefix,
+        src=temp_dir,
+        dst="C:\\" + prefix,
         subscription=subscription,
         resource_group=resource_group,
         vm_name=vm_name,
@@ -384,7 +420,7 @@ def vm_runc(
         container_name="container",
         blob_name=lcow_config_blob_name,
         managed_identity=managed_identity,
-        run_script="run.ps1",
+        commands=[f"cd C:\\{prefix}", ".\\run.ps1", 'Write-Output "run.ps1 result: $LASTEXITCODE"'],
     )
 
     run_on_vm(
