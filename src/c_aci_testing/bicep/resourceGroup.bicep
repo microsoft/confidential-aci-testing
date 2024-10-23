@@ -34,6 +34,9 @@ module managedIdentity './managedIdentity.bicep' = {
 module storageAccount './blobStorage.bicep' = if (storageAccountName != '') {
   name: 'storageAccountModule'
   scope: resourceGroup
+  dependsOn: [
+    managedIdentity
+  ]
   params: {
     name: storageAccountName
     location: location

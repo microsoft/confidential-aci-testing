@@ -46,7 +46,7 @@ def infra_deploy(
                 "--parameters",
                 f"name={resource_group}",
                 "--parameters",
-                f"registryName={registry}",
+                f"registryName={registry.split('.')[0]}",
                 "--parameters",
                 f"managedIdentityName={managed_identity}",
                 "--parameters",
