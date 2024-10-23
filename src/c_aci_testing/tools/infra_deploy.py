@@ -118,44 +118,45 @@ def infra_deploy(
             check=True,
         )
 
-    print(f"Checking if storage account '{storage_account}' exists")
-    result = subprocess.run(
-        [
-            "az",
-            "storage",
-            "account",
-            "show",
-            "--name",
-            storage_account,
-            "--resource-group",
-            resource_group,
-            "--query",
-            "name",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    account_exists = result is not None and result.stdout.replace('"', "").strip() == storage_account
-    print(f"{storage_account} " + ("exists" if account_exists else "does not exist"))
-
-    if not account_exists:
-        print("Creating storage account")
+    if storage_account:
+        print(f"Checking if storage account '{storage_account}' exists")
         result = subprocess.run(
             [
                 "az",
-                "deployment",
-                "group",
-                "create",
+                "storage",
+                "account",
+                "show",
+                "--name",
+                storage_account,
                 "--resource-group",
                 resource_group,
-                "--template-file",
-                os.path.join(bicep_template_dir, "blobStorage.bicep"),
-                "--parameters",
-                f"name={storage_account}",
-                "--parameters",
-                f"location={location}",
-                "--parameters",
-                f"managedIdName={managed_identity}",
+                "--query",
+                "name",
             ],
-            check=True,
+            capture_output=True,
+            text=True,
         )
+        account_exists = result is not None and result.stdout.replace('"', "").strip() == storage_account
+        print(f"{storage_account} " + ("exists" if account_exists else "does not exist"))
+
+        if not account_exists:
+            print("Creating storage account")
+            result = subprocess.run(
+                [
+                    "az",
+                    "deployment",
+                    "group",
+                    "create",
+                    "--resource-group",
+                    resource_group,
+                    "--template-file",
+                    os.path.join(bicep_template_dir, "blobStorage.bicep"),
+                    "--parameters",
+                    f"name={storage_account}",
+                    "--parameters",
+                    f"location={location}",
+                    "--parameters",
+                    f"managedIdName={managed_identity}",
+                ],
+                check=True,
+            )

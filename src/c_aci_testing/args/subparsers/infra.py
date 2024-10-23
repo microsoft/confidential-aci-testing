@@ -26,7 +26,7 @@ def subparse_infra(infra: argparse.ArgumentParser):
     parse_registry(deploy)
     parse_managed_identity(deploy)
     parse_location(deploy)
-    parse_storage_account(deploy)
+    parse_storage_account(deploy, allow_empty=True)
 
     deploy.add_argument(
         "--github-repo",
