@@ -30,7 +30,6 @@ def parse_vm_win_flavor(parser: ArgumentParser):
 
 
 def parse_vm_size(parser):
-
     parser.add_argument(
         "--vm-size",
         help="The size of the VM",
@@ -44,4 +43,14 @@ def parse_runc_prefix(parser: ArgumentParser):
         "--prefix",
         type=str,
         default=os.getenv("RUNC_PREFIX", "lcow"),
+    )
+
+
+def parse_vm_zones(parser: ArgumentParser):
+    parser.add_argument(
+        "--zone",
+        type=str,
+        default=os.getenv("VM_ZONE", ""),
+        dest="vm_zone",
+        help="The zone to use for the VM, or empty",
     )

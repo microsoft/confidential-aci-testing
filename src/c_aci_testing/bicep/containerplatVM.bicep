@@ -10,6 +10,7 @@ param managedIDName string
 param containerplatUrl string
 param vmCustomCommands array = []
 param vmSize string = 'Standard_DC4ads_cc_v5'
+param vmZones array = []
 
 var tokenUrl = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
 
@@ -182,6 +183,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
       }
     }
   }
+  zones: vmZones
 }
 
 resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01' = {
