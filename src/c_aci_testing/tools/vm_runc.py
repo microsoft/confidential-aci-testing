@@ -138,7 +138,7 @@ def make_configs(
         encoding="utf-8",
         mode="w",
     ) as pull_file:
-        json.dump(pull_template, pull_file, separators=(",", ":"))
+        json.dump(pull_template, pull_file, indent=2)
 
     def write_script(file, script):
         with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
@@ -267,7 +267,7 @@ def make_configs(
                         for env in container["properties"]["environmentVariables"]
                     ]
                 container_json["log_path"] = f"C:\\{prefix}\\container_log_{container_group_id}_{container_id}.log"
-                json.dump(container_json, f, separators=(",", ":"))
+                json.dump(container_json, f, indent=2)
 
             # Create Container
             start_container_commands.append(
@@ -341,7 +341,7 @@ def make_configs(
 
             annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
 
-            json.dump(container_group_json, f, separators=(",", ":"))
+            json.dump(container_group_json, f, indent=2)
 
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
