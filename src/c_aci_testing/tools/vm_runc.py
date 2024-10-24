@@ -346,7 +346,7 @@ def make_configs(
         [
             "$hasError = $false",
             "try {",
-            *check_commands,
+            *[f"  {line}" for line in check_commands],
             "} catch {",
             "  Write-Output 'ERROR: failed to run check' $_.Exception.ToString()",
             "  $hasError = $true",
