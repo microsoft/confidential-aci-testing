@@ -53,14 +53,16 @@ def make_configs(
 
     lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
-    run_script_common = [
-        r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
-        f"cd C:\\{prefix}",
-    ]
+    def write_script(file, script):
+        with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
+            f.write("\r\n".join(script))
 
-    checked_shimdiag_exec_pod_fn = "\r\n".join(
+    write_script(
+        "common.ps1",
         [
+            r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
             "Set-Alias -Name shimdiag -Value C:\\ContainerPlat\\shimdiag.exe",
+            "",
             "function shimdiag_exec_pod {",
             "  param(",
             "    [string]$podName,",
@@ -74,10 +76,7 @@ def make_configs(
             "  if ($t) { $opts += '-t' }",
             '  shimdiag exec @opts ("k8s.io-"+$podId) $argv',
             "}",
-        ]
-    )
-    checked_container_exec_fn = "\r\n".join(
-        [
+            "",
             "function container_exec {",
             "  param(",
             "    [string]$podName,",
@@ -94,18 +93,21 @@ def make_configs(
             "  if ($it) { $opts += '-it' }",
             "  crictl exec @opts $containerId $argv",
             "}",
-        ]
+            "",
+            f"cd C:\\{prefix}",
+        ],
     )
-    pull_commands = run_script_common.copy()
-    start_pod_commands = run_script_common.copy()
-    start_container_commands = run_script_common.copy()
-    check_commands = [
-        *run_script_common,
-        checked_shimdiag_exec_pod_fn,
-        checked_container_exec_fn,
+
+    script_head = [
+        f". C:\\{prefix}\\common.ps1",
     ]
-    stop_container_commands = run_script_common.copy()
-    stop_pod_commands = run_script_common.copy()
+
+    pull_commands = script_head.copy()
+    start_pod_commands = script_head.copy()
+    start_container_commands = script_head.copy()
+    check_commands = script_head.copy()
+    stop_container_commands = script_head.copy()
+    stop_pod_commands = script_head.copy()
 
     if registry.endswith(".azurecr.io"):
         aci_pull_token = get_acr_token(registry)
@@ -138,11 +140,7 @@ def make_configs(
         encoding="utf-8",
         mode="w",
     ) as pull_file:
-        json.dump(pull_template, pull_file, separators=(",", ":"))
-
-    def write_script(file, script):
-        with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
-            f.write("\r\n".join(script))
+        json.dump(pull_template, pull_file, indent=2)
 
     for container_group_id, container_group, containers in parse_bicep(
         target_path,
@@ -173,8 +171,7 @@ def make_configs(
         write_script(
             f"stream_dmesg_{container_group_id}.ps1",
             [
-                *run_script_common,
-                checked_shimdiag_exec_pod_fn,
+                *script_head,
                 f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
                 f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
             ],
@@ -200,8 +197,7 @@ def make_configs(
                 "param(",
                 "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
                 ")",
-                *run_script_common,
-                checked_shimdiag_exec_pod_fn,
+                *script_head,
                 "if (!$argv) {",
                 "  $argv = @('bash')",
                 "}",
@@ -267,7 +263,7 @@ def make_configs(
                         for env in container["properties"]["environmentVariables"]
                     ]
                 container_json["log_path"] = f"C:\\{prefix}\\container_log_{container_group_id}_{container_id}.log"
-                json.dump(container_json, f, separators=(",", ":"))
+                json.dump(container_json, f, indent=2)
 
             # Create Container
             start_container_commands.append(
@@ -313,8 +309,7 @@ def make_configs(
                     "param(",
                     "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
                     ")",
-                    *run_script_common,
-                    checked_container_exec_fn,
+                    *script_head,
                     "if (!$argv) {",
                     "  $argv = @('bash')",
                     "}",
@@ -341,7 +336,7 @@ def make_configs(
 
             annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
 
-            json.dump(container_group_json, f, separators=(",", ":"))
+            json.dump(container_group_json, f, indent=2)
 
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
@@ -351,7 +346,7 @@ def make_configs(
         [
             "$hasError = $false",
             "try {",
-            *check_commands,
+            *[f"  {line}" for line in check_commands],
             "} catch {",
             "  Write-Output 'ERROR: failed to run check' $_.Exception.ToString()",
             "  $hasError = $true",
@@ -371,6 +366,7 @@ def make_configs(
             ".\\stop.ps1",
             ".\\runp.ps1",
             ".\\startc.ps1",
+            ".\\check.ps1",
         ],
     )
 
