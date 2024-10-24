@@ -10,6 +10,7 @@ import subprocess
 import tarfile
 import tempfile
 
+VM_CONTAINER_NAME = "container"
 
 def containerplat_cache_from_path(storage_account: str, container_name: str, blob_name: str, cplat_path: str):
     with open(f"{cplat_path}/deploy.json", "r+", encoding="utf-8") as f:
@@ -116,4 +117,21 @@ def containerplat_cache(
         raise Exception("Missing cplat_path or cplat_feed, cplat_name, cplat_version")
 
 
-vm_cache_cplat = containerplat_cache
+def vm_cache_cplat(
+    cplat_blob_name: str,
+    storage_account: str,
+    cplat_feed: str,
+    cplat_name: str,
+    cplat_version: str,
+    cplat_path: str,
+    **kwargs,
+):
+    containerplat_cache(
+        cplat_blob_name=cplat_blob_name,
+        storage_account=storage_account,
+        container_name=VM_CONTAINER_NAME,
+        cplat_feed=cplat_feed,
+        cplat_name=cplat_name,
+        cplat_version=cplat_version,
+        cplat_path=cplat_path,
+    )
