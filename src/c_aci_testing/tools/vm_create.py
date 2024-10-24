@@ -35,6 +35,7 @@ def vm_create(
     cplat_path: str,
     storage_account: str,
     vm_size: str,
+    vm_zone: str,
     **kwargs,
 ) -> list[str]:
     """
@@ -90,6 +91,33 @@ def vm_create(
     if len(hostname) > 15:
         hostname = hostname[:15]
 
+    parameters: dict = {
+        "vmPassword": password,
+        "location": location,
+        "vmImage": vm_image,
+        "managedIDName": managed_identity,
+        "containerplatUrl": cplat_blob_url,
+        "vmSize": vm_size,
+        "vmHostname": hostname,
+    }
+
+    if vm_zone:
+        parameters["vmZones"] = [vm_zone]
+
+    parameters_file = os.path.join(tempfile.gettempdir(), f"{deployment_name}_parameters.json")
+    with open(parameters_file, "wt") as f:
+        parameters_obj = {
+            "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+            "contentVersion": "1.0.0.0",
+            "parameters": {k: {"value": v} for k, v in parameters.items()},
+        }
+        json.dump(parameters_obj, f, indent=2)
+
+    template_file = os.path.join(os.path.dirname(__file__), "..", "bicep", "containerplatVM.bicep")
+
+    print(f"Deployment template: {template_file}")
+    print(f"Deployment parameters file: {parameters_file}")
+
     subprocess.run(
         [
             "az",
@@ -103,21 +131,9 @@ def vm_create(
             "--resource-group",
             resource_group,
             "--template-file",
-            os.path.join(os.path.dirname(__file__), "..", "bicep", "containerplatVM.bicep"),
+            template_file,
             "--parameters",
-            f"vmPassword={password}",
-            "--parameters",
-            f"location={location}",  # To be determined by bicep template
-            "--parameters",
-            f"vmImage={vm_image}",
-            "--parameters",
-            f"managedIDName={managed_identity}",
-            "--parameters",
-            f"containerplatUrl={cplat_blob_url}",
-            "--parameters",
-            f"vmSize={vm_size}",
-            "--parameters",
-            f"vmHostname={hostname}",
+            f"@{parameters_file}",
         ],
         check=True,
     )

@@ -29,6 +29,7 @@ def vm_deploy(
     storage_account: str,
     vm_size: str,
     prefix: str,
+    vm_zone: str,
     **kwargs,
 ):
     """
@@ -53,6 +54,7 @@ def vm_deploy(
         cplat_blob_name=cplat_blob_name,
         storage_account=storage_account,
         vm_size=vm_size,
+        vm_zone=vm_zone,
     )
 
     vm_runc(

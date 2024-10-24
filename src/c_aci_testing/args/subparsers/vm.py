@@ -19,7 +19,7 @@ from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
-from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix
+from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix, parse_vm_zones
 from ..parameters.storage_account import parse_storage_account
 
 
@@ -37,6 +37,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_storage_account(create)
     parse_vm_image(create)
     parse_vm_size(create)
+    parse_vm_zones(create)
 
     runc = vm_subparser.add_parser("runc")
     parse_target_path(runc)
@@ -73,6 +74,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_runc_prefix(deploy)
     parse_vm_size(deploy)
     parse_vm_win_flavor(deploy)
+    parse_vm_zones(deploy)
 
     remove = vm_subparser.add_parser("remove")
     parse_deployment_name(remove)

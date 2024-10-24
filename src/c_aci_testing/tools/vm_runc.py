@@ -205,7 +205,7 @@ def make_configs(
                 "if (!$argv) {",
                 "  $argv = @('bash')",
                 "}",
-                f"shimdiag_exec_pod -podName '{pod_name}' -t -- $argv",
+                f"shimdiag_exec_pod -podName '{pod_name}' -t -- @argv",
             ],
         )
 
@@ -318,7 +318,7 @@ def make_configs(
                     "if (!$argv) {",
                     "  $argv = @('bash')",
                     "}",
-                    f"container_exec -podName {pod_name} -containerName {container_name} -it -- $argv",
+                    f"container_exec -podName {pod_name} -containerName {container_name} -it -- @argv",
                 ],
             )
 
