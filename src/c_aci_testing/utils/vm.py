@@ -107,7 +107,11 @@ def run_on_vm(
     subscription: str,
     resource_group: str,
     command: str,
-):
+) -> str:
+    """
+    :return: stdout
+    """
+
     print(f"Running command on VM: {command}")
     res = subprocess.run(
         [
@@ -201,7 +205,11 @@ def upload_to_vm_and_run(
     blob_name: str,
     managed_identity: str,
     commands: List[str],
-):
+) -> str:
+    """
+    :return: stdout
+    """
+
     dst_parsed = re.fullmatch(r"^(.+):\\(.+)$", dst)
     if not dst_parsed:
         raise ValueError("Destination path must be absolute")
@@ -243,7 +251,7 @@ def upload_to_vm_and_run(
     )
     blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
 
-    run_on_vm(
+    return run_on_vm(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
