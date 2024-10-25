@@ -407,7 +407,7 @@ def vm_runc(
 
     print(f"Uploading LCOW config and scripts to {vm_name}...")
 
-    upload_to_vm_and_run(
+    output = upload_to_vm_and_run(
         src=temp_dir,
         dst="C:\\" + prefix,
         subscription=subscription,
@@ -419,6 +419,9 @@ def vm_runc(
         managed_identity=managed_identity,
         commands=[f"cd C:\\{prefix}", ".\\run.ps1", 'Write-Output "run.ps1 result: $LASTEXITCODE"'],
     )
+
+    if "ERROR" in output:
+        raise Exception("Error detected in run output - container deployment failed")
 
     run_on_vm(
         vm_name=vm_name,
