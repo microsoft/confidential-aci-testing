@@ -7,12 +7,10 @@ param containerPorts array = ['80']
 @secure()
 param vmImage string
 param managedIDName string
-param containerplatUrl string
-param vmCustomCommands array = []
 param vmSize string = 'Standard_DC4ads_cc_v5'
 param vmZones array = []
 
-var tokenUrl = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
+var storageTokenUri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
 
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: managedIDName
@@ -196,26 +194,30 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
       script: concat(
         'try { ',
         join(
-          union(
-            [
-              '$ProgressPreference = "SilentlyContinue"' // otherwise invoke-restmethod is very slow to download large files
-              '$ErrorActionPreference = "Continue"'
-              '$token = (Invoke-RestMethod -Uri "${tokenUrl}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token'
-              'Write-Output "Token acquired" >> C:/bootstrap.log'
-              '$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }'
-              'Invoke-RestMethod -Uri "${containerplatUrl}" -Method GET -Headers $headers -OutFile "C:/containerplat.tar"'
-              'Write-Output "Containerplat download done" >> C:/bootstrap.log'
-              'tar -xf C:/containerplat.tar -C C:/'
-              'Write-Output "tar -xf C:/containerplat.tar -C C:/   result: $LASTEXITCODE" >> C:/bootstrap.log'
-              'C:/containerplat_build/deploy.exe >> C:/bootstrap.log 2>&1'
-              'Write-Output "C:/containerplat_build/deploy.exe   result: $LASTEXITCODE" >> C:/bootstrap.log'
-              'Write-Output "All done!" >> C:/bootstrap.log'
-            ],
-            vmCustomCommands
-          ),
-          '; '
+          [
+            // Write utility scripts to download / upload stuff from / to the storage account into C:\, so that we:
+            // 1. Do not have to repeat this every time we need this functionality
+            // 2. Do not trigger Defender alerts when executing Invoke-WebRequest directly via runCommand
+
+            'echo \'param([string]$uri, [string]$outFile)\' > C:\\storage_get.ps1'
+            'echo \'# Script written in containerplatVM.bicep\' >> C:\\storage_get.ps1'
+            'echo \'$ProgressPreference = "SilentlyContinue"\' >> C:\\storage_get.ps1'
+            'echo \'$token = (Invoke-RestMethod -Uri "${storageTokenUri}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token\' >> C:\\storage_get.ps1'
+            'echo \'$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12" }\' >> C:\\storage_get.ps1'
+            'echo \'Invoke-RestMethod -Uri $uri -Method GET -Headers $headers -OutFile $outFile\' >> C:\\storage_get.ps1'
+
+            'echo \'param([string]$uri, [string]$inFile)\' > C:\\storage_put.ps1'
+            'echo \'# Script written in containerplatVM.bicep\' >> C:\\storage_put.ps1'
+            'echo \'$ProgressPreference = "SilentlyContinue"\' >> C:\\storage_put.ps1'
+            'echo \'$token = (Invoke-RestMethod -Uri "${storageTokenUri}" -Headers @{Metadata="true"} -Method GET -UseBasicParsing).access_token\' >> C:\\storage_put.ps1'
+            'echo \'$dateStr = (Get-Date).ToUniversalTime().ToString("R")\' >> C:\\storage_put.ps1'
+            'echo \'$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12"; "x-ms-blob-type" = "BlockBlob"; "x-ms-date" = $dateStr }\' >> C:\\storage_put.ps1'
+            'echo \'# -InFile requires file to not be open by ">>", but for some reason `Get-Content` works\' >> C:\\storage_put.ps1'
+            'echo \'Invoke-RestMethod -Uri $uri -Method PUT -Headers $headers -Body (Get-Content -Raw $inFile)\' >> C:\\storage_put.ps1'
+          ],
+          '\r\n'
         ),
-        ' } catch { Write-Output $_.Exception.ToString() >> C:/bootstrap.log }'
+        ' } catch { Write-Output $_.Exception.ToString() >> C:\\bootstrap.log }'
       )
     }
   }

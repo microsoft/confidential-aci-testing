@@ -416,7 +416,6 @@ def vm_runc(
         storage_account=storage_account,
         container_name=VM_CONTAINER_NAME,
         blob_name=lcow_config_blob_name,
-        managed_identity=managed_identity,
         commands=[f"cd C:\\{prefix}", ".\\run.ps1", 'Write-Output "run.ps1 result: $LASTEXITCODE"'],
     )
 

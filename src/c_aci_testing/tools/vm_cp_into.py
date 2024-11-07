@@ -37,6 +37,5 @@ def vm_cp_into(
         storage_account=storage_account,
         container_name=VM_CONTAINER_NAME,
         blob_name=f"{deployment_name}vm_cp_into_{ts}",
-        managed_identity=managed_identity,
         commands=commands,
     )
