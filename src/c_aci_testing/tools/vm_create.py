@@ -214,7 +214,7 @@ def vm_create(
             print(output)
             raise Exception("Bootstrap error detected")
         if tries < 12:
-        print("Waiting for VM to finish bootstrapping...")
+            print("Waiting for VM to finish bootstrapping...")
             print("Current output:")
             print(output)
             time.sleep(20)
