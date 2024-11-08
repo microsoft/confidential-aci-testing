@@ -4,8 +4,12 @@ param vmUsername string = 'atlas'
 param vmPassword string
 param location string
 param containerPorts array = ['80']
+param useOfficialImages bool
+param officialImageSku string = '2025-datacenter-g2'
+param officialImageVersion string = 'latest'
 @secure()
-param vmImage string
+param vmImage string = ''
+
 param managedIDName string
 param vmSize string = 'Standard_DC4ads_cc_v5'
 param vmZones array = []
@@ -148,9 +152,16 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
         }
         deleteOption: 'Delete'
       }
-      imageReference: {
-        id: vmImage
-      }
+      imageReference: useOfficialImages
+        ? {
+            publisher: 'MicrosoftWindowsServer'
+            offer: 'WindowsServer'
+            sku: officialImageSku
+            version: officialImageVersion
+          }
+        : {
+            id: vmImage
+          }
     }
     networkProfile: {
       networkInterfaces: [
