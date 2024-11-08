@@ -8,14 +8,18 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-import tarfile
 import tempfile
 import uuid
 import time
 import re
 
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
-from c_aci_testing.utils.vm import run_on_vm, download_single_file_from_vm, decode_utf8_or_utf16
+from c_aci_testing.utils.vm import (
+    run_on_vm,
+    download_single_file_from_vm,
+    decode_utf8_or_utf16,
+    upload_to_vm_and_run,
+)
 from c_aci_testing.tools.vm_cache_cplat import containerplat_cache
 
 VM_CONTAINER_NAME = "container"
@@ -27,6 +31,9 @@ def vm_create(
     resource_group: str,
     location: str,
     managed_identity: str,
+    use_official_images: bool,
+    official_image_sku: str,
+    official_image_version: str,
     vm_image: str,
     cplat_feed: str,
     cplat_name: str,
@@ -61,24 +68,6 @@ def vm_create(
 
     cplat_blob_url = f"https://{storage_account}.blob.core.windows.net/{VM_CONTAINER_NAME}/{cplat_blob_name}"
 
-    print(f"{os.linesep}Deploying VM to Azure, view deployment here:")
-    print(
-        "%2F".join(
-            [
-                "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
-                "subscriptions",
-                subscription,
-                "resourceGroups",
-                resource_group,
-                "providers",
-                "Microsoft.Resources",
-                "deployments",
-                deployment_name,
-            ]
-        )
-    )
-    print("")
-
     password = str(uuid.uuid4())
     password_file = os.path.join(tempfile.gettempdir(), f"{deployment_name}_password.txt")
     with open(password_file, "wt") as f:
@@ -94,9 +83,11 @@ def vm_create(
     parameters: dict = {
         "vmPassword": password,
         "location": location,
-        "vmImage": vm_image,
+        "useOfficialImages": use_official_images,
+        "officialImageSku": official_image_sku if official_image_sku else None,
+        "officialImageVersion": official_image_version if official_image_version else None,
+        "vmImage": vm_image if vm_image else None,
         "managedIDName": managed_identity,
-        "containerplatUrl": cplat_blob_url,
         "vmSize": vm_size,
         "vmHostname": hostname,
     }
@@ -117,6 +108,24 @@ def vm_create(
 
     print(f"Deployment template: {template_file}")
     print(f"Deployment parameters file: {parameters_file}")
+
+    print(f"{os.linesep}Deploying VM to Azure, view deployment here:")
+    print(
+        "%2F".join(
+            [
+                "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
+                "subscriptions",
+                subscription,
+                "resourceGroups",
+                resource_group,
+                "providers",
+                "Microsoft.Resources",
+                "deployments",
+                deployment_name,
+            ]
+        )
+    )
+    print("")
 
     subprocess.run(
         [
@@ -146,35 +155,78 @@ def vm_create(
 
     for id in ids:
         if id.endswith("-vm"):
+            print("------------------------------------------------------------------------")
             print(f'Deployed {id.split("/")[-1]}, view here:')
             print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource{id}")
+            print("------------------------------------------------------------------------")
 
     vm_name = f"{deployment_name}-vm"
 
+    print("Downloading containerplat on VM")
+    run_on_vm(
+        vm_name=vm_name,
+        subscription=subscription,
+        resource_group=resource_group,
+        command="\r\n".join(
+            [
+                f'C:\\storage_get.ps1 -Uri "{cplat_blob_url}" -OutFile "C:\\containerplat.tar" 2>&1 >> C:\\bootstrap.log',
+                "tar -xf C:\\containerplat.tar -C C:\\ 2>&1 >> C:\\bootstrap.log",
+                'echo "result: $LASTEXITCODE"',
+            ]
+        ),
+    )
+
+    print("Bootstrapping VM")
+    upload_to_vm_and_run(
+        src=os.path.join(os.path.dirname(__file__), "..", "templates", "l1_initialize.ps1"),
+        dst="C:\\l1_initialize.ps1",
+        subscription=subscription,
+        resource_group=resource_group,
+        vm_name=vm_name,
+        storage_account=storage_account,
+        container_name=VM_CONTAINER_NAME,
+        blob_name=f"{deployment_name}_l1_initialize.ps1",
+        commands=[
+            "C:\\l1_initialize.ps1",
+        ],
+    )
+
     tries = 0
-    finished = False
-    while tries < 12:
-        output = decode_utf8_or_utf16(
-            download_single_file_from_vm(
+    while True:
+        tries += 1
+
+        try:
+            raw_output = download_single_file_from_vm(
                 vm_name=vm_name,
                 subscription=subscription,
                 resource_group=resource_group,
                 storage_account=storage_account,
                 container_name=VM_CONTAINER_NAME,
-                managed_identity=managed_identity,
                 file_path="C:\\bootstrap.log",
             )
-        )
-        tries += 1
-        if "All done!" in output:
-            finished = True
+        except Exception as e:
+            print(f"Failed to download bootstrap.log: {e}")
+            if tries < 12:
+                print("Retrying...")
+                time.sleep(20)
+                continue
+            raise
+
+        output = decode_utf8_or_utf16(raw_output)
+        if "DEPLOY-SUCCESS" in output:
             print(output)
             break
-        print("Waiting for VM to finish bootstrapping...")
-        time.sleep(5)
-
-    if not finished:
-        raise Exception("VM did not finish bootstrapping in 1m")
+        if "DEPLOY-ERROR" in output:
+            print(output)
+            raise Exception("Bootstrap error detected")
+        if tries < 12:
+            print("Waiting for VM to finish bootstrapping...")
+            print("Current output:")
+            print(output)
+            time.sleep(20)
+            continue
+        print(output)
+        raise Exception("VM did not finish bootstrapping in time")
 
     output = run_on_vm(
         vm_name=vm_name,

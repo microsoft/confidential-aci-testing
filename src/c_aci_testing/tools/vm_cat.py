@@ -25,7 +25,6 @@ def vm_cat(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
-        managed_identity=managed_identity,
         file_path=file_path,
         storage_account=storage_account,
         container_name=VM_CONTAINER_NAME,

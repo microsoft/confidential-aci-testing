@@ -12,10 +12,31 @@ from argparse import ArgumentParser
 
 def parse_vm_image(parser: ArgumentParser):
     parser.add_argument(
+        "--use-official-images",
+        action="store_true",
+        default=os.getenv("USE_OFFICIAL_IMAGES", "").lower() == "true",
+        help="Use the official image for the VM",
+    )
+
+    parser.add_argument(
         "--vm-image",
         type=str,
-        default=os.getenv("VM_IMAGE"),
+        default=os.getenv("VM_IMAGE", ""),
         help="The image to use for the VM",
+    )
+
+    parser.add_argument(
+        "--official-image-sku",
+        type=str,
+        default=os.getenv("OFFICIAL_IMAGE_SKU", ""),
+        help="The SKU for the official image",
+    )
+
+    parser.add_argument(
+        "--official-image-version",
+        type=str,
+        default=os.getenv("OFFICIAL_IMAGE_VERSION", ""),
+        help="The version for the official image",
     )
 
 
