@@ -16,7 +16,6 @@ def vm_cat(
     deployment_name: str,
     subscription: str,
     resource_group: str,
-    managed_identity: str,
     storage_account: str,
     **kwargs,
 ):

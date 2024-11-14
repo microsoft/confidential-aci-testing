@@ -132,6 +132,11 @@ def main():
 
             vm_create(**vars(args))
 
+        elif args.vm_command == "generate_scripts":
+            from .tools.vm_generate_scripts import vm_generate_scripts
+
+            vm_generate_scripts(**vars(args))
+
         elif args.vm_command == "runc":
             from .tools.vm_runc import vm_runc
 

@@ -24,12 +24,20 @@ def parse_bicep(
     tag: str,
 ) -> Iterable[Tuple[str, dict, Iterable[dict]]]:
 
+    bicep_file_path = None
+    bicepparam_file_path = None
+
     # Find the bicep files
     for file in os.listdir(target_path):
         if file.endswith(".bicep"):
             bicep_file_path = os.path.join(target_path, file)
         elif file.endswith(".bicepparam"):
             bicepparam_file_path = os.path.join(target_path, file)
+
+    if not bicep_file_path:
+        raise FileNotFoundError(f"No bicep file found in {target_path}")
+    if not bicepparam_file_path:
+        raise FileNotFoundError(f"No bicepparam file found in {target_path}")
 
     # Set required parameters in bicep param file
     aci_param_set(
