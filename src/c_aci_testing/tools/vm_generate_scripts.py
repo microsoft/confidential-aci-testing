@@ -359,7 +359,7 @@ def make_configs(
     write_script(
         "run.ps1",
         [
-            f"cd C:\\{prefix}",
+            *script_head,
             ".\\pull.ps1",
             ".\\stop.ps1",
             ".\\runp.ps1",
