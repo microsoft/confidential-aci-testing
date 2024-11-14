@@ -91,12 +91,13 @@ def make_configs(
             "  crictl exec @opts $containerId $argv",
             "}",
             "",
-            f"cd C:\\{prefix}",
+            "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
         ],
     )
 
     script_head = [
-        f". C:\\{prefix}\\common.ps1",
+        "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
+        ". .\\common.ps1",
     ]
 
     pull_commands = script_head.copy()
@@ -158,7 +159,7 @@ def make_configs(
                 [
                     "$group_id = (crictl runp",
                     "--runtime runhcs-lcow",
-                    f"./container_group_{container_group_id}.json)",
+                    f"./pod_{container_group_id}.json)",
                 ]
             )
         )
@@ -269,7 +270,7 @@ def make_configs(
                         "$container_id = (crictl create --no-pull",
                         f"(crictl pods --name {pod_name} -q)",
                         f"./container_{container_group_id}_{container_id}.json",
-                        f"./container_group_{container_group_id}.json)",
+                        f"./pod_{container_group_id}.json)",
                     ]
                 )
             )
@@ -315,7 +316,7 @@ def make_configs(
             )
 
         with open(
-            os.path.join(output_conf_dir, f"container_group_{container_group_id}.json"),
+            os.path.join(output_conf_dir, f"pod_{container_group_id}.json"),
             "w",
             encoding="utf-8",
         ) as f:
