@@ -7,31 +7,8 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import time
 
 from c_aci_testing.utils.parse_bicep import parse_bicep
-
-
-# TODO: ideally all of this should happen within the VM, and there can be powershell logic to use the correct ACR instance even if "registry" is wrong etc.
-def get_acr_token(registry: str):
-    if registry.endswith(".azurecr.io"):
-        registry = registry[: -len(".azurecr.io")]
-
-    tries = 0
-    while tries < 5:
-        try:
-            res = subprocess.run(
-                ["az", "acr", "login", "-n", registry, "--expose-token"],
-                stdout=subprocess.PIPE,
-                stderr=None,  # inherit
-                check=True,
-            )
-            return json.loads(res.stdout)["accessToken"]
-        except subprocess.CalledProcessError:
-            tries += 1
-            time.sleep(1)
-    raise Exception("Failed to get ACR token in 5 tries")
 
 
 def make_configs(
@@ -106,11 +83,7 @@ def make_configs(
     check_commands = script_head.copy()
     stop_container_commands = script_head.copy()
     stop_pod_commands = script_head.copy()
-
-    if registry.endswith(".azurecr.io"):
-        aci_pull_token = get_acr_token(registry)
-    else:
-        aci_pull_token = ""
+    need_acr_pull = False
 
     with open(
         os.path.join(lcow_config_dir, "pull.json.template"),
@@ -228,16 +201,31 @@ def make_configs(
         # )
 
         for container in containers:
-            pull_commands.append(
-                " ".join(
-                    [
-                        "crictl pull",
-                        (f'--creds "00000000-0000-0000-0000-000000000000:{aci_pull_token}"' if aci_pull_token else ""),
-                        "--pod-config ./pull.json",
-                        container["properties"]["image"],
-                    ]
+            image = container["properties"]["image"]
+
+            if registry.endswith(".azurecr.io") and image.startswith(registry):
+                need_acr_pull = True
+                pull_commands.append(
+                    " ".join(
+                        [
+                            ".\\acr_pull.ps1",
+                            registry,
+                            ".\\pull.json",
+                            "(Get-Content -Raw C:\\managed_identity_client_id.txt)",
+                            image,
+                        ]
+                    )
                 )
-            )
+            else:
+                pull_commands.append(
+                    " ".join(
+                        [
+                            "crictl pull",
+                            "--pod-config ./pull.json",
+                            container["properties"]["image"],
+                        ]
+                    )
+                )
 
             container_id = container["name"]
             container_name = f"{prefix}_{container_group_id}_{container_id}"
@@ -355,6 +343,14 @@ def make_configs(
     )
     write_script("stopc.ps1", stop_container_commands)
     write_script("stop.ps1", stop_pod_commands)
+
+    if need_acr_pull:
+        with open(
+            os.path.join(os.path.dirname(__file__), "..", "templates", "acr_pull.ps1"),
+            "rt",
+            encoding="utf-8",
+        ) as acr_pull_script:
+            write_script("acr_pull.ps1", [l.rstrip() for l in acr_pull_script.readlines()])
 
     write_script(
         "run.ps1",
