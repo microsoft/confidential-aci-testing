@@ -206,7 +206,11 @@ def make_configs(
             if registry.endswith(".azurecr.io") and image.startswith(registry):
                 need_acr_pull = True
                 pull_commands.append(
-                    " ".join(
+                    f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
+                )
+                pull_commands.append(
+                    "  "
+                    + " ".join(
                         [
                             ".\\acr_pull.ps1",
                             registry,
@@ -216,6 +220,7 @@ def make_configs(
                         ]
                     )
                 )
+                pull_commands.append("}")
             else:
                 pull_commands.append(
                     " ".join(
