@@ -40,6 +40,7 @@ def check_vm_exists(
                 resource_group,
             ],
             check=True,
+            stdout=subprocess.DEVNULL,
         )
         return True
     except subprocess.CalledProcessError:
