@@ -60,12 +60,11 @@ try {
   $exchangeResponse = Invoke-RestMethod -Method Post -Uri $exchangeUri -Body $exchangeBody -ContentType "application/x-www-form-urlencoded"
   $acrRefreshToken = $exchangeResponse.refresh_token
 
-  Write-Host "Pulling image: $imageName"
+  Write-Output "Pulling image: $imageName"
 
   C:\ContainerPlat\crictl.exe pull --creds "00000000-0000-0000-0000-000000000000:$acrRefreshToken" --pod-config $pullJson $imageName
 } catch {
-  Write-Host "Failed to get ACR token: $_"
-  Write-Host "Pulling image: $imageName without credentials"
+  Write-Output "Failed to get ACR token: $_"
+  Write-Output "Pulling image: $imageName without credentials"
   C:\ContainerPlat\crictl.exe pull --pod-config $pullJson $imageName
-  exit 1
 }
