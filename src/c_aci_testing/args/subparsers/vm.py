@@ -39,6 +39,16 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_vm_size(create)
     parse_vm_zones(create)
 
+    create_noinit = vm_subparser.add_parser("create_noinit")
+    parse_deployment_name(create_noinit)
+    parse_subscription(create_noinit)
+    parse_resource_group(create_noinit)
+    parse_location(create_noinit)
+    parse_managed_identity(create_noinit)
+    parse_vm_image(create_noinit)
+    parse_vm_size(create_noinit)
+    parse_vm_zones(create_noinit)
+
     generate_scripts = vm_subparser.add_parser("generate_scripts")
     parse_target_path(generate_scripts)
     generate_scripts.add_argument("output_dir", type=str)

@@ -5,15 +5,10 @@
 
 from __future__ import annotations
 
-import json
 import os
 import subprocess
-import tempfile
-import uuid
 import time
-import re
 
-from c_aci_testing.tools.vm_get_ids import vm_get_ids
 from c_aci_testing.utils.vm import (
     run_on_vm,
     download_single_file_from_vm,
@@ -21,8 +16,34 @@ from c_aci_testing.utils.vm import (
     upload_to_vm_and_run,
 )
 from c_aci_testing.tools.vm_cache_cplat import containerplat_cache
+from c_aci_testing.tools.vm_create_noinit import vm_create_noinit
 
 VM_CONTAINER_NAME = "container"
+
+
+def check_vm_exists(
+    subscription: str,
+    resource_group: str,
+    vm_name: str,
+) -> bool:
+    try:
+        subprocess.run(
+            [
+                "az",
+                "vm",
+                "show",
+                "--name",
+                vm_name,
+                "--subscription",
+                subscription,
+                "--resource-group",
+                resource_group,
+            ],
+            check=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
 
 
 def vm_create(
@@ -68,99 +89,30 @@ def vm_create(
 
     cplat_blob_url = f"https://{storage_account}.blob.core.windows.net/{VM_CONTAINER_NAME}/{cplat_blob_name}"
 
-    password = str(uuid.uuid4())
-    password_file = os.path.join(tempfile.gettempdir(), f"{deployment_name}_password.txt")
-    with open(password_file, "wt") as f:
-        f.write(password)
-    print(f"VM password written to {password_file}")
-
-    hostname = re.sub(r"[^a-zA-Z0-9\-]", "", re.sub("_", "-", deployment_name))
-    if not hostname or re.fullmatch(r"^[0-9]+$", hostname):
-        hostname = "atlas-" + hostname
-    if len(hostname) > 15:
-        hostname = hostname[:15]
-
-    parameters: dict = {
-        "vmPassword": password,
-        "location": location,
-        "useOfficialImages": use_official_images,
-        "officialImageSku": official_image_sku if official_image_sku else None,
-        "officialImageVersion": official_image_version if official_image_version else None,
-        "vmImage": vm_image if vm_image else None,
-        "managedIDName": managed_identity,
-        "vmSize": vm_size,
-        "vmHostname": hostname,
-    }
-
-    if vm_zone:
-        parameters["vmZones"] = [vm_zone]
-
-    parameters_file = os.path.join(tempfile.gettempdir(), f"{deployment_name}_parameters.json")
-    with open(parameters_file, "wt") as f:
-        parameters_obj = {
-            "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
-            "contentVersion": "1.0.0.0",
-            "parameters": {k: {"value": v} for k, v in parameters.items()},
-        }
-        json.dump(parameters_obj, f, indent=2)
-
-    template_file = os.path.join(os.path.dirname(__file__), "..", "bicep", "containerplatVM.bicep")
-
-    print(f"Deployment template: {template_file}")
-    print(f"Deployment parameters file: {parameters_file}")
-
-    print(f"{os.linesep}Deploying VM to Azure, view deployment here:")
-    print(
-        "%2F".join(
-            [
-                "https://ms.portal.azure.com/#blade/HubsExtension/DeploymentDetailsBlade/id/",
-                "subscriptions",
-                subscription,
-                "resourceGroups",
-                resource_group,
-                "providers",
-                "Microsoft.Resources",
-                "deployments",
-                deployment_name,
-            ]
-        )
-    )
-    print("")
-
-    subprocess.run(
-        [
-            "az",
-            "deployment",
-            "group",
-            "create",
-            "-n",
-            deployment_name,
-            "--subscription",
-            subscription,
-            "--resource-group",
-            resource_group,
-            "--template-file",
-            template_file,
-            "--parameters",
-            f"@{parameters_file}",
-        ],
-        check=True,
-    )
-
-    ids = vm_get_ids(
-        deployment_name=deployment_name,
+    vm_name = f"{deployment_name}-vm"
+    vm_exists = check_vm_exists(
         subscription=subscription,
         resource_group=resource_group,
+        vm_name=vm_name,
     )
 
-    for id in ids:
-        if id.endswith("-vm"):
-            print("------------------------------------------------------------------------")
-            print(f'Deployed {id.split("/")[-1]}, view here:')
-            print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource{id}")
-            print("------------------------------------------------------------------------")
-
-    vm_name = f"{deployment_name}-vm"
+    if not vm_exists:
+        ids = vm_create_noinit(
+            deployment_name=deployment_name,
+            subscription=subscription,
+            resource_group=resource_group,
+            location=location,
+            managed_identity=managed_identity,
+            use_official_images=use_official_images,
+            official_image_sku=official_image_sku,
+            official_image_version=official_image_version,
+            vm_image=vm_image,
+            vm_size=vm_size,
+            vm_zone=vm_zone,
+        )
+    else:
+        ids = []
+        print(f"{vm_name} already exists - skipping Azure deployment")
 
     print("Downloading containerplat on VM")
     run_on_vm(
