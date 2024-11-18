@@ -100,77 +100,79 @@ def policies_gen(
 
     policies = {}
 
-    with tempfile.TemporaryDirectory() as arm_template_dir:
-        resolves_json = json.loads(res.stdout)
-        for change in resolves_json["changes"]:
-            result = change.get("after")
-            if result:
-                for prefix in (
-                    "providers/Microsoft.ContainerInstance/containerGroups/",
-                    "providers/Microsoft.ContainerInstance/containerGroupProfiles/",
-                ):
-                    if prefix in result["id"]:
+    # with tempfile.TemporaryDirectory() as arm_template_dir:
+    arm_template_dir = tempfile.mkdtemp()
+    print(f"Placing ARM templates in {arm_template_dir}")
+    resolves_json = json.loads(res.stdout)
+    for change in resolves_json["changes"]:
+        result = change.get("after")
+        if result:
+            for prefix in (
+                "providers/Microsoft.ContainerInstance/containerGroups/",
+                "providers/Microsoft.ContainerInstance/containerGroupProfiles/",
+            ):
+                if prefix in result["id"]:
 
-                        # Workaround for acipolicygen not supporting empty environment variables
-                        for container in result["properties"]["containers"]:
-                            for env_var in container["properties"].get("environmentVariables", []):
-                                if "value" in env_var and env_var["value"] == "":
-                                    del env_var["value"]
-                                if "value" not in env_var:
-                                    env_var["secureValue"] = ""
+                    # Workaround for acipolicygen not supporting empty environment variables
+                    for container in result["properties"]["containers"]:
+                        for env_var in container["properties"].get("environmentVariables", []):
+                            if "value" in env_var and env_var["value"] == "":
+                                del env_var["value"]
+                            if "value" not in env_var:
+                                env_var["secureValue"] = ""
 
-                        if "confidentialComputeProperties" not in result["properties"]:
-                            result["properties"]["confidentialComputeProperties"] = {}
+                    if "confidentialComputeProperties" not in result["properties"]:
+                        result["properties"]["confidentialComputeProperties"] = {}
 
-                        result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
-                        container_group_id = (
-                            result["id"]
-                            .split(prefix)[-1]
-                            .replace(deployment_name, bicep_file_path.split("/")[-1].split(".")[0])
-                            .replace("-", "_")
+                    result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
+                    container_group_id = (
+                        result["id"]
+                        .split(prefix)[-1]
+                        .replace(deployment_name, bicep_file_path.split("/")[-1].split(".")[0])
+                        .replace("-", "_")
+                    )
+
+                    if policy_type == "allow_all":
+                        with open(
+                            os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego")
+                        ) as policy_file:
+                            policy = policy_file.read()
+                    else:
+                        if "volumes" in result["properties"]:
+                            for volume in result["properties"]["volumes"]:
+                                volume["emptyDir"] = {}
+
+                        arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
+                        with open(arm_template_path, "w") as file:
+                            json.dump({"resources": [result]}, file, indent=2)
+
+                        print("Calling acipolicygen and saving policy to file")
+                        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+                        res = subprocess.run(
+                            [
+                                "az",
+                                "confcom",
+                                "acipolicygen",
+                                "-a",
+                                arm_template_path,
+                                "--outraw",
+                                *(["--debug-mode"] if policy_type == "debug" else []),
+                                *(
+                                    ["--include-fragments", "--fragments-json", fragments_json]
+                                    if fragments_json
+                                    else []
+                                ),
+                            ],
+                            check=True,
+                            stdout=subprocess.PIPE,
                         )
 
-                        if policy_type == "allow_all":
-                            with open(
-                                os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego")
-                            ) as policy_file:
-                                policy = policy_file.read()
-                        else:
-                            if "volumes" in result["properties"]:
-                                for volume in result["properties"]["volumes"]:
-                                    volume["emptyDir"] = {}
+                        policy = res.stdout.decode()
 
-                            arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
-                            with open(arm_template_path, "w") as file:
-                                json.dump({"resources": [result]}, file, indent=2)
+                    with open(os.path.join(target_path, f"policy_{container_group_id}.rego"), "w") as file:
+                        file.write(policy)
 
-                            print("Calling acipolicygen and saving policy to file")
-                            subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-                            res = subprocess.run(
-                                [
-                                    "az",
-                                    "confcom",
-                                    "acipolicygen",
-                                    "-a",
-                                    arm_template_path,
-                                    "--outraw",
-                                    *(["--debug-mode"] if policy_type == "debug" else []),
-                                    *(
-                                        ["--include-fragments", "--fragments-json", fragments_json]
-                                        if fragments_json
-                                        else []
-                                    ),
-                                ],
-                                check=True,
-                                stdout=subprocess.PIPE,
-                            )
-
-                            policy = res.stdout.decode()
-
-                        with open(os.path.join(target_path, f"policy_{container_group_id}.rego"), "w") as file:
-                            file.write(policy)
-
-                        policies[container_group_id] = base64.b64encode(policy.encode()).decode()
+                    policies[container_group_id] = base64.b64encode(policy.encode()).decode()
 
     aci_param_set(
         target_path,
