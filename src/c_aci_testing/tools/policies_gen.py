@@ -24,6 +24,7 @@ def policies_gen(
     repository: str | None,
     tag: str | None,
     policy_type: str,
+    fragment_json: str | None,
     **kwargs,
 ):
 
@@ -35,12 +36,20 @@ def policies_gen(
     if policy_type != "generated":
         print("This should not be used in real environments")
 
+    bicep_file_path = None
+    bicepparam_file_path = None
+
     # Find the bicep files
     for file in os.listdir(target_path):
         if file.endswith(".bicep"):
             bicep_file_path = os.path.join(target_path, file)
         elif file.endswith(".bicepparam"):
             bicepparam_file_path = os.path.join(target_path, file)
+
+    if not bicep_file_path:
+        raise FileNotFoundError(f"No bicep file found in {target_path}")
+    if not bicepparam_file_path:
+        raise FileNotFoundError(f"No bicepparam file found in {target_path}")
 
     # Check if a policy needs to be set
     with open(bicep_file_path) as f:
@@ -146,6 +155,11 @@ def policies_gen(
                                     arm_template_path,
                                     "--outraw",
                                     *(["--debug-mode"] if policy_type == "debug" else []),
+                                    *(
+                                        ["--include-fragments", "--fragments-json", fragment_json]
+                                        if fragment_json
+                                        else []
+                                    ),
                                 ],
                                 check=True,
                                 stdout=subprocess.PIPE,
