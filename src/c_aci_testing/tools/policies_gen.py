@@ -24,7 +24,7 @@ def policies_gen(
     repository: str | None,
     tag: str | None,
     policy_type: str,
-    fragment_json: str | None,
+    fragments_json: str | None,
     **kwargs,
 ):
 
@@ -156,8 +156,8 @@ def policies_gen(
                                     "--outraw",
                                     *(["--debug-mode"] if policy_type == "debug" else []),
                                     *(
-                                        ["--include-fragments", "--fragments-json", fragment_json]
-                                        if fragment_json
+                                        ["--include-fragments", "--fragments-json", fragments_json]
+                                        if fragments_json
                                         else []
                                     ),
                                 ],

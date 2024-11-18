@@ -8,12 +8,16 @@ from __future__ import annotations
 
 import os
 
+from argparse import ArgumentParser, FileType
 
-def parse_fragment_json(parser):
+
+def parse_fragments_json(parser: ArgumentParser):
 
     parser.add_argument(
-        "--fragment-json",
+        "--fragments-json",
         help="Optional path to JSON file containing fragment information to use for generating a policy.",
-        type=os.path.abspath,
-        default=None,
+        # type=FileType("r"),
+        type=str,
+        default="",  # this is needed because of some incorrect checks elsewhere
+        nargs="?",
     )
