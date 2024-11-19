@@ -148,21 +148,19 @@ def policies_gen(
 
                         print("Calling acipolicygen and saving policy to file")
                         subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+                        args = [
+                            "az",
+                            "confcom",
+                            "acipolicygen",
+                            "-a",
+                            arm_template_path,
+                            "--outraw-pretty-print",
+                            *(["--debug-mode"] if policy_type == "debug" else []),
+                            *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
+                        ]
+                        print(" ".join(args))
                         res = subprocess.run(
-                            [
-                                "az",
-                                "confcom",
-                                "acipolicygen",
-                                "-a",
-                                arm_template_path,
-                                "--outraw",
-                                *(["--debug-mode"] if policy_type == "debug" else []),
-                                *(
-                                    ["--include-fragments", "--fragments-json", fragments_json]
-                                    if fragments_json
-                                    else []
-                                ),
-                            ],
+                            args,
                             check=True,
                             stdout=subprocess.PIPE,
                         )
