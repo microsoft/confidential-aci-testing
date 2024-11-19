@@ -158,7 +158,7 @@ def policies_gen(
                             *(["--debug-mode"] if policy_type == "debug" else []),
                             *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
                         ]
-                        print(" ".join(args))
+                        print("Running: " + " ".join(args))
                         res = subprocess.run(
                             args,
                             check=True,
