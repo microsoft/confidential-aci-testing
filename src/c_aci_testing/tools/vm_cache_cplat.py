@@ -20,7 +20,6 @@ def containerplat_cache_from_path(storage_account: str, container_name: str, blo
         data["EnableLayerIntegrity"] = True
         data["NoLCOWGPU"] = True
         data["RuntimeOptions"][0]["ShareScratch"] = True
-        data["SkipSandboxPull"] = True  # we don't need WCOW sandbox, not pulling it makes bootstrap faster
         f.seek(0)
         json.dump(data, f, indent=4)
         f.truncate()
