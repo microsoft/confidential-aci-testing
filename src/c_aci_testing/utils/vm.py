@@ -210,7 +210,7 @@ def upload_to_vm_and_run(
 
     blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
 
-    return run_on_vm(
+    output = run_on_vm(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
@@ -233,6 +233,10 @@ def upload_to_vm_and_run(
             ]
         ),
     )
+
+    async_delete_storage_blob(storage_account, container_name, blob_name)
+
+    return output
 
 
 def decode_utf8_or_utf16(data: bytes) -> str:
