@@ -25,7 +25,7 @@ def policies_gen(
     repository: str | None,
     tag: str | None,
     policy_type: str,
-    fragments_json: str | None,
+    fragments_json: str | None = None,
     **kwargs,
 ):
 
