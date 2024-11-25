@@ -11,6 +11,7 @@ import json
 import os
 import subprocess
 import tempfile
+import shutil
 
 from .aci_param_set import aci_param_set
 
@@ -100,7 +101,7 @@ def policies_gen(
 
     policies = {}
 
-    # with tempfile.TemporaryDirectory() as arm_template_dir:
+    # Deliberately does not delete this directory if it fails
     arm_template_dir = tempfile.mkdtemp()
     print(f"Placing ARM templates in {arm_template_dir}")
     resolves_json = json.loads(res.stdout)
@@ -181,3 +182,6 @@ def policies_gen(
             + "\n}"
         ],
     )
+
+    print(f"Removing {arm_template_dir}")
+    shutil.rmtree(arm_template_dir)
