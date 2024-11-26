@@ -203,11 +203,11 @@ def make_configs(
         for container in containers:
             image = container["properties"]["image"]
 
+            pull_commands.append(
+                f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
+            )
             if registry.endswith(".azurecr.io") and image.startswith(registry):
                 need_acr_pull = True
-                pull_commands.append(
-                    f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
-                )
                 pull_commands.append(
                     "  "
                     + " ".join(
@@ -220,10 +220,10 @@ def make_configs(
                         ]
                     )
                 )
-                pull_commands.append("}")
             else:
                 pull_commands.append(
-                    " ".join(
+                    "  "
+                    + " ".join(
                         [
                             "crictl pull",
                             "--pod-config ./pull.json",
@@ -231,6 +231,7 @@ def make_configs(
                         ]
                     )
                 )
+            pull_commands.append("}")
 
             container_id = container["name"]
             container_name = f"{prefix}_{container_group_id}_{container_id}"
