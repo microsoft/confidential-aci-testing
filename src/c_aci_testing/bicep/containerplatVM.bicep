@@ -151,6 +151,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
           storageAccountType: 'Premium_LRS'
         }
         deleteOption: 'Delete'
+        diskSizeGB: 128
       }
       imageReference: useOfficialImages
         ? {
