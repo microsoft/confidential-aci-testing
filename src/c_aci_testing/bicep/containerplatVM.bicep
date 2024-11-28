@@ -151,6 +151,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
           storageAccountType: 'Premium_LRS'
         }
         deleteOption: 'Delete'
+        diskSizeGB: 128
       }
       imageReference: useOfficialImages
         ? {
@@ -225,6 +226,8 @@ resource vmRunCommand 'Microsoft.Compute/virtualMachines/runCommands@2022-03-01'
             'echo \'$headers = @{ Authorization = "Bearer $token"; "x-ms-version" = "2019-12-12"; "x-ms-blob-type" = "BlockBlob"; "x-ms-date" = $dateStr }\' >> C:\\storage_put.ps1'
             'echo \'# -InFile requires file to not be open by ">>", but for some reason `Get-Content` works\' >> C:\\storage_put.ps1'
             'echo \'Invoke-RestMethod -Uri $uri -Method PUT -Headers $headers -Body (Get-Content -Raw $inFile)\' >> C:\\storage_put.ps1'
+
+            'echo "${managedIdentity.properties.clientId}" >> C:\\managed_identity_client_id.txt'
           ],
           '\r\n'
         ),

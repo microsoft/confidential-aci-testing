@@ -170,20 +170,22 @@ def upload_to_vm_and_run(
     :return: stdout
     """
 
-    dst_parsed = re.fullmatch(r"^(.+):\\(.+)$", dst)
+    dst_parsed = re.fullmatch(r"^(.+):\\(.*)$", dst)
     if not dst_parsed:
         raise ValueError("Destination path must be absolute")
     dst_drive, dst_arcname = dst_parsed.groups()
     if not dst_drive.isalpha():
         raise ValueError(f"Invalid destination path {dst}")
-    dst_arcname = dst_arcname.rstrip("\\")
-    if not dst_arcname:
-        raise ValueError(f"Copying directly to {dst_drive}:\\ is not supported")
-    dst_arcname = dst_arcname.replace("\\", "/")
+    dst_arcname = dst_arcname.rstrip("\\").replace("\\", "/")
 
     with tempfile.TemporaryDirectory() as temp_dir:
         with tarfile.open(f"{temp_dir}/upload.tar", "w:gz") as tar:
-            tar.add(src, arcname=dst_arcname)
+            if dst_arcname:
+                tar.add(src, arcname=dst_arcname)  # tarfile will handle directory for us
+            else:
+                # we're extracting to a drive root. Add each item in src individually
+                for item in os.listdir(src):
+                    tar.add(os.path.join(src, item), arcname=item)
 
         subprocess.run(
             [
@@ -208,14 +210,20 @@ def upload_to_vm_and_run(
 
     blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
 
-    return run_on_vm(
+    output = run_on_vm(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
         command="\r\n".join(
             [
                 f"if (Test-Path C:/upload.tar) {{ rm -Force C:/upload.tar }}",
-                f"if (Test-Path '{dst}') {{ rm -Recurse -Force '{dst}' }}",
+                *(
+                    [
+                        f"if (Test-Path '{dst}') {{ rm -Recurse -Force '{dst}' }}",
+                    ]
+                    if dst_arcname
+                    else []
+                ),
                 f'C:\\storage_get.ps1 -Uri "{blobUrl}" -OutFile C:\\upload.tar',
                 f"tar -xf C:\\upload.tar -C {dst_drive}:/",
                 f"if ($LASTEXITCODE -ne 0) {{",
@@ -225,6 +233,10 @@ def upload_to_vm_and_run(
             ]
         ),
     )
+
+    async_delete_storage_blob(storage_account, container_name, blob_name)
+
+    return output
 
 
 def decode_utf8_or_utf16(data: bytes) -> str:

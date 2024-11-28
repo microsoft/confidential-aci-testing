@@ -132,6 +132,16 @@ def main():
 
             vm_create(**vars(args))
 
+        elif args.vm_command == "create_noinit":
+            from .tools.vm_create_noinit import vm_create_noinit
+
+            vm_create_noinit(**vars(args))
+
+        elif args.vm_command == "generate_scripts":
+            from .tools.vm_generate_scripts import vm_generate_scripts
+
+            vm_generate_scripts(**vars(args))
+
         elif args.vm_command == "runc":
             from .tools.vm_runc import vm_runc
 

@@ -18,7 +18,6 @@ def vm_cp_into(
     deployment_name: str,
     subscription: str,
     resource_group: str,
-    managed_identity: str,
     storage_account: str,
     **kwargs,
 ):
