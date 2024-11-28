@@ -37,6 +37,7 @@ def vm_get_ids(
             stdout=subprocess.PIPE,
         )
     except subprocess.CalledProcessError:
+        print(f"Failed to get deployment outputs for {deployment_name}")
         return []
 
     ids = [id for id in res.stdout.decode().split(os.linesep) if id]

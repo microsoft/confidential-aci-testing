@@ -17,11 +17,31 @@ def vm_remove(
     **kwargs,
 ):
     remaining_resources = set(vm_get_ids(deployment_name, subscription, resource_group))
-    deleted_resources = set()
 
     while remaining_resources:
-        print(f"{remaining_resources=}")
-        print(f"{deleted_resources=}")
+        print(f"Deleting {len(remaining_resources)} resources...")
+
+        res = subprocess.run(
+            [
+                "az",
+                "resource",
+                "delete",
+                "--subscription",
+                subscription,
+                "--resource-group",
+                resource_group,
+                "--ids",
+                *remaining_resources,
+            ],
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        if res.returncode != 0:
+            print(f"Failed to delete resources: {res.stderr.decode()}")
+            break
+
+        deleted_resources = set()
         for res_id in remaining_resources:
             res_name = res_id.split("/")[-1]
             res = subprocess.run(
@@ -41,20 +61,4 @@ def vm_remove(
                 deleted_resources.add(res_id)
                 print(f"Removed resource: {res_name}")
 
-            subprocess.run(
-                [
-                    "az",
-                    "resource",
-                    "delete",
-                    "--subscription",
-                    subscription,
-                    "--resource-group",
-                    resource_group,
-                    "--ids",
-                    res_id,
-                ],
-                check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        remaining_resources.difference_update(deleted_resources)
+        remaining_resources -= deleted_resources
