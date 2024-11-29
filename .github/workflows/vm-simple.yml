@@ -7,7 +7,7 @@ permissions:
 on:
   push:
     paths:
-      - .github/workflows/vmdeploy.yml
+      - .github/workflows/vm-simple.yml
       - 'src/c_aci_testing/tools/vm*'
       - src/c_aci_testing/bicep/containerplatVM.bicep
       - src/c_aci_testing/templates/lcow_configs
@@ -17,7 +17,7 @@ on:
 
   pull_request:
     paths:
-      - .github/workflows/vmdeploy.yml
+      - .github/workflows/vm-simple.yml
       - 'src/c_aci_testing/tools/vm*'
       - src/c_aci_testing/bicep/containerplatVM.bicep
       - src/c_aci_testing/templates/lcow_configs
