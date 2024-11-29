@@ -1,4 +1,4 @@
-name: Test Deploy Atlas VM
+name: Test Deploy VM
 
 permissions:
   id-token: write
