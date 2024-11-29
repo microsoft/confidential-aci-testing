@@ -1,0 +1,90 @@
+name: Test Deploy VM
+
+permissions:
+  id-token: write
+  contents: read
+
+on:
+  push:
+    paths:
+      - .github/workflows/vm-simple.yml
+      - 'src/c_aci_testing/tools/vm*'
+      - src/c_aci_testing/bicep/containerplatVM.bicep
+      - src/c_aci_testing/templates/lcow_configs
+      - 'src/c_aci_testing/utils/vm*'
+    branches:
+      - main
+
+  pull_request:
+    paths:
+      - .github/workflows/vm-simple.yml
+      - 'src/c_aci_testing/tools/vm*'
+      - src/c_aci_testing/bicep/containerplatVM.bicep
+      - src/c_aci_testing/templates/lcow_configs
+      - 'src/c_aci_testing/utils/vm*'
+
+  workflow_dispatch:
+    inputs:
+      vm_size:
+        description: 'The size of the VM'
+        required: true
+        default: 'Standard_DC4as_cc_v5'
+      cplat_cache_name:
+        description: 'The name of the containerplat blob to use'
+        required: true
+        default: 'containerplat-0.2.4-rc.3'
+      location:
+        description: 'Azure region to use'
+        required: true
+        default: 'northeurope'
+      cpu:
+        description: 'Number of CPUs to assign to the VM'
+        required: true
+        default: '4'
+      memory_in_gb:
+        description: 'Memory in GB to assign to the VM'
+        required: true
+        default: '4'
+
+env:
+  DEPLOYMENT_NAME: vm-simple-${{ inputs.location }}-${{ github.run_number }}
+  SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
+  RESOURCE_GROUP: c-aci-testing
+  MANAGED_IDENTITY: c-aci-testing
+  STORAGE_ACCOUNT: cacitestingstorage
+  LOCATION: ${{ inputs.location || 'northeurope' }}
+  CPU: ${{ inputs.cpu || 4 }}
+  MEMORY_IN_GB: ${{ inputs.memory_in_gb || 4 }}
+  VM_SIZE: ${{ inputs.vm_size || 'Standard_DC4ads_cc_v5' }}
+  VM_IMAGE: ${{ secrets.VM_IMAGE }}
+  CPLAT_BLOB_NAME: ${{ inputs.cplat_cache_name || vars.CPLAT_CURR_BLOB_NAME }}
+  WIN_FLAVOR: ws2025
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+
+    - name: Log into Azure
+      uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.MANAGED_ID_CLIENT_ID }}
+        tenant-id: ${{ secrets.MANAGED_ID_TENANT_ID }}
+        subscription-id: ${{ vars.SUBSCRIPTION }}
+
+    - name: Setup Docker
+      run: sudo usermod -aG docker $USER
+
+    - name: Install package
+      run: pip install flit && flit install
+
+    - name: Deploy VM (no container target)
+      run: |
+        c-aci-testing vm create --deployment-name $DEPLOYMENT_NAME
+
+    - name: Remove VM
+      if: always()
+      run: |
+        c-aci-testing vm remove --deployment-name $DEPLOYMENT_NAME

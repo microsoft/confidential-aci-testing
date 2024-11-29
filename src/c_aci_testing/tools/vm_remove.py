@@ -38,8 +38,7 @@ def vm_remove(
             stderr=subprocess.PIPE,
         )
         if res.returncode != 0:
-            print(f"Failed to delete resources: {res.stderr.decode()}")
-            break
+            print(f"Failed to delete some resources: {res.stderr.decode()}")
 
         deleted_resources = set()
         for res_id in remaining_resources:
