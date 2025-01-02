@@ -70,11 +70,7 @@ def aci_deploy(
     sys.stdout.flush()
     sys.stderr.flush()
 
-    res = subprocess.run(az_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print(res.stdout.decode())
-    print(res.stderr.decode(), file=sys.stderr)
-    sys.stdout.flush()
-    sys.stderr.flush()
+    res = subprocess.run(az_command)
     if res.returncode != 0:
         raise Exception(f"Deployment failed with return code {res.returncode}")
 
