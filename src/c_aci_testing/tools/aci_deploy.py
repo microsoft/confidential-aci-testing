@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 from .aci_get_ids import aci_get_ids
 from .aci_param_set import aci_param_set
@@ -31,12 +32,20 @@ def aci_deploy(
         add=False,
     )
 
+    bicep_file_path = None
+    bicepparam_file_path = None
+
     # Find the bicep files
     for file in os.listdir(target_path):
         if file.endswith(".bicep"):
             bicep_file_path = os.path.join(target_path, file)
         elif file.endswith(".bicepparam"):
             bicepparam_file_path = os.path.join(target_path, file)
+
+    if not bicep_file_path:
+        raise FileNotFoundError(f"No bicep file found in {target_path}")
+    if not bicepparam_file_path:
+        raise FileNotFoundError(f"No bicepparam file found in {target_path}")
 
     az_command = [
         "az", "deployment", "group", "create",
@@ -58,7 +67,16 @@ def aci_deploy(
     ]))
     print("")
 
-    subprocess.run(az_command, check=True)
+    sys.stdout.flush()
+    sys.stderr.flush()
+
+    res = subprocess.run(az_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print(res.stdout.decode())
+    print(res.stderr.decode(), file=sys.stderr)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    if res.returncode != 0:
+        raise Exception(f"Deployment failed with return code {res.returncode}")
 
     ids = aci_get_ids(
         deployment_name=deployment_name,
