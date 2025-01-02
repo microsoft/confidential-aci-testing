@@ -72,7 +72,7 @@ def aci_deploy(
 
     res = subprocess.run(az_command)
     if res.returncode != 0:
-        raise Exception(f"Deployment failed with return code {res.returncode}")
+        raise RuntimeError(f"Deployment failed with return code {res.returncode}")
 
     ids = aci_get_ids(
         deployment_name=deployment_name,
