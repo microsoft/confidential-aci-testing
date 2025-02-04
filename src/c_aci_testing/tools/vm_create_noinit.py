@@ -38,6 +38,10 @@ def vm_create_noinit(
     :param cplat_path: Path to an already downloaded containerplat package, can be empty
     :param cplat_blob_name: Name to use for the containerplat blob, can be empty for per-deployment blobs
     """
+
+    if not vm_image and not use_official_images:
+        raise ValueError("Either specify VM_IMAGE, or set USE_OFFICIAL_IMAGES to true")
+
     password = str(uuid.uuid4())
     password_file = os.path.join(tempfile.gettempdir(), f"{deployment_name}_password.txt")
     with open(password_file, "wt") as f:
