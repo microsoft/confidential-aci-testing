@@ -95,9 +95,16 @@ def policies_gen(
             "--parameters",
             bicepparam_file_path,
         ],
-        check=True,
+        check=False,  # Manually check later
         stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+
+    if res.returncode != 0:
+        print("What-if deployment failed:")
+        print(f"  stdout: {res.stdout.decode()}")
+        print(f"  stderr: {res.stderr.decode()}")
+        res.check_returncode()
 
     policies = {}
 
