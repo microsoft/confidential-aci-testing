@@ -14,6 +14,7 @@ import re
 import subprocess
 import tempfile
 import shutil
+import sys
 
 from .aci_param_set import aci_param_set
 
@@ -147,10 +148,12 @@ def policies_gen(
     )
 
     policies = {}
+    # Deliberately does not delete this directory if it fails
     arm_template_dir = tempfile.mkdtemp()
     print(f"Placing ARM templates in {arm_template_dir}")
 
     print("Converting bicep files to an ARM template")
+    sys.stderr.flush()
     res = subprocess.run(
         [
             "az",
@@ -235,6 +238,7 @@ def policies_gen(
                 *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
             ]
             print("Running: " + " ".join(args))
+            sys.stderr.flush()
             res = subprocess.run(
                 args,
                 check=True,
