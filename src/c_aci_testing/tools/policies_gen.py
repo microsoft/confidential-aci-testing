@@ -9,11 +9,84 @@ from __future__ import annotations
 import base64
 import json
 import os
+import pathlib
+import re
 import subprocess
 import tempfile
 import shutil
 
 from .aci_param_set import aci_param_set
+
+
+def resolve_arm_functions(arm_template_str, resource_group, subscription, deployment_name):
+
+    # Handle constants
+    for constant, value in [
+        ("resourceGroup().name", resource_group),
+        ("subscription().subscriptionId", subscription),
+        ("deployment().name", deployment_name),
+    ]:
+        arm_template_str = arm_template_str.replace(constant, value)
+
+    # Remove the square brackets which denote functions in ARM templates
+    # since they will be resolved. Do it here so parameters are correctly resolved.
+    arm_template_lines = arm_template_str.split("\\n")
+    for idx, line in enumerate(arm_template_lines):
+        arm_template_lines[idx] = re.sub(r'\\"\[(.*?)\]\\"', r"\"\1\"", line)
+    arm_template_str = "\\n".join(arm_template_lines)
+    arm_template_dict = json.loads(json.loads(arm_template_str)["templateJson"])
+
+    # Handle parameters function
+    parameters_dict = {
+        key: value["value"]
+        for key, value in json.loads(json.loads(arm_template_str)["parametersJson"])["parameters"].items()
+    }
+    parameters = {key: definition.get("defaultValue") for key, definition in arm_template_dict["parameters"].items()}
+    parameters.update(parameters_dict)
+    for key, value in parameters.items():
+        arm_template_str = re.sub(
+            f"parameters\\('{key}'\\)",
+            str(value),
+            arm_template_str,
+        )
+
+    # Handle empty function
+    arm_template_lines = arm_template_str.split("\\n")
+    for idx, line in enumerate(arm_template_lines):
+        for match in re.findall(r"empty\((.*?)\)", line):
+            arm_template_lines[idx] = line.replace(
+                f"empty({match})",
+                "true" if match == "" else "false",
+            )
+            line = arm_template_lines[idx]
+    arm_template_str = "\\n".join(arm_template_lines)
+
+    # Handle if function
+    arm_template_lines = arm_template_str.split("\\n")
+    for idx, line in enumerate(arm_template_lines):
+        for condition, if_true, if_false in re.findall(
+            r"if\((.*?)\, (.*?)\, (.*?)\)",
+            line,
+        ):
+            arm_template_lines[idx] = line.replace(
+                f"if({condition}, {if_true}, {if_false})",
+                f"{if_true}" if condition == "true" else f"{if_false}",
+            )
+            line = arm_template_lines[idx]
+    arm_template_str = "\\n".join(arm_template_lines)
+
+    # Handle format function
+    arm_template_lines = arm_template_str.split("\\n")
+    for idx, line in enumerate(arm_template_lines):
+        for format_string, inputs in re.findall(r"format\((.*?)\, (.*?)\)", line):
+            inputs_list = [i.strip("'") for i in inputs.split(", ")]
+            arm_template_lines[idx] = line.replace(
+                f"format({format_string}, {inputs})",
+                format_string.format(*inputs_list).strip("'"),
+            )
+    arm_template_str = "\\n".join(arm_template_lines)
+
+    return json.loads(json.loads(arm_template_str)["templateJson"])
 
 
 def policies_gen(
@@ -73,105 +146,106 @@ def policies_gen(
         add=False,  # If the user removed a field, don't re-add it
     )
 
-    # Create an ARM template with parameters resolved
-    print("Resolving parameters using what-if deployment")
+    policies = {}
+    arm_template_dir = tempfile.mkdtemp()
+    print(f"Placing ARM templates in {arm_template_dir}")
+
+    print("Converting bicep files to an ARM template")
     res = subprocess.run(
         [
             "az",
-            "deployment",
-            "group",
-            "what-if",
-            "--name",
-            deployment_name,
-            "--no-pretty-print",
-            "--mode",
-            "Complete",
-            "--subscription",
-            subscription,
-            "--resource-group",
-            resource_group,
-            "--template-file",
-            bicep_file_path,
-            "--parameters",
+            "bicep",
+            "build-params",
+            "--file",
             bicepparam_file_path,
+            "--stdout",
         ],
         check=True,
         stdout=subprocess.PIPE,
     )
+    arm_template_json = resolve_arm_functions(
+        res.stdout.decode(),
+        resource_group=resource_group,
+        subscription=subscription,
+        deployment_name=deployment_name,
+    )
 
-    policies = {}
+    for resource in arm_template_json["resources"]:
 
-    # Deliberately does not delete this directory if it fails
-    arm_template_dir = tempfile.mkdtemp()
-    print(f"Placing ARM templates in {arm_template_dir}")
-    resolves_json = json.loads(res.stdout)
-    for change in resolves_json["changes"]:
-        result = change.get("after")
-        if result:
-            for prefix in (
-                "providers/Microsoft.ContainerInstance/containerGroups/",
-                "providers/Microsoft.ContainerInstance/containerGroupProfiles/",
-            ):
-                if prefix in result["id"]:
+        # Only handle container groups
+        if resource["type"] not in (
+            "Microsoft.ContainerInstance/containerGroups",
+            "Microsoft.ContainerInstance/containerGroupProfiles",
+        ):
+            continue
 
-                    # Workaround for acipolicygen not supporting empty environment variables
-                    for container in result["properties"]["containers"]:
-                        for env_var in container["properties"].get("environmentVariables", []):
-                            if "value" in env_var and env_var["value"] == "":
-                                del env_var["value"]
-                            if "value" not in env_var:
-                                env_var["secureValue"] = ""
+        # Only handle confidential container groups
+        if resource["properties"].get("sku", "Standard") != "Confidential":
+            continue
 
-                    if "confidentialComputeProperties" not in result["properties"]:
-                        result["properties"]["confidentialComputeProperties"] = {}
+        # Workaround for acipolicygen not supporting empty environment variables
+        for container in resource["properties"]["containers"]:
+            for env_var in container["properties"].get("environmentVariables", []):
+                if "value" in env_var and env_var["value"] == "":
+                    del env_var["value"]
+                if "value" not in env_var:
+                    env_var["secureValue"] = ""
 
-                    result["properties"]["confidentialComputeProperties"]["ccePolicy"] = ""
-                    container_group_id = (
-                        result["id"]
-                        .split(prefix)[-1]
-                        .replace(deployment_name, bicep_file_path.split("/")[-1].split(".")[0])
-                        .replace("-", "_")
-                    )
+        # Workaround for acipolicygen not supporting missing emptyDir value
+        if "volumes" in resource["properties"]:
+            for volume in resource["properties"]["volumes"]:
+                volume["emptyDir"] = {}
 
-                    if policy_type == "allow_all":
-                        with open(
-                            os.path.join(os.path.dirname(__file__), "..", "templates", "allow_all_policy.rego")
-                        ) as policy_file:
-                            policy = policy_file.read()
-                    else:
-                        if "volumes" in result["properties"]:
-                            for volume in result["properties"]["volumes"]:
-                                volume["emptyDir"] = {}
+        # Derive container group ID
+        container_group_id = (
+            resource["name"]
+            .replace(
+                deployment_name,
+                pathlib.Path(bicep_file_path).stem,
+            )
+            .replace("-", "_")
+        )
 
-                        arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
-                        with open(arm_template_path, "w") as file:
-                            json.dump({"resources": [result]}, file, indent=2)
+        allow_all_path = os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "templates",
+            "allow_all_policy.rego",
+        )
+        if policy_type == "allow_all":
+            with open(allow_all_path, encoding="utf-8") as policy_file:
+                policy = policy_file.read()
+        else:
 
-                        print("Calling acipolicygen and saving policy to file")
-                        subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
-                        args = [
-                            "az",
-                            "confcom",
-                            "acipolicygen",
-                            "-a",
-                            arm_template_path,
-                            "--outraw-pretty-print",
-                            *(["--debug-mode"] if policy_type == "debug" else []),
-                            *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
-                        ]
-                        print("Running: " + " ".join(args))
-                        res = subprocess.run(
-                            args,
-                            check=True,
-                            stdout=subprocess.PIPE,
-                        )
+            # Write the resource to an ARM template file
+            arm_template_path = os.path.join(arm_template_dir, f"arm_{container_group_id}.json")
+            with open(arm_template_path, "w", encoding="utf-8") as file:
+                json.dump({"resources": [resource]}, file, indent=2)
 
-                        policy = res.stdout.decode()
+            print("Calling acipolicygen and saving policy to file")
+            subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)
+            args = [
+                "az",
+                "confcom",
+                "acipolicygen",
+                "-a",
+                arm_template_path,
+                "--outraw-pretty-print",
+                *(["--debug-mode"] if policy_type == "debug" else []),
+                *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
+            ]
+            print("Running: " + " ".join(args))
+            res = subprocess.run(
+                args,
+                check=True,
+                stdout=subprocess.PIPE,
+            )
+            policy = res.stdout.decode()
 
-                    with open(os.path.join(target_path, f"policy_{container_group_id}.rego"), "w") as file:
-                        file.write(policy)
+        with open(os.path.join(target_path, f"policy_{container_group_id}.rego"), "w") as file:
+            file.write(policy)
 
-                    policies[container_group_id] = base64.b64encode(policy.encode()).decode()
+        policies[container_group_id] = base64.b64encode(policy.encode()).decode()
 
     aci_param_set(
         target_path,
