@@ -191,11 +191,6 @@ def policies_gen(
                 if "value" not in env_var:
                     env_var["secureValue"] = ""
 
-        # Workaround for acipolicygen not supporting missing emptyDir value
-        if "volumes" in resource["properties"]:
-            for volume in resource["properties"]["volumes"]:
-                volume["emptyDir"] = {}
-
         # Derive container group ID
         container_group_id = (
             resource["name"]
