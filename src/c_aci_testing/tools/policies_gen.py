@@ -153,7 +153,7 @@ def policies_gen(
     arm_template_dir = tempfile.mkdtemp()
     print(f"Placing ARM templates in {arm_template_dir}")
 
-    print("Converting bicep files to an ARM template")
+    print("Converting bicep files to an ARM template", flush=True)
     sys.stderr.flush()
     res = subprocess.run(
         [
@@ -234,7 +234,7 @@ def policies_gen(
                 *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
                 *(["--infrastructure-svn", str(infrastructure_svn)] if infrastructure_svn is not None else []),
             ]
-            print("Running: " + " ".join(args))
+            print("Running: " + " ".join(args), flush=True)
             sys.stderr.flush()
             res = subprocess.run(
                 args,
