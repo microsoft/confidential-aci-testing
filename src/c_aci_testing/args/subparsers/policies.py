@@ -16,6 +16,7 @@ from ..parameters.subscription import parse_subscription
 from ..parameters.tag import parse_tag
 from ..parameters.target_path import parse_target_path
 from ..parameters.fragments_json import parse_fragments_json
+from ..parameters.infrastructure_svn import parse_infrastructure_svn
 
 
 def subparse_policies(policies: argparse.ArgumentParser):
@@ -32,3 +33,4 @@ def subparse_policies(policies: argparse.ArgumentParser):
     parse_tag(gen)
     parse_policy_type(gen)
     parse_fragments_json(gen)
+    parse_infrastructure_svn(gen)

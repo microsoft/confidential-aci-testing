@@ -99,6 +99,7 @@ def policies_gen(
     tag: str | None,
     policy_type: str,
     fragments_json: str | None = None,
+    infrastructure_svn: int | None = None,
     **kwargs,
 ):
 
@@ -228,6 +229,7 @@ def policies_gen(
                 "--outraw-pretty-print",
                 *(["--debug-mode"] if policy_type == "debug" else []),
                 *(["--include-fragments", "--fragments-json", fragments_json] if fragments_json else []),
+                *(["--infrastructure-svn", str(infrastructure_svn)] if infrastructure_svn is not None else []),
             ]
             print("Running: " + " ".join(args))
             res = subprocess.run(
