@@ -164,6 +164,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
             id: vmImage
           }
     }
+    licenseType: 'Windows_Server'
     networkProfile: {
       networkInterfaces: [
         {
