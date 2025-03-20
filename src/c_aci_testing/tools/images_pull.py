@@ -36,7 +36,8 @@ def images_pull(
     tag: str | None,
     **kwargs,
 ) -> list[str]:
-    login_with_retry(registry)
+    if "." not in registry or registry.endswith(".azurecr.io"):
+        login_with_retry(registry)
 
     print(f"Pulling images for {registry}")
     for stderr_val in (None, subprocess.PIPE):
