@@ -7,85 +7,117 @@
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
-import re
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, Any, Dict, List
 
 from c_aci_testing.tools.aci_param_set import aci_param_set
 from c_aci_testing.utils.find_bicep import find_bicep_files
+from c_aci_testing.utils.arm_expression import evaluate_expr
 
 
-def resolve_arm_functions(arm_template_str, resource_group, subscription, deployment_name):
-
-    # Handle constants
-    for constant, value in [
-        ("resourceGroup().name", resource_group),
-        ("subscription().subscriptionId", subscription),
-        ("deployment().name", deployment_name),
-    ]:
-        arm_template_str = arm_template_str.replace(constant, value)
-
-    # Remove the square brackets which denote functions in ARM templates
-    # since they will be resolved. Do it here so parameters are correctly resolved.
-    arm_template_lines = arm_template_str.split("\\n")
-    for idx, line in enumerate(arm_template_lines):
-        arm_template_lines[idx] = re.sub(r'\\"\[(.*?)\]\\"', r"\"\1\"", line)
-    arm_template_str = "\\n".join(arm_template_lines)
-    arm_template_dict = json.loads(json.loads(arm_template_str)["templateJson"])
-
-    # Handle parameters function
-    parameters_dict = {
-        key: value["value"]
-        for key, value in json.loads(json.loads(arm_template_str)["parametersJson"])["parameters"].items()
+def _resolve_arm_functions(
+    templateJson: Dict[str, Any], parametersJson: Dict[str, Any], resource_group, subscription, deployment_name
+):
+    parameters_defaults_dict = {
+        key: value.get("defaultValue", None) for key, value in templateJson["parameters"].items()
     }
-    parameters = {key: definition.get("defaultValue") for key, definition in arm_template_dict["parameters"].items()}
+    parameters_dict = {key: value["value"] for key, value in parametersJson["parameters"].items()}
+    parameters = {}
+    parameters.update(parameters_defaults_dict)
     parameters.update(parameters_dict)
-    for key, value in parameters.items():
-        arm_template_str = re.sub(
-            f"parameters\\('{key}'\\)",
-            str(value),
-            arm_template_str,
-        )
 
-    # Handle empty function
-    arm_template_lines = arm_template_str.split("\\n")
-    for idx, line in enumerate(arm_template_lines):
-        for match in re.findall(r"empty\((.*?)\)", line):
-            arm_template_lines[idx] = line.replace(
-                f"empty({match})",
-                "true" if match == "" else "false",
-            )
-            line = arm_template_lines[idx]
-    arm_template_str = "\\n".join(arm_template_lines)
+    def _handle_func(func_name: str, args: List[Any]) -> Any:
+        """
+        Handle ARM functions. All args are already evaluated
+        """
+        if func_name == "concat":
+            assert all(isinstance(arg, str) for arg in args)
+            return "".join(args)
+        elif func_name == "subscription":
+            return {
+                "subscriptionId": subscription,
+            }
+        elif func_name == "resourceGroup":
+            return {
+                "name": resource_group,
+            }
+        elif func_name == "deployment":
+            return {
+                "name": deployment_name,
+            }
+        elif func_name == "resourceId":
+            assert all(isinstance(arg, str) for arg in args)
+            if len(args) == 3:
+                return f"/subscriptions/{subscription}/resourceGroups/{args[0]}/providers/{args[1]}/{args[2]}"
+            elif len(args) == 2:
+                return f"/subscriptions/{subscription}/resourceGroups/{resource_group}/providers/{args[0]}/{args[1]}"
+        elif func_name == "parameters":
+            assert len(args) == 1 and isinstance(args[0], str)
+            if args[0] not in parameters:
+                raise ValueError(f"Invalid parameter: {args[0]}")
+            return parameters[args[0]]
+        elif func_name == "if":
+            assert len(args) == 3
+            assert isinstance(args[0], bool)
+            if args[0]:
+                return args[1]
+            else:
+                return args[2]
+        elif func_name == "empty":
+            assert len(args) == 1 and isinstance(args[0], str)
+            return args[0] == ""
+        elif func_name == "format":
+            assert len(args) >= 1
+            assert isinstance(args[0], str)
+            format_string = args[0]
+            inputs = args[1:]
+            # Handle the case where inputs are not strings
+            # Convert all inputs to strings
+            inputs = [str(arg) for arg in inputs]
+            # Format the string
+            return format_string.format(*inputs)
+        elif func_name == "add":
+            assert len(args) == 2
+            assert isinstance(args[0], (int, float))
+            assert isinstance(args[1], (int, float))
+            return args[0] + args[1]
+        elif func_name == "sub":
+            assert len(args) == 2
+            assert isinstance(args[0], (int, float))
+            assert isinstance(args[1], (int, float))
+            return args[0] - args[1]
+        elif func_name == "not":
+            assert len(args) == 1
+            assert isinstance(args[0], bool)
+            return not args[0]
+        elif func_name == "createObject":
+            obj = {}
+            for i in range(0, len(args), 2):
+                if i + 1 >= len(args):
+                    raise ValueError("createObject requires an even number of arguments")
+                key = args[i]
+                value = args[i + 1]
+                assert isinstance(key, str)
+                obj[key] = value
+            return obj
+        else:
+            raise ValueError(f"Unknown function: {func_name}")
 
-    # Handle if function
-    arm_template_lines = arm_template_str.split("\\n")
-    for idx, line in enumerate(arm_template_lines):
-        for condition, if_true, if_false in re.findall(
-            r"if\((.*?)\, (.*?)\, (.*?)\)",
-            line,
-        ):
-            arm_template_lines[idx] = line.replace(
-                f"if({condition}, {if_true}, {if_false})",
-                f"{if_true}" if condition == "true" else f"{if_false}",
-            )
-            line = arm_template_lines[idx]
-    arm_template_str = "\\n".join(arm_template_lines)
+    def _resolve_val(val: Any) -> Any:
+        if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
+            return evaluate_expr(val[1:-1], _handle_func)
+        elif isinstance(val, list):
+            return [_resolve_val(v) for v in val]
+        elif isinstance(val, dict):
+            return {_resolve_val(k): _resolve_val(v) for k, v in val.items()}
+        else:
+            return val
 
-    # Handle format function
-    arm_template_lines = arm_template_str.split("\\n")
-    for idx, line in enumerate(arm_template_lines):
-        for format_string, inputs in re.findall(r"format\((.*?)\, (.*?)\)", line):
-            inputs_list = [i.strip("'") for i in inputs.split(", ")]
-            arm_template_lines[idx] = line.replace(
-                f"format({format_string}, {inputs})",
-                format_string.format(*inputs_list).strip("'"),
-            )
-    arm_template_str = "\\n".join(arm_template_lines)
+    for k in parameters.keys():
+        parameters[k] = _resolve_val(parameters[k])
 
-    return json.loads(json.loads(arm_template_str)["templateJson"])
+    return _resolve_val(templateJson)
 
 
 def parse_bicep(
@@ -131,8 +163,10 @@ def parse_bicep(
         check=True,
         stdout=subprocess.PIPE,
     )
-    arm_template_json = resolve_arm_functions(
-        res.stdout.decode(),
+    res_json = json.loads(res.stdout.decode())
+    arm_template_json = _resolve_arm_functions(
+        json.loads(res_json["templateJson"]),
+        json.loads(res_json["parametersJson"]),
         resource_group=resource_group,
         subscription=subscription,
         deployment_name=deployment_name,
