@@ -214,6 +214,13 @@ def main():
         else:
             print(f"github command: {args.github_command} not recognised")
 
+    elif args.command == "vn2":
+
+        if args.vn2_command == "generate_yaml":
+            from .tools.vn2_generate_yaml import vn2_generate_yaml
+
+            vn2_generate_yaml(**vars(args))
+
     else:
         print(f"Command: {args.command} not recognised")
 
