@@ -77,6 +77,16 @@ def _resolve_arm_functions(
             inputs = [str(arg) for arg in inputs]
             # Format the string
             return format_string.format(*inputs)
+        elif func_name == "add":
+            assert len(args) == 2
+            assert isinstance(args[0], (int, float))
+            assert isinstance(args[1], (int, float))
+            return args[0] + args[1]
+        elif func_name == "sub":
+            assert len(args) == 2
+            assert isinstance(args[0], (int, float))
+            assert isinstance(args[1], (int, float))
+            return args[0] - args[1]
         else:
             raise ValueError(f"Unknown function: {func_name}")
 
