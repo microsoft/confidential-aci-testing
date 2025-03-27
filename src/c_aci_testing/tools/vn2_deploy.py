@@ -53,6 +53,13 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
         print(f"Failed to get number of replicas from {yaml_path}")
         sys.exit(1)
 
+    annotations = yaml_data["spec"]["template"]["metadata"].get("annotations", {})
+    if not annotations.get("microsoft.containerinstance.virtualnode.ccepolicy", ""):
+        raise ValueError(
+            "YAML does not have a ccepolicy, which will result in non-confidential VN2. Refusing to continue.\n"
+            + "Run `c-aci-testing vn2 policygen .` to populate the policy."
+        )
+
     print(f"Deployment name: {deployment_name}")
     print(f"Label selector: {label_selector}")
     print(f"Number of replicas: {replicas}")
