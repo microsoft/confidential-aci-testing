@@ -8,16 +8,8 @@ import subprocess
 import time
 import json
 import sys
-import yaml
 
-
-def run_cmd(cmd):
-    """Run a command and return the output."""
-    print(f"Running command: {' '.join(cmd)}")
-    return subprocess.run(
-        cmd, stdout=subprocess.PIPE, text=True, check=True
-    ).stdout.strip()
-
+from c_aci_testing.utils.run_cmd import run_cmd
 
 def vn2_remove(deployment_name: str, **kwargs):
     """
@@ -27,9 +19,7 @@ def vn2_remove(deployment_name: str, **kwargs):
 
     # First, get the pod label selector for monitoring
     try:
-        deployment_json = run_cmd(
-            ["kubectl", "get", "deployment", deployment_name, "-o", "json"]
-        )
+        deployment_json = run_cmd(["kubectl", "get", "deployment", deployment_name, "-o", "json"], retries=2)
         deployment_data = json.loads(deployment_json)
         label_selector_obj = deployment_data["spec"]["selector"]["matchLabels"]
         label_selector = ",".join([f"{k}={v}" for k, v in label_selector_obj.items()])

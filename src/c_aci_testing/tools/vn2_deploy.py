@@ -11,12 +11,7 @@ import yaml
 import sys
 import os
 
-
-def run_cmd(cmd):
-    """Run a command and return the output."""
-    print(f"Running command: {' '.join(cmd)}")
-    return subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
-
+from c_aci_testing.utils.run_cmd import run_cmd
 
 def vn2_deploy(input_yaml_path: str, **kwargs):
     """
@@ -111,7 +106,7 @@ def vn2_deploy(input_yaml_path: str, **kwargs):
     nb_pods_running = 0
 
     while time.time() < timeout:
-        pods_json = run_cmd(["kubectl", "get", "pods", "-l", label_selector, "-o", "json"])
+        pods_json = run_cmd(["kubectl", "get", "pods", "-l", label_selector, "-o", "json"], retries=2)
         pods_data = json.loads(pods_json)
         if not pods_data.get("items"):
             print("No pods created yet.")
