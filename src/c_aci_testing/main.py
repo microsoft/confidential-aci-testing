@@ -236,6 +236,11 @@ def main():
 
             vn2_remove(**vars(args))
 
+        elif args.vn2_command == "policygen":
+            from .tools.vn2_policygen import vn2_policygen
+
+            vn2_policygen(**vars(args))
+
         else:
             print(f"vn2 command: {args.vn2_command} not recognised")
 

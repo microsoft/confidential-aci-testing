@@ -5,14 +5,12 @@
 
 from __future__ import annotations
 
-from c_aci_testing.utils.run_cmd import run_cmd
+from argparse import ArgumentParser
 
 
-def vn2_logs(deployment_name: str, follow: bool = False, **kwargs):
-
-    label_selector = f"app={deployment_name}"
-    args = ["kubectl", "logs", "--all-containers", "-l", label_selector, "--tail=-1"]
-    if follow:
-        args.append("-f")
-
-    run_cmd(args, retries=2, consume_stdout=False)
+def parse_yaml_path(parser: ArgumentParser):
+    parser.add_argument(
+        "--yaml-path",
+        type=str,
+        help="Path to the YAML file to generate. Default is workload_name.yaml",
+    )

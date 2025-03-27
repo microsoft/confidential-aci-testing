@@ -9,13 +9,16 @@ import json
 import os
 import pathlib
 import yaml
+import re
 
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
+from c_aci_testing.tools.aci_param_set import aci_param_set
 
 
-def generate_vn2_yaml(
+def vn2_generate_yaml(
     target_path: str,
+    yaml_path: str,
     subscription: str,
     resource_group: str,
     deployment_name: str,
@@ -24,8 +27,23 @@ def generate_vn2_yaml(
     repository: str,
     tag: str,
     replicas: int,
-) -> str:
+    **kwargs,
+):
     bicep_file_path, _ = find_bicep_files(target_path)
+    bicep_file_name = re.sub(r"\.bicep$", "", os.path.basename(bicep_file_path))
+    if not yaml_path:
+        yaml_path = os.path.join(target_path, f"{bicep_file_name}.yaml")
+
+    aci_param_set(
+        target_path,
+        parameters=[
+            f"{k}='{v}'"
+            for k, v in {
+                "managedIDName": managed_identity,
+            }.items()
+        ],
+        add=False,
+    )
 
     arm_template_json = parse_bicep(
         target_path,
@@ -121,35 +139,8 @@ def generate_vn2_yaml(
         if "command" in props:
             container_def["command"] = props["command"]
 
-    yaml_string = yaml.dump(yaml_body, sort_keys=False)
-    return yaml_string
-
-
-def vn2_generate_yaml(
-    target_path: str,
-    output_yaml_path: str,
-    subscription: str,
-    resource_group: str,
-    deployment_name: str,
-    managed_identity: str,
-    registry: str,
-    repository: str,
-    tag: str,
-    replicas: int,
-    **kwargs,
-):
-    yaml_str = generate_vn2_yaml(
-        target_path,
-        subscription,
-        resource_group,
-        deployment_name,
-        managed_identity,
-        registry,
-        repository,
-        tag,
-        replicas,
-    )
+    yaml_str = yaml.dump(yaml_body, sort_keys=False)
 
     # Write the YAML to the output file
-    with open(output_yaml_path, "wt") as f:
+    with open(yaml_path, "wt") as f:
         f.write(yaml_str)

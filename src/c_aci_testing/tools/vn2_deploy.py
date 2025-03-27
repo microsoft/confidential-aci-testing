@@ -10,36 +10,47 @@ import json
 import yaml
 import sys
 import os
+import re
 
 from c_aci_testing.utils.run_cmd import run_cmd
+from c_aci_testing.utils.find_bicep import find_bicep_files
 
-def vn2_deploy(input_yaml_path: str, **kwargs):
+
+def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
     """
     Deploy a VN2 application using kubectl apply with the provided YAML file.
     This function also checks that the pods are running correctly after deployment.
     """
+
+    if not yaml_path:
+        bicep_file_path, _ = find_bicep_files(target_path)
+        bicep_file_name = re.sub(r"\.bicep$", "", os.path.basename(bicep_file_path))
+        if not yaml_path:
+            yaml_path = os.path.join(target_path, f"{bicep_file_name}.yaml")
+
     # Load YAML file to get deployment information
-    with open(input_yaml_path, "r") as f:
+    with open(yaml_path, "r") as f:
         yaml_content = f.read()
 
     yaml_data = yaml.safe_load(yaml_content)
     deployment_name = yaml_data["metadata"]["name"]
     if not deployment_name:
-        print(f"Failed to get deployment name from {input_yaml_path}")
+        print(f"Failed to get deployment name from {yaml_path}")
         sys.exit(1)
 
     env_dep_name = os.getenv("DEPLOYMENT_NAME")
     if env_dep_name is not None and env_dep_name != deployment_name:
         raise ValueError(
-            "Refusing to continue as DEPLOYMENT_NAME environment variable is inconsistent with the deployment name in the YAML file." + \
-            "Run c-aci-testing vn2 generate_yaml again."
+            "Refusing to continue as DEPLOYMENT_NAME environment variable is inconsistent with the deployment name in the YAML file.\n"
+            + "This is likely unintentional.\n"
+            + "Run c-aci-testing vn2 generate_yaml again."
         )
 
     label_selector_obj = yaml_data["spec"]["selector"]["matchLabels"]
     label_selector = ",".join([f"{k}={v}" for k, v in label_selector_obj.items()])
     replicas = yaml_data["spec"].get("replicas")
     if not replicas:
-        print(f"Failed to get number of replicas from {input_yaml_path}")
+        print(f"Failed to get number of replicas from {yaml_path}")
         sys.exit(1)
 
     print(f"Deployment name: {deployment_name}")
@@ -47,7 +58,7 @@ def vn2_deploy(input_yaml_path: str, **kwargs):
     print(f"Number of replicas: {replicas}")
 
     # Deploy the deployment from the YAML template
-    run_cmd(["kubectl", "apply", "-f", input_yaml_path])
+    run_cmd(["kubectl", "apply", "-f", yaml_path], consume_stdout=False)
 
     # Wait for all pods of the deployment to be in Running state (max 15 minutes)
     print("Waiting for pods to be in Running state...")

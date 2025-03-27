@@ -67,7 +67,7 @@ def parse_command():
     args = arg_parser.parse_args()
 
     missing_args = []
-    exceptions = ["repository", "tag", "infrastructure_svn"]
+    exceptions = ["repository", "tag", "infrastructure_svn", "yaml_path"]
     for key, value in vars(args).items():
         if value is None and key not in exceptions:
             missing_args.append(key)

@@ -2,12 +2,16 @@ from typing import List
 import subprocess
 import time
 
-def run_cmd(cmd: List[str], retries: int = 0):
+
+def run_cmd(cmd: List[str], retries: int = 0, consume_stdout: bool = True):
     retried_times = 0
     while True:
         print(f"Running command: {' '.join(cmd)}")
         try:
-            return subprocess.run(cmd, stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
+            run_res = subprocess.run(cmd, stdout=subprocess.PIPE if consume_stdout else None, text=True, check=True)
+            if consume_stdout:
+                return run_res.stdout.strip()
+            return None
         except subprocess.CalledProcessError as e:
             print(f"Command failed with code: {e.returncode}")
             retried_times += 1

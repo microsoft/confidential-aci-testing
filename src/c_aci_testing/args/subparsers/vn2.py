@@ -15,18 +15,16 @@ from ..parameters.target_path import parse_target_path
 from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
-
-import os
+from ..parameters.yaml_path import parse_yaml_path
+from ..parameters.policy_type import parse_policy_type
+from ..parameters.fragments_json import parse_fragments_json
+from ..parameters.infrastructure_svn import parse_infrastructure_svn
+from ..parameters.follow import parse_follow
 
 
 def subparse_vn2(vm: argparse.ArgumentParser):
 
     vn2_subparser = vm.add_subparsers(dest="vn2_command", required=True)
-
-    if os.getenv("DEPLOYMENT_NAME"):
-        yaml_path_default = f"{os.getenv('DEPLOYMENT_NAME')}.yaml"
-    else:
-        yaml_path_default = None
 
     generate_yaml = vn2_subparser.add_parser("generate_yaml")
     parse_deployment_name(generate_yaml)
@@ -37,32 +35,32 @@ def subparse_vn2(vm: argparse.ArgumentParser):
     parse_registry(generate_yaml)
     parse_repository(generate_yaml)
     parse_tag(generate_yaml)
+    parse_yaml_path(generate_yaml)
     generate_yaml.add_argument(
         "--replicas",
         type=int,
         help="Number of replicas in the deployment template",
         default=1,
     )
-    generate_yaml.add_argument(
-        "--output-yaml-path",
-        type=str,
-        default=yaml_path_default,
-        help="Path to the YAML file to generate. If DEPLOYMENT_NAME environment variable is set, defaults to that.yaml",
-    )
 
     # Deploy command
     deploy = vn2_subparser.add_parser("deploy")
-    deploy.add_argument(
-        "--input-yaml-path",
-        type=str,
-        default=yaml_path_default,
-        help="Path to the YAML file to deploy. If DEPLOYMENT_NAME environment variable is set, defaults to that.yaml",
-    )
+    parse_target_path(deploy)
+    parse_yaml_path(deploy)
 
     # Logs command
     logs = vn2_subparser.add_parser("logs")
     parse_deployment_name(logs)
+    parse_follow(logs)
 
     # Remove command
     remove = vn2_subparser.add_parser("remove")
     parse_deployment_name(remove)
+
+    # Policygen command
+    policygen = vn2_subparser.add_parser("policygen")
+    parse_target_path(policygen)
+    parse_yaml_path(policygen)
+    parse_policy_type(policygen)
+    parse_fragments_json(policygen)
+    parse_infrastructure_svn(policygen)
