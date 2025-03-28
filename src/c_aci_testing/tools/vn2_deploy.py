@@ -125,6 +125,7 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
 
     while time.time() < timeout:
         pods_json = run_cmd(["kubectl", "get", "pods", "-l", label_selector, "-o", "json"], retries=2)
+        assert pods_json
         pods_data = json.loads(pods_json)
         if not pods_data.get("items"):
             print("No pods created yet.")

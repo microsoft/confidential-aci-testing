@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Optional
 import subprocess
 import time
 
 
-def run_cmd(cmd: List[str], retries: int = 0, consume_stdout: bool = True):
+def run_cmd(cmd: List[str], retries: int = 0, consume_stdout: bool = True) -> Optional[str]:
     retried_times = 0
     while True:
         print(f"Running command: {' '.join(cmd)}")

@@ -118,5 +118,5 @@ def evaluate_expr(expr: str, _handle_func: Callable[[str, List[Any]], Any]) -> A
         if debug:
             print(f"Evaluated expression '{orig_expr}' to {json.dumps(result)}", flush=True)
         return result
-    except ValueError as e:
+    except Exception as e:
         raise ValueError(f"Failed to parse expression '{orig_expr}': {e}")

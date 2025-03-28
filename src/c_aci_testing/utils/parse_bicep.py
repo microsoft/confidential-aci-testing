@@ -87,8 +87,36 @@ def _resolve_arm_functions(
             assert isinstance(args[0], (int, float))
             assert isinstance(args[1], (int, float))
             return args[0] - args[1]
+        elif func_name == "not":
+            assert len(args) == 1
+            assert isinstance(args[0], bool)
+            return not args[0]
+        elif func_name == "createObject":
+            obj = {}
+            for i in range(0, len(args), 2):
+                if i + 1 >= len(args):
+                    raise ValueError("createObject requires an even number of arguments")
+                key = args[i]
+                value = args[i + 1]
+                assert isinstance(key, str)
+                obj[key] = value
+            return obj
         else:
-            raise ValueError(f"Unknown function: {func_name}")
+            # raise ValueError(f"Unknown function: {func_name}")
+            ret_str = f"{func_name}("
+            first = True
+            for arg in args:
+                if first:
+                    first = False
+                else:
+                    ret_str += ","
+                if isinstance(arg, str):
+                    ret_str += f"'{arg}'"
+                else:
+                    ret_str += repr(arg)
+            ret_str += ")"
+            print(f"Warning: Unknown function: {ret_str}", file=sys.stderr, flush=True)
+            return ret_str
 
     def _resolve_val(val: Any) -> Any:
         if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
