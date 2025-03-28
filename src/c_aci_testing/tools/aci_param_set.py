@@ -9,6 +9,8 @@ from __future__ import annotations
 import os
 import re
 
+from c_aci_testing.utils.find_bicep import find_bicep_files
+
 
 def aci_param_set(
     target_path: str,
@@ -16,19 +18,10 @@ def aci_param_set(
     add: bool = True,
     **kwargs,
 ):
-    # Find the bicep param file
-    biceparam_file_path = None
-    bicepparam_files = [file for file in os.listdir(target_path) if file.endswith(".bicepparam")]
-
-    if not bicepparam_files:
-        raise FileNotFoundError("No .bicepparam file found in the target directory.")
-    elif len(bicepparam_files) > 1:
-        raise ValueError("Multiple .bicepparam files found in the target directory.")
-    else:
-        biceparam_file_path = bicepparam_files[0]
+    _, bicepparam_file_path = find_bicep_files(target_path)
 
     # Load the param file
-    with open(os.path.join(target_path, biceparam_file_path), encoding="utf-8") as f:
+    with open(os.path.join(target_path, bicepparam_file_path), encoding="utf-8") as f:
         biceparam_content = f.read()
 
     # Set parameters
@@ -90,5 +83,5 @@ def aci_param_set(
             biceparam_content += f"{os.linesep}{param_line}"
 
     # Save the new file
-    with open(os.path.join(target_path, biceparam_file_path), "w", encoding="utf-8") as f:
+    with open(os.path.join(target_path, bicepparam_file_path), "w", encoding="utf-8") as f:
         f.write(biceparam_content)
