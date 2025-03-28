@@ -64,3 +64,6 @@ def subparse_vn2(vm: argparse.ArgumentParser):
     parse_policy_type(policygen)
     parse_fragments_json(policygen)
     parse_infrastructure_svn(policygen)
+
+    create_pull_secret = vn2_subparser.add_parser("create_pull_secret")
+    parse_registry(create_pull_secret)

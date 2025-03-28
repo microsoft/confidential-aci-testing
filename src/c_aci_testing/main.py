@@ -241,6 +241,11 @@ def main():
 
             vn2_policygen(**vars(args))
 
+        elif args.vn2_command == "create_pull_secret":
+            from .tools.vn2_create_pull_secret import vn2_create_pull_secret
+
+            vn2_create_pull_secret(**vars(args))
+
         else:
             print(f"vn2 command: {args.vn2_command} not recognised")
 

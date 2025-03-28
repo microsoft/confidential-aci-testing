@@ -14,6 +14,7 @@ import re
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
 from c_aci_testing.tools.aci_param_set import aci_param_set
+from .vn2_create_pull_secret import get_pull_secret_name, vn2_create_pull_secret
 
 
 def vn2_generate_yaml(
@@ -138,6 +139,13 @@ def vn2_generate_yaml(
 
         if "command" in props:
             container_def["command"] = props["command"]
+
+        if registry:
+            secret_name = get_pull_secret_name(registry)
+            if secret_name:
+                template_spec["imagePullSecrets"] = [{"name": secret_name}]
+                print(f"Creating short-lived pull secret {secret_name}", flush=True)
+                vn2_create_pull_secret(registry)
 
     yaml_str = yaml.dump(yaml_body, sort_keys=False)
 
