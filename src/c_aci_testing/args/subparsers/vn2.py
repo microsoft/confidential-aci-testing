@@ -65,5 +65,15 @@ def subparse_vn2(vm: argparse.ArgumentParser):
     parse_fragments_json(policygen)
     parse_infrastructure_svn(policygen)
 
+    # Get-ip command
+    get_ip = vn2_subparser.add_parser("get-ip")
+    parse_deployment_name(get_ip)
+    get_ip.add_argument(
+        "--timeout",
+        type=int,
+        help="Timeout in seconds to wait for the service to be ready",
+        default=300,
+    )
+
     create_pull_secret = vn2_subparser.add_parser("create_pull_secret")
     parse_registry(create_pull_secret)

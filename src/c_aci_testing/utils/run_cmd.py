@@ -1,12 +1,15 @@
 from typing import List, Optional
 import subprocess
 import time
+import sys
 
 
-def run_cmd(cmd: List[str], retries: int = 0, consume_stdout: bool = True) -> Optional[str]:
+def run_cmd(cmd: List[str], retries: int = 0, consume_stdout: bool = True, log_run_to=sys.stdout) -> Optional[str]:
     retried_times = 0
     while True:
-        print(f"Running command: {' '.join(cmd)}")
+        sys.stdout.flush()
+        sys.stderr.flush()
+        print(f"Running command: {' '.join(cmd)}", file=log_run_to, flush=True)
         try:
             run_res = subprocess.run(cmd, stdout=subprocess.PIPE if consume_stdout else None, text=True, check=True)
             if consume_stdout:

@@ -246,6 +246,11 @@ def main():
 
             vn2_create_pull_secret(**vars(args))
 
+        elif args.vn2_command == "get-ip":
+            from .tools.vn2_get_ip import vn2_get_ip
+
+            vn2_get_ip(**vars(args))
+
         else:
             print(f"vn2 command: {args.vn2_command} not recognised")
 
