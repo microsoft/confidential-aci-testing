@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 
-from c_aci_testing.utils.parse_bicep import parse_bicep
+from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
+from c_aci_testing.utils.find_bicep import find_bicep_files
 
 
 def make_configs(
@@ -24,6 +26,8 @@ def make_configs(
     output_conf_dir: str,
 ):
     print(f"Constructing LCOW configs and scripts in {output_conf_dir}...")
+
+    bicep_file_path, _ = find_bicep_files(target_path)
 
     lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
 
@@ -113,7 +117,7 @@ def make_configs(
     ) as pull_file:
         json.dump(pull_template, pull_file, indent=2)
 
-    for container_group_id, container_group, containers in parse_bicep(
+    arm_template_json = parse_bicep(
         target_path,
         subscription,
         resource_group,
@@ -121,7 +125,19 @@ def make_configs(
         registry,
         repository,
         tag,
-    ):
+    )
+
+    for container_group, containers in arm_template_for_each_container_group(arm_template_json):
+        # Derive container group ID
+        container_group_id = (
+            container_group["name"]
+            .replace(
+                deployment_name,
+                pathlib.Path(bicep_file_path).stem,
+            )
+            .replace("-", "_")
+        )
+
         group_cpus = 0
         group_memory = 0
 
