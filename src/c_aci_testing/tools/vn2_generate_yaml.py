@@ -65,7 +65,9 @@ def vn2_generate_yaml(
         "tolerations": [{"key": "virtual-kubelet.io/provider", "operator": "Exists", "effect": "NoSchedule"}],
     }
 
-    yaml_body = {
+    extra_resources = []
+
+    main_deployment = {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
         "metadata": {
@@ -147,7 +149,27 @@ def vn2_generate_yaml(
                 print(f"Creating short-lived pull secret {secret_name}", flush=True)
                 vn2_create_pull_secret(registry)
 
-    yaml_str = yaml.dump(yaml_body, sort_keys=False)
+    if container_group["properties"].get("ipAddress", {}).get("type") == "Public":
+        ports = {"port": p["port"] for p in container_group["properties"]["ipAddress"]["ports"]}
+        service = {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "name": deployment_name,
+                "annotations": {
+                    "external-dns.alpha.kubernetes.io/hostname": f"{deployment_name}.azure.net",
+                    "external-dns.alpha.kubernetes.io/internal-hostname": f"clusterip.{deployment_name}.azure.net",
+                },
+            },
+            "spec": {
+                "type": "LoadBalancer",
+                "ports": [ports],
+                "selector": {"app": deployment_name},
+            },
+        }
+        extra_resources.append(service)
+
+    yaml_str = yaml.dump_all([main_deployment, *extra_resources], sort_keys=False)
 
     # Write the YAML to the output file
     with open(yaml_path, "wt") as f:

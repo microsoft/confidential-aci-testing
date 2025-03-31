@@ -32,7 +32,15 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
     with open(yaml_path, "r") as f:
         yaml_content = f.read()
 
-    yaml_data = yaml.safe_load(yaml_content)
+    yaml_data_all = yaml.safe_load_all(yaml_content)
+    all_deployments = [d for d in yaml_data_all if d.get("kind") == "Deployment"]
+    if not all_deployments:
+        print(f"No deployments found in {yaml_path}")
+        sys.exit(1)
+    if len(all_deployments) > 1:
+        print(f"Multiple deployments found in {yaml_path}, which is not supported.")
+        sys.exit(1)
+    yaml_data = all_deployments[0]
     deployment_name = yaml_data["metadata"]["name"]
     if not deployment_name:
         print(f"Failed to get deployment name from {yaml_path}")
