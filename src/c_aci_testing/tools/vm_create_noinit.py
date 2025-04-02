@@ -29,6 +29,7 @@ def vm_create_noinit(
     vm_image: str,
     vm_size: str,
     vm_zone: str,
+    resource_tags: dict[str, str],
     **kwargs,
 ) -> list[str]:
     """
@@ -64,6 +65,7 @@ def vm_create_noinit(
         "managedIDName": managed_identity,
         "vmSize": vm_size,
         "vmHostname": hostname,
+        "vmTags": resource_tags,
     }
 
     if vm_zone:

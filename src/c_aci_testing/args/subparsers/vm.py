@@ -21,6 +21,7 @@ from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
 from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix, parse_vm_zones
 from ..parameters.storage_account import parse_storage_account
+from ..parameters.resource_tags import parse_resource_tags
 
 
 def subparse_vm(vm: argparse.ArgumentParser):
@@ -38,6 +39,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_vm_image(create)
     parse_vm_size(create)
     parse_vm_zones(create)
+    parse_resource_tags(create)
 
     create_noinit = vm_subparser.add_parser("create_noinit")
     parse_deployment_name(create_noinit)
@@ -48,6 +50,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_vm_image(create_noinit)
     parse_vm_size(create_noinit)
     parse_vm_zones(create_noinit)
+    parse_resource_tags(create_noinit)
 
     generate_scripts = vm_subparser.add_parser("generate_scripts")
     parse_target_path(generate_scripts)
@@ -95,6 +98,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_vm_size(deploy)
     parse_vm_win_flavor(deploy)
     parse_vm_zones(deploy)
+    parse_resource_tags(deploy)
 
     remove = vm_subparser.add_parser("remove")
     parse_deployment_name(remove)
