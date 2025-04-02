@@ -15,6 +15,8 @@ from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 from ..parameters.target_path import parse_target_path
 
+from .. import extend_dict
+
 
 def subparse_aci(aci: argparse.ArgumentParser):
 
@@ -40,10 +42,11 @@ def subparse_aci(aci: argparse.ArgumentParser):
     parse_resource_group(remove)
 
     param_set = aci_subparser.add_parser("param_set")
+    extend_dict.register(param_set)
     parse_target_path(param_set)
     param_set.add_argument(
         "--parameters",
-        action="append",
+        action="extend_dict",
         help="The parameter key value pair to add in the format key=value",
     )
     param_set.add_argument(

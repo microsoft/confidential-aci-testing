@@ -33,6 +33,7 @@ def vm_deploy(
     vm_size: str,
     prefix: str,
     vm_zone: str,
+    resource_tags: dict[str, str],
     **kwargs,
 ):
     """
@@ -61,6 +62,7 @@ def vm_deploy(
         storage_account=storage_account,
         vm_size=vm_size,
         vm_zone=vm_zone,
+        resource_tags=resource_tags,
     )
 
     vm_runc(
