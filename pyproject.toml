@@ -21,6 +21,9 @@ classifiers = [
 ]
 requires-python = ">=3.8.1"
 dynamic = ["version"]
+dependencies = [
+    "pyyaml~=6.0.2"
+]
 
 [project.scripts]
 c-aci-testing = "c_aci_testing.main:main"

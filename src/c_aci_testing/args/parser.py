@@ -18,6 +18,7 @@ from .subparsers.policies import subparse_policies
 from .subparsers.target import subparse_target
 from .subparsers.vm import subparse_vm
 from .subparsers.vscode import subparse_vscode
+from .subparsers.vn2 import subparse_vn2
 
 
 def parse_command():
@@ -36,6 +37,7 @@ def parse_command():
     subparser.add_parser("target")
     subparser.add_parser("vm")
     subparser.add_parser("vscode")
+    subparser.add_parser("vn2")
 
     args, _ = arg_parser.parse_known_args()
 
@@ -57,13 +59,15 @@ def parse_command():
         subparse_vm(subparser.choices["vm"])
     elif args.command == "vscode":
         subparse_vscode(subparser.choices["vscode"])
+    elif args.command == "vn2":
+        subparse_vn2(subparser.choices["vn2"])
     else:
         raise argparse.ArgumentError(None, "command is required")
 
     args = arg_parser.parse_args()
 
     missing_args = []
-    exceptions = ["repository", "tag", "infrastructure_svn"]
+    exceptions = ["repository", "tag", "infrastructure_svn", "yaml_path"]
     for key, value in vars(args).items():
         if value is None and key not in exceptions:
             missing_args.append(key)

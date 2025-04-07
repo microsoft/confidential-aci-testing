@@ -214,6 +214,46 @@ def main():
         else:
             print(f"github command: {args.github_command} not recognised")
 
+    elif args.command == "vn2":
+
+        if args.vn2_command == "generate_yaml":
+            from .tools.vn2_generate_yaml import vn2_generate_yaml
+
+            vn2_generate_yaml(**vars(args))
+
+        elif args.vn2_command == "deploy":
+            from .tools.vn2_deploy import vn2_deploy
+
+            vn2_deploy(**vars(args))
+
+        elif args.vn2_command == "logs":
+            from .tools.vn2_logs import vn2_logs
+
+            vn2_logs(**vars(args))
+
+        elif args.vn2_command == "remove":
+            from .tools.vn2_remove import vn2_remove
+
+            vn2_remove(**vars(args))
+
+        elif args.vn2_command == "policygen":
+            from .tools.vn2_policygen import vn2_policygen
+
+            vn2_policygen(**vars(args))
+
+        elif args.vn2_command == "create_pull_secret":
+            from .tools.vn2_create_pull_secret import vn2_create_pull_secret
+
+            vn2_create_pull_secret(**vars(args))
+
+        elif args.vn2_command == "get-ip":
+            from .tools.vn2_get_ip import vn2_get_ip
+
+            vn2_get_ip(**vars(args))
+
+        else:
+            print(f"vn2 command: {args.vn2_command} not recognised")
+
     else:
         print(f"Command: {args.command} not recognised")
 
