@@ -107,9 +107,7 @@ def evaluate_expr(expr: str, _handle_func: Callable[[str, List[Any]], Any]) -> A
             if not prop_name:
                 raise ValueError(f"Failed to parse property access")
             assert isinstance(result, dict)
-            if prop_name not in result:
-                raise ValueError(f"could not find property '{prop_name}'")
-            result = result[prop_name]
+            result = result.get(prop_name)
             expr = expr[prop_end + 1 :].strip()
 
         if expr:
