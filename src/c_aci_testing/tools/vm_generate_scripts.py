@@ -11,6 +11,7 @@ import pathlib
 
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
+from .aci_param_set import aci_param_set
 
 
 def make_configs(
@@ -117,14 +118,25 @@ def make_configs(
     ) as pull_file:
         json.dump(pull_template, pull_file, indent=2)
 
+    # Set required parameters in bicep param file
+    aci_param_set(
+        target_path,
+        parameters=[
+            f"{k}='{v}'"
+            for k, v in {
+                "registry": registry,
+                "repository": repository or "",
+                "tag": tag or "",
+            }.items()
+        ],
+        add=False,  # If the user removed a field, don't re-add it
+    )
+
     arm_template_json = parse_bicep(
         target_path,
         subscription,
         resource_group,
         deployment_name,
-        registry,
-        repository,
-        tag,
     )
 
     for container_group, containers in arm_template_for_each_container_group(arm_template_json):

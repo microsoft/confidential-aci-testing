@@ -46,14 +46,25 @@ def vn2_generate_yaml(
         add=False,
     )
 
+    # Set required parameters in bicep param file
+    aci_param_set(
+        target_path,
+        parameters=[
+            f"{k}='{v}'"
+            for k, v in {
+                "registry": registry,
+                "repository": repository or "",
+                "tag": tag or "",
+            }.items()
+        ],
+        add=False,  # If the user removed a field, don't re-add it
+    )
+
     arm_template_json = parse_bicep(
         target_path,
         subscription,
         resource_group,
         deployment_name,
-        registry,
-        repository,
-        tag,
     )
 
     annotations = {}

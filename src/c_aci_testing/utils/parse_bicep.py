@@ -138,29 +138,12 @@ def parse_bicep(
     subscription: str,
     resource_group: str,
     deployment_name: str,
-    registry: str,
-    repository: str | None,
-    tag: str | None,
 ) -> dict:
     """
     Returns ARM template JSON with parameters inlined
     """
 
     _, bicepparam_file_path = find_bicep_files(target_path)
-
-    # Set required parameters in bicep param file
-    aci_param_set(
-        target_path,
-        parameters=[
-            f"{k}='{v}'"
-            for k, v in {
-                "registry": registry,
-                "repository": repository or "",
-                "tag": tag or "",
-            }.items()
-        ],
-        add=False,  # If the user removed a field, don't re-add it
-    )
 
     print("Converting bicep files to an ARM template", flush=True)
     sys.stderr.flush()
