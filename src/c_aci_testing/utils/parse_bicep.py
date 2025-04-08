@@ -168,6 +168,9 @@ def parse_bicep(
         deployment_name=deployment_name,
     )
 
+    # We've inlined all parameters, so don't declare them in the ARM template
+    arm_template_json["parameters"] = {}
+
     return arm_template_json
 
 
