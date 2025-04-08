@@ -8,9 +8,13 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
+import json
 
 from .aci_get_ids import aci_get_ids
 from .aci_param_set import aci_param_set
+
+from c_aci_testing.utils.parse_bicep import parse_bicep
 
 
 def aci_deploy(
@@ -47,16 +51,31 @@ def aci_deploy(
     if not bicepparam_file_path:
         raise FileNotFoundError(f"No bicepparam file found in {target_path}")
 
+    parsed_arm = parse_bicep(target_path, subscription, resource_group, deployment_name)
+    temp_arm_path = tempfile.mktemp(suffix=".json")
+    with open(temp_arm_path, "wt") as temp_arm_file:
+        json.dump(parsed_arm, temp_arm_file, indent=2)
+
     az_command = [
-        "az", "deployment", "group", "create",
-        "-n", deployment_name,
-        "--subscription", subscription,
-        "--resource-group", resource_group,
-        "--template-file", os.path.join(target_path, bicep_file_path),
-        "--parameters", bicepparam_file_path,
-        "--query", "properties.outputs.ids.value",
-        "-o", "tsv",
+        "az",
+        "deployment",
+        "group",
+        "create",
+        "-n",
+        deployment_name,
+        "--subscription",
+        subscription,
+        "--resource-group",
+        resource_group,
+        "--template-file",
+        temp_arm_path,
+        "--query",
+        "properties.outputs.ids.value",
+        "-o",
+        "tsv",
     ]
+
+    print(f"ARM template saved to: {temp_arm_path}")
 
     print(f"{os.linesep}Deploying to Azure, view deployment here:")
     print("%2F".join([
@@ -83,5 +102,7 @@ def aci_deploy(
     for id in ids:
         print(f'Deployed {os.linesep}{id.split("/")[-1]}, view here:')
         print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource{id}")
+
+    os.remove(temp_arm_path)
 
     return ids
