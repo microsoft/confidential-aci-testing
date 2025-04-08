@@ -133,14 +133,11 @@ def _resolve_arm_functions(
     return _resolve_val(templateJson)
 
 
-def parse_bicep(
+def bicep_build(
     target_path: str,
-    subscription: str,
-    resource_group: str,
-    deployment_name: str,
-) -> dict:
+) -> Tuple[dict, dict]:
     """
-    Returns ARM template JSON with parameters inlined
+    Runs az bicep build on the target path and return (template JSON, parameters JSON)
     """
 
     _, bicepparam_file_path = find_bicep_files(target_path)
@@ -160,9 +157,24 @@ def parse_bicep(
         stdout=subprocess.PIPE,
     )
     res_json = json.loads(res.stdout.decode())
+    return json.loads(res_json["templateJson"]), json.loads(res_json["parametersJson"])
+
+
+def parse_bicep(
+    target_path: str,
+    subscription: str,
+    resource_group: str,
+    deployment_name: str,
+) -> dict:
+    """
+    Returns ARM template JSON with parameters inlined
+    """
+
+    template_json, parameters_json = bicep_build(target_path)
+
     arm_template_json = _resolve_arm_functions(
-        json.loads(res_json["templateJson"]),
-        json.loads(res_json["parametersJson"]),
+        template_json,
+        parameters_json,
         resource_group=resource_group,
         subscription=subscription,
         deployment_name=deployment_name,

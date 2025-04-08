@@ -14,7 +14,7 @@ import json
 from .aci_get_ids import aci_get_ids
 from .aci_param_set import aci_param_set
 
-from c_aci_testing.utils.parse_bicep import parse_bicep
+from c_aci_testing.utils.parse_bicep import bicep_build
 
 
 def aci_deploy(
@@ -51,10 +51,13 @@ def aci_deploy(
     if not bicepparam_file_path:
         raise FileNotFoundError(f"No bicepparam file found in {target_path}")
 
-    parsed_arm = parse_bicep(target_path, subscription, resource_group, deployment_name)
+    template_json, parameters_json = bicep_build(target_path)
     temp_arm_path = tempfile.mktemp(suffix=".json")
+    temp_param_path = tempfile.mktemp(suffix=".json")
     with open(temp_arm_path, "wt") as temp_arm_file:
-        json.dump(parsed_arm, temp_arm_file, indent=2)
+        json.dump(template_json, temp_arm_file, indent=2)
+    with open(temp_param_path, "wt") as temp_param_file:
+        json.dump(parameters_json, temp_param_file, indent=2)
 
     az_command = [
         "az",
@@ -69,6 +72,8 @@ def aci_deploy(
         resource_group,
         "--template-file",
         temp_arm_path,
+        "--parameters",
+        f"@{temp_param_path}",
         "--query",
         "properties.outputs.ids.value",
         "-o",
@@ -76,6 +81,7 @@ def aci_deploy(
     ]
 
     print(f"ARM template saved to: {temp_arm_path}")
+    print(f"Parameters saved to: {temp_param_path}")
 
     print(f"{os.linesep}Deploying to Azure, view deployment here:")
     print("%2F".join([
@@ -85,6 +91,8 @@ def aci_deploy(
         "providers", "Microsoft.Resources", "deployments", deployment_name,
     ]))
     print("")
+
+    print(f"Running: {' '.join(az_command)}")
 
     sys.stdout.flush()
     sys.stderr.flush()
