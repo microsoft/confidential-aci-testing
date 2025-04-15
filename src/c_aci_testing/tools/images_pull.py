@@ -8,25 +8,8 @@ from __future__ import annotations
 
 import os
 import subprocess
-import time
 
-
-def login_with_retry(registry: str):
-    attempts = 0
-    max_attempts = 3
-    while attempts < max_attempts:
-        try:
-            subprocess.run(["az", "acr", "login", "--name", registry], check=True)
-            return
-        except subprocess.CalledProcessError:
-            attempts += 1
-            if attempts == max_attempts:
-                print(f"Failed to login to {registry} after {max_attempts} attempts.")
-                raise
-            else:
-                sleep_s = 2 ** (attempts + 1)
-                print(f"Retrying login to {registry} in {sleep_s}s...")
-                time.sleep(sleep_s)
+from c_aci_testing.utils.acr import login_with_retry, strip_acr_suffix
 
 
 def images_pull(
@@ -36,7 +19,7 @@ def images_pull(
     tag: str | None,
     **kwargs,
 ) -> list[str]:
-    if "." not in registry or registry.endswith(".azurecr.io"):
+    if strip_acr_suffix(registry):  # function returns None if not ACR
         login_with_retry(registry)
 
     print(f"Pulling images for {registry}")
