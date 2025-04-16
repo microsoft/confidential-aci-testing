@@ -66,6 +66,7 @@ def vm_create(
     storage_account: str,
     vm_size: str,
     vm_zone: str,
+    resource_tags: dict[str, str],
     **kwargs,
 ) -> list[str]:
     """
@@ -111,6 +112,7 @@ def vm_create(
             vm_image=vm_image,
             vm_size=vm_size,
             vm_zone=vm_zone,
+            resource_tags=resource_tags,
         )
     else:
         ids = []
