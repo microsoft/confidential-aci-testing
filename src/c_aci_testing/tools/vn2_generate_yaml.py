@@ -37,12 +37,9 @@ def vn2_generate_yaml(
 
     aci_param_set(
         target_path,
-        parameters=[
-            f"{k}='{v}'"
-            for k, v in {
-                "managedIDName": managed_identity,
-            }.items()
-        ],
+        parameters={
+            "managedIDName": managed_identity,
+        },
         add=False,
     )
 

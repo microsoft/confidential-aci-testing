@@ -46,6 +46,7 @@ def subparse_aci(aci: argparse.ArgumentParser):
     parse_target_path(param_set)
     param_set.add_argument(
         "--parameters",
+        nargs="*",
         action="extend_dict",
         help="The parameter key value pair to add in the format key=value",
     )
