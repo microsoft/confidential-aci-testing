@@ -16,5 +16,6 @@ def parse_resource_tags(parser: ArgumentParser):
         "--resource-tags",
         nargs="*",
         action="extend_dict",
+        default={},
         help="ARM Tags to set on the VM resource. Syntax: key=value. Can be specified multiple times.",
     )
