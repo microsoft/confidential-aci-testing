@@ -190,7 +190,7 @@ def vn2_deploy(target_path: str, yaml_path: str, monitor_duration_secs: int, dep
         nb_pods_running = 0
         nb_bad_pod = 0
         nb_good_pod = 0
-        for pod in sorted(pods_data["items"]):
+        for pod in sorted(pods_data["items"], key=lambda x: x["metadata"]["name"]):
             print(f"Pod {pod['metadata']['name']} status: {pod['status']['phase']}")
             pod_print_conditions(pod)
             sys.stdout.flush()
