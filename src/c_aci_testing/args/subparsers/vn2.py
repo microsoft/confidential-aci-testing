@@ -20,6 +20,8 @@ from ..parameters.policy_type import parse_policy_type
 from ..parameters.fragments_json import parse_fragments_json
 from ..parameters.infrastructure_svn import parse_infrastructure_svn
 from ..parameters.follow import parse_follow
+from ..parameters.monitor_duration_secs import parse_monitor_duration_secs
+from ..parameters.deploy_output_file import parse_deploy_output_file
 
 
 def subparse_vn2(vm: argparse.ArgumentParser):
@@ -47,6 +49,8 @@ def subparse_vn2(vm: argparse.ArgumentParser):
     deploy = vn2_subparser.add_parser("deploy")
     parse_target_path(deploy)
     parse_yaml_path(deploy)
+    parse_monitor_duration_secs(deploy)
+    parse_deploy_output_file(deploy)
 
     # Logs command
     logs = vn2_subparser.add_parser("logs")
