@@ -14,7 +14,7 @@ from c_aci_testing.utils.find_bicep import find_bicep_files
 
 def aci_param_set(
     target_path: str,
-    parameters: list[str],
+    parameters: dict[str, str],
     add: bool = True,
     **kwargs,
 ):
@@ -25,13 +25,7 @@ def aci_param_set(
         biceparam_content = f.read()
 
     # Set parameters
-    for parameter in parameters:
-        if "=" not in parameter:
-            raise ValueError(f"Parameter '{parameter}' is not in 'key=value' format.")
-
-        key, value = parameter.split("=", 1)
-        key = key.strip()
-        value = value.strip()
+    for key, value in parameters.items():
         escaped_key = re.escape(key)
         print(f"Setting parameter '{key}' to {value[:50]}{'...' if len(value) > 50 else ''}")
 

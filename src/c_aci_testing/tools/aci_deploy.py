@@ -25,10 +25,10 @@ def aci_deploy(
     # Set required parameters in bicep param file
     aci_param_set(
         target_path,
-        parameters=[f"{k}='{v}'" for k, v in {
+        parameters={
             "location": location,
             "managedIDName": managed_identity,
-        }.items()],
+        },
         add=False,
     )
 

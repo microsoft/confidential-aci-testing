@@ -127,10 +127,9 @@ def policies_gen(
 
     aci_param_set(
         target_path,
-        parameters=[
-            "ccePolicies="
-            + "{\n"
+        parameters={
+            "ccePolicies": "{\n"
             + "\n".join([f"  {group_id}: '{policy}'" for group_id, policy in policies.items()])
             + "\n}"
-        ],
+        },
     )

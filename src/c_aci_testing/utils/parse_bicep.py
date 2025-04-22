@@ -151,14 +151,11 @@ def parse_bicep(
     # Set required parameters in bicep param file
     aci_param_set(
         target_path,
-        parameters=[
-            f"{k}='{v}'"
-            for k, v in {
-                "registry": registry,
-                "repository": repository or "",
-                "tag": tag or "",
-            }.items()
-        ],
+        parameters={
+            "registry": registry,
+            "repository": repository or "",
+            "tag": tag or "",
+        },
         add=False,  # If the user removed a field, don't re-add it
     )
 

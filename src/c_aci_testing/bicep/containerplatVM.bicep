@@ -14,6 +14,8 @@ param managedIDName string
 param vmSize string = 'Standard_DC4ads_cc_v5'
 param vmZones array = []
 
+param vmTags object = {}
+
 var storageTokenUri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://storage.azure.com/&client_id=${managedIdentity.properties.clientId}'
 
 resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
@@ -134,6 +136,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2021-08-01' = {
 resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
   name: '${deployment().name}-vm'
   location: location
+  tags: vmTags
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: {
