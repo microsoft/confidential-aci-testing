@@ -124,7 +124,8 @@ def vn2_generate_yaml(
         containers.append(container_def)
 
         resources = props.get("resources", {}).get("requests", {})
-        container_def["resources"] = {"requests": {"cpu": resources.get("cpu"), "memory": resources.get("memoryInGB")}}
+        memoryStr = f"{resources.get('memoryInGB')}Gi"
+        container_def["resources"] = {"requests": {"cpu": resources.get("cpu"), "memory": memoryStr}}
 
         ports = props.get("ports", [])
         if ports:
