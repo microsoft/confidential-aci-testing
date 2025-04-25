@@ -30,6 +30,28 @@ try {
     $newKey2 = New-Item -Path $keyName -Name ($vsockTemplate -f $PortNumber2) -Force
     New-ItemProperty -Path $newKey2.PSPAth -Name "ElementName" -Value "Vsock port $PortNumber2" -PropertyType "String" 2>&1 >> C:\bootstrap.log
 
+    $sevSnpFlagExists = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Hypervisor" -Name EnableSevSnp -ErrorAction Ignore)
+    $hardwareIsolationFlagExists = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\Hypervisor" -Name EnableHardwareIsolation -ErrorAction Ignore)
+    $virtualisationBasedSecurityFlagExists = (Get-ItemProperty "HKLM:\SYSTEM\CurrentControlSet\Control\DeviceGuard" -Name EnableVirtualizationBasedSecurity -ErrorAction Ignore)
+
+    # "reg add" will create top-level key if it doesn't exist instead of erroring out
+
+    if (-not $sevSnpFlagExists -and -not $hardwareIsolationFlagExists) {
+        echo "Adding required reg flags for sev-snp" >> C:\bootstrap.log
+        # Before 22600
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Hypervisor" /v EnableSevSnp /t REG_DWORD /d 1 /f 2>&1 >> C:\bootstrap.log
+        # After 22600 (WS2025)
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Hypervisor" /v EnableHardwareIsolation /t REG_DWORD /d 1 /f 2>&1 >> C:\bootstrap.log
+
+        $needRestart = $true
+    } else {
+        echo "SevSnp or HardwareIsolation flag already exists" >> C:\bootstrap.log
+    }
+    if (-not $virtualisationBasedSecurityFlagExists) {
+        reg add "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f 2>&1 >> C:\bootstrap.log
+        $needRestart = $true
+    }
+
     if ($needRestart) {
         $scriptPath = $MyInvocation.MyCommand.Path
         echo "Registering InitializeL1 task and restarting" >> C:\bootstrap.log
