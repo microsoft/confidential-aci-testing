@@ -56,7 +56,7 @@ env:
   CPU: ${{ inputs.cpu || 4 }}
   MEMORY_IN_GB: ${{ inputs.memory_in_gb || 4 }}
   VM_SIZE: ${{ inputs.vm_size || 'Standard_DC4ads_cc_v5' }}
-  VM_IMAGE: ${{ secrets.VM_IMAGE }}
+  USE_OFFICIAL_IMAGES: "true"
   CPLAT_BLOB_NAME: ${{ inputs.cplat_cache_name || vars.CPLAT_CURR_BLOB_NAME }}
   WIN_FLAVOR: ws2025
 
