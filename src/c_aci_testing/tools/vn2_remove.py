@@ -99,5 +99,5 @@ def vn2_remove(deployment_name: str, **kwargs):
 
     # If we get here, the pods weren't deleted within the timeout period
     check_has_pods(verbose=True)
-    print("Warning: Some pods may still exist after timeout period.")
+    print("Error removing VN2 deployment: Some podss still exist after timeout period.")
     sys.exit(1)
