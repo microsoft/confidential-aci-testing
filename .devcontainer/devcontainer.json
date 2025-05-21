@@ -9,7 +9,7 @@
 	"features": {
 		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
 		"ghcr.io/devcontainers/features/azure-cli:1": {
-			"version": "2.61.0"
+			"version": "2.71.0"
 		}
 	},
 	"customizations": {
