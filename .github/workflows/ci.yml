@@ -13,6 +13,9 @@ on:
     types: [created]
   workflow_dispatch:
 
+env:
+  AZ_CLI_VERSION: 2.72.0
+
 jobs:
   test_target_run:
     runs-on: ubuntu-latest
@@ -34,8 +37,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -61,8 +62,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -88,8 +87,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -115,8 +112,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -142,8 +137,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -169,8 +162,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -196,8 +187,6 @@ jobs:
       run: pip install flit && flit install
 
     - name: Install Azure CLI
-      env:
-        AZ_CLI_VERSION: 2.61.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
