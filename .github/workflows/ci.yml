@@ -35,7 +35,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -62,7 +62,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -89,7 +89,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -116,7 +116,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -143,7 +143,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -170,7 +170,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
@@ -197,7 +197,7 @@ jobs:
 
     - name: Install Azure CLI
       env:
-        AZ_CLI_VERSION: 2.71.0
+        AZ_CLI_VERSION: 2.72.0
       run: ./scripts/install-az-cli.sh
 
     - name: Run Test
