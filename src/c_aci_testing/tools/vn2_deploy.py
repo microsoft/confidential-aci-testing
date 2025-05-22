@@ -4,6 +4,9 @@
 #   ---------------------------------------------------------------------------------
 
 from __future__ import annotations
+
+from typing import Optional
+
 import subprocess
 import time
 import json
@@ -11,12 +14,13 @@ import yaml
 import sys
 import os
 import re
+from io import StringIO
 
 from c_aci_testing.utils.run_cmd import run_cmd
 from c_aci_testing.utils.find_bicep import find_bicep_files
 
 
-def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
+def vn2_deploy(target_path: str, yaml_path: str, monitor_duration_secs: int, deploy_output_file: str, **kwargs):
     """
     Deploy a VN2 application using kubectl apply with the provided YAML file.
     This function also checks that the pods are running correctly after deployment.
@@ -25,8 +29,7 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
     if not yaml_path:
         bicep_file_path, _ = find_bicep_files(target_path)
         bicep_file_name = re.sub(r"\.bicep$", "", os.path.basename(bicep_file_path))
-        if not yaml_path:
-            yaml_path = os.path.join(target_path, f"{bicep_file_name}.yaml")
+        yaml_path = os.path.join(target_path, f"{bicep_file_name}.yaml")
 
     # Load YAML file to get deployment information
     with open(yaml_path, "r") as f:
@@ -70,28 +73,33 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
 
     print(f"Deployment name: {deployment_name}")
     print(f"Label selector: {label_selector}")
-    print(f"Number of replicas: {replicas}")
+    print(f"Number of replicas: {replicas}", flush=True)
 
     # Deploy the deployment from the YAML template
     run_cmd(["kubectl", "apply", "-f", yaml_path], consume_stdout=False)
 
     # Wait for all pods of the deployment to be in Running state (max 15 minutes)
-    print("Waiting for pods to be in Running state...")
+    print("Waiting for pods to be in Running state...", flush=True)
     timeout = time.time() + 900  # 15 minutes
 
     seen_container_ids_for_pod = {}
     failed_container_ids = set()
     all_container_ids = set()
 
-    def pod_print_conditions(pod):
+    def pod_print_conditions(pod, out_buf=sys.stdout):
         conditions = pod.get("status", {}).get("conditions", [])
         all_condition_types = [
             condition.get("type", "???") for condition in sorted(conditions, key=lambda x: x.get("lastTransitionTime"))
         ]
-        print(f"  Conditions: {', '.join(all_condition_types)}")
+        print(f"  Conditions: {', '.join(all_condition_types)}", file=out_buf)
 
-    def check_pod_containers(pod):
-        """Check container status and track container IDs to detect restarts."""
+    def check_pod_containers(pod, out_buf=sys.stdout) -> bool:
+        """
+        We check that the container IDs have not "flipped", which could indicate
+        a failure followed by a restart.  We do this by keeping track of the IDs
+        seen in the last round of checking in seen_container_ids_for_pod.
+        """
+
         nonlocal seen_container_ids_for_pod
         nonlocal failed_container_ids
         nonlocal all_container_ids
@@ -106,23 +114,28 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
             restart_count = container.get("restartCount", 0)
             if not container_id:
                 print(
-                    f"  !: Container ID not found for container {container_name} in pod {pod_name}. Pod being restarted?"
+                    f"  !: Container ID not found for container {container_name} in pod {pod_name}. Pod being restarted?",
+                    file=out_buf,
                 )
+                # If this pod has yet to be restarted, we let a later check fail
+                # instead of this one, to give more information (i.e. what is
+                # the restarted instance)
                 continue
             pod_container_ids.add(container_id)
             all_container_ids.add(container_id)
-            print(f"  Container {container_name}:")
-            print(f"    ID: {container_id}")
-            print(f"    Image ID: {image_id}")
-            print(f"    Restart Count: {restart_count}")
+            print(f"  Container {container_name}:", file=out_buf)
+            print(f"    ID: {container_id}", file=out_buf)
+            print(f"    Image ID: {image_id}", file=out_buf)
+            print(f"    Restart Count: {restart_count}", file=out_buf)
             if restart_count > 0:
-                print(f"    !: Container {container_name} has restarted {restart_count} times!")
+                print(f"    !: Container {container_name} has restarted {restart_count} times!", file=out_buf)
                 has_issue = True
         if pod_name in seen_container_ids_for_pod:
             for container_id in seen_container_ids_for_pod[pod_name]:
                 if container_id not in pod_container_ids:
                     print(
-                        f"    !: Container ID {container_id}, which appeared in a previous check of pod {pod_name}, has now disappeared"
+                        f"    !: Container ID {container_id}, which appeared in a previous check of pod {pod_name}, has now disappeared",
+                        file=out_buf,
                     )
                     failed_container_ids.add(container_id)
         if pod_container_ids:
@@ -130,54 +143,164 @@ def vn2_deploy(target_path: str, yaml_path: str, **kwargs):
         return has_issue
 
     nb_pods_running = 0
+    nb_bad_pod = 0
+    nb_good_pod = 0
+    deployment_start_time = time.time()
+    deployment_end_time = None
+
+    # Don't bother printing errors to stderr instead of stdout as GitHub Actions
+    # messes up the order.
+
+    def write_deploy_output(err_str: Optional[str] = None):
+        if not deploy_output_file:
+            return
+
+        if deployment_end_time:
+            deployment_time = deployment_end_time - deployment_start_time
+        else:
+            deployment_time = time.time() - deployment_start_time
+        with open(deploy_output_file, "wt") as f:
+            json.dump(
+                {
+                    "err_str": err_str,
+                    "replicas": replicas,
+                    "failed_containers": list(failed_container_ids),
+                    "success_containers": list(all_container_ids.difference(failed_container_ids)),
+                    "nb_bad_pod": nb_bad_pod,
+                    "nb_good_pod": nb_good_pod,
+                    "deployment_time_secs": deployment_time,
+                },
+                f,
+                indent=4,
+            )
+            f.write("\n")
+        if err_str:
+            print(f"\x1b[31;1mERROR: {err_str}\x1b[0m", flush=True)
 
     while time.time() < timeout:
         pods_json = run_cmd(["kubectl", "get", "pods", "-l", label_selector, "-o", "json"], retries=2)
         assert pods_json
         pods_data = json.loads(pods_json)
         if not pods_data.get("items"):
-            print("No pods created yet.")
+            print("No pods created yet.", flush=True)
             time.sleep(5)
             continue
 
         has_issue = False
         nb_pods_running = 0
-        for pod in pods_data["items"]:
+        nb_bad_pod = 0
+        nb_good_pod = 0
+        for pod in sorted(pods_data["items"], key=lambda x: x["metadata"]["name"]):
             print(f"Pod {pod['metadata']['name']} status: {pod['status']['phase']}")
             pod_print_conditions(pod)
+            sys.stdout.flush()
             if pod.get("status", {}).get("phase") == "Running":
                 nb_pods_running += 1
                 if check_pod_containers(pod):
-                    print(f"ERROR: Issue detected for pod {pod['metadata']['name']}. Pod info dump follows:")
+                    print(
+                        f"\x1b[31;1mERROR: Issue detected for pod {pod['metadata']['name']}. Pod info dump follows:\x1b[0m",
+                        flush=True,
+                    )
                     subprocess.run(
                         ["kubectl", "describe", "pod", pod["metadata"]["name"]],
                         check=True,
                     )
                     has_issue = True
+                    nb_bad_pod += 1
+                else:
+                    sys.stdout.flush()
+                    nb_good_pod += 1
         if has_issue:
-            print("Exiting due to issues detected during startup.")
+            write_deploy_output(f"Exiting due to issues detected during startup.")
             sys.exit(1)
         if nb_pods_running == replicas:
-            print("All pods are running now.")
+            print("\x1b[32;1mAll pods are running now.\x1b[0m", flush=True)
             break
         if nb_pods_running > replicas:
-            print(f"Error: More pods running ({nb_pods_running}) than expected ({replicas}).")
+            write_deploy_output(f"AssertionError: More pods running ({nb_pods_running}) than expected ({replicas}).")
             sys.exit(1)
 
-        print("Waiting for all pods to be running...")
+        print("Waiting for all pods to be running...", flush=True)
         time.sleep(5)
 
     if nb_pods_running < replicas:
-        print("Timeout reached: not all pods are Running.")
+        write_deploy_output("Timeout reached: not all pods are Running.")
         sys.exit(1)
+
+    deployment_end_time = time.time()
+
+    def check_pod_breakage(out_buf: StringIO) -> bool:
+        nonlocal seen_container_ids_for_pod, nb_good_pod, nb_bad_pod
+        pods_json = run_cmd(["kubectl", "get", "pods", "-l", label_selector, "-o", "json"], log_run_to=out_buf)
+        assert pods_json is not None
+        pods_data = json.loads(pods_json)
+        has_issue = False
+        nb_good_pod = 0
+        nb_bad_pod = 0
+        for pod in pods_data.get("items", []):
+            pod_has_issue = False
+            pod_name = pod["metadata"]["name"]
+            status = pod.get("status", {}).get("phase", "Unknown")
+            start_time = pod.get("status", {}).get("startTime", "???")
+            print(
+                f"Pod {pod_name} - Status: {status}, Start Time: {start_time}",
+                file=out_buf,
+            )
+            pod_print_conditions(pod, out_buf)
+            if status != "Running":
+                print(f"  !: Status is not running!", file=out_buf)
+                pod_has_issue = True
+            else:
+                if check_pod_containers(pod, out_buf):
+                    pod_has_issue = True
+            if pod_has_issue:
+                print(
+                    f"\x1b[31;1mERROR: Issue detected for pod {pod_name}. Pod info dump follows:\x1b[0m",
+                    file=out_buf,
+                )
+                dump_res = subprocess.run(
+                    ["kubectl", "describe", "pod", pod_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+                )
+                if dump_res.stdout:
+                    out_buf.write(dump_res.stdout)
+                if dump_res.stderr:
+                    out_buf.write(dump_res.stderr)
+                has_issue = True
+                nb_bad_pod += 1
+            else:
+                nb_good_pod += 1
+        return has_issue
+
+    if monitor_duration_secs:
+        print(f"Monitoring deployment stability for {monitor_duration_secs}s...", flush=True)
+        monitor_start = time.time()
+        first_time = True
+        while time.time() < monitor_start + monitor_duration_secs:
+            out_buf = StringIO()
+            res = check_pod_breakage(out_buf)
+            if first_time or res:
+                print(out_buf.getvalue(), flush=True)
+                first_time = False
+            if res:
+                write_deploy_output("Pod breakage detected. Exiting with error.")
+                sys.exit(1)
+            time.sleep(10)
 
     # Final check for any failed containers that may have been replaced
     if failed_container_ids:
-        print("ERROR: No restart count > 0 on any pods, but we have observed container IDs that have disappeared.")
+        print(
+            "\x1b[31;1mERROR: No restart count > 0 on any pods, but we have observed container IDs that have disappeared.\x1b[0m",
+            flush=True,
+        )
         for container_id in failed_container_ids:
-            print(f"  Container ID: {container_id}")
-        print("Search in earlier logs for more information.")
+            print(f"  Container ID: {container_id}", flush=True)
+        print("Search in earlier logs for more information.", flush=True)
+        write_deploy_output(
+            "ERROR: No restart count > 0 on any pods, but we have observed container IDs that have disappeared."
+        )
         sys.exit(1)
+
+    write_deploy_output()
 
     print(f"VN2 deployment successful: {deployment_name}")
     print("All pods are running. You can monitor them by using the 'vn2 logs' command.")
