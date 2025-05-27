@@ -25,8 +25,8 @@ def vn2_generate_yaml(
     deployment_name: str,
     managed_identity: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     replicas: int,
     **kwargs,
 ):
