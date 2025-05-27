@@ -251,6 +251,15 @@ def main():
 
             vn2_get_ip(**vars(args))
 
+        elif args.vn2_command == "target":
+            if args.target_command == "run":
+                from .tools.vn2_target_run import vn2_target_run
+
+                vn2_target_run(**vars(args))
+
+            else:
+                print(f"vn2 target command: {args.target_command} not recognised")
+
         else:
             print(f"vn2 command: {args.vn2_command} not recognised")
 
