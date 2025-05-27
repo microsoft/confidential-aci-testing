@@ -26,7 +26,6 @@ def vn2_target_run_ctx(
     registry: str,
     repository: str | None,
     tag: str | None,
-    location: str,
     managed_identity: str,
     policy_type: str = "generated",
     follow: bool = False,
