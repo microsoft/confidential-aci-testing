@@ -53,7 +53,14 @@ def vn2_generate_yaml(
         tag,
     )
 
-    annotations = {}
+    annotations = {
+        # This is needed to get rid of the "nameserver 10.0.0.10" in
+        # /etc/resolv.conf.
+        # Otherwise, every web request will fail / hang for 30 seconds, since
+        # the cluster DNS is not reachable from the ACI instance.
+        # https://github.com/azure-core-compute/VirtualNodesOnACI-1P/blob/main/Docs/PodCustomizations.md#disable-k8s-dns-injection
+        "microsoft.containerinstance.virtualnode.injectdns": "false",
+    }
     containers = []
 
     template_spec = {
