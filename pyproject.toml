@@ -29,9 +29,6 @@ dependencies = [
 c-aci-testing = "c_aci_testing.main:main"
 
 [project.optional-dependencies]
-spark = [
-    "pyspark>=3.0.0"
-]
 test = [
     "bandit[toml]==1.7.9",
     "black==24.4.2",
