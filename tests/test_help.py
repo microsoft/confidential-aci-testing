@@ -48,27 +48,29 @@ def test_deep_subcommand_help():
 
 
 def test_no_command_shows_help():
-    """Test that running without command shows usage."""
+    """Test that running without command shows help."""
     result = subprocess.run(
         ["c-aci-testing"],
         capture_output=True,
         text=True
     )
-    assert result.returncode == 2
-    assert "usage:" in result.stderr
-    assert "the following arguments are required: command" in result.stderr
+    assert result.returncode == 0
+    assert "usage:" in result.stdout
+    assert "positional arguments:" in result.stdout
+    assert "aci                 Azure Container Instances commands" in result.stdout
 
 
 def test_insufficient_subcommand_shows_help():
-    """Test that running with insufficient subcommand shows usage."""
+    """Test that running with insufficient subcommand shows help."""
     result = subprocess.run(
         ["c-aci-testing", "aci"],
         capture_output=True,
         text=True
     )
-    assert result.returncode == 2
-    assert "usage:" in result.stderr
-    assert "aci_command" in result.stderr
+    assert result.returncode == 0
+    assert "usage:" in result.stdout
+    assert "positional arguments:" in result.stdout
+    assert "{deploy,monitor,remove,param_set,get}" in result.stdout
 
 
 @pytest.mark.parametrize("command", [

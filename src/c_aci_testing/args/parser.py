@@ -53,6 +53,31 @@ def parse_command():
     subparse_vscode(vscode_parser)
     subparse_vn2(vn2_parser)
 
+    import sys
+    
+    # Check for common insufficient argument patterns
+    if len(sys.argv) == 1:
+        # No arguments at all
+        arg_parser.print_help()
+        exit(0)
+    elif len(sys.argv) == 2 and sys.argv[1] in ['aci', 'env', 'github', 'infra', 'images', 'policies', 'target', 'vm', 'vscode', 'vn2']:
+        # Just a command with no subcommand
+        command = sys.argv[1]
+        parser_map = {
+            'aci': aci_parser,
+            'env': env_parser, 
+            'github': github_parser,
+            'infra': infra_parser,
+            'images': images_parser,
+            'policies': policies_parser,
+            'target': target_parser,
+            'vm': vm_parser,
+            'vscode': vscode_parser,
+            'vn2': vn2_parser
+        }
+        parser_map[command].print_help()
+        exit(0)
+        
     args = arg_parser.parse_args()
 
     missing_args = []
