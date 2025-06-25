@@ -18,6 +18,12 @@ def vm_remove(
 ):
     remaining_resources = set(vm_get_ids(deployment_name, subscription, resource_group))
 
+    if not remaining_resources:
+        print(f"Failed to get deployment output. Using default VM name: {deployment_name}-vm")
+        remaining_resources = {
+            f"/subscriptions/{subscription}/resourceGroups/{resource_group}/providers/Microsoft.Compute/virtualMachines/{deployment_name}-vm"
+        }
+
     while remaining_resources:
         print(f"Deleting {len(remaining_resources)} resources...")
 

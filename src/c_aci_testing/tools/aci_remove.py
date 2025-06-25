@@ -16,8 +16,20 @@ def aci_remove(
     resource_group: str,
     **kwargs,
 ):
-    for id in aci_get_ids(deployment_name, subscription, resource_group):
+    resources = aci_get_ids(deployment_name, subscription, resource_group)
+
+    if not resources:
+        print(
+            f"Failed to get deployment output. Removing any container group of the same name as the deployment: {deployment_name}"
+        )
+        resources = [
+            f"/subscriptions/{subscription}/resourceGroups/{resource_group}/providers/Microsoft.ContainerInstance/containerGroups/{deployment_name}"
+        ]
+
+    for id in resources:
         group_name = id.split("/")[-1]
+        # az resource delete will return successfully even if the resource does
+        # not exist.
         subprocess.run([
             "az", "resource", "delete", "--no-wait",
             "--subscription", subscription,
