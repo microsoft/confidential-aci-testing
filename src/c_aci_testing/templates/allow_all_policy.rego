@@ -1,6 +1,6 @@
 package policy
 
-api_svn := "0.10.0"
+api_version := "0.10.0"
 
 mount_device := {"allowed": true}
 mount_overlay := {"allowed": true}
