@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import os
 import subprocess
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+import re
 
 import typer
 from typing_extensions import Annotated
@@ -67,6 +68,17 @@ def get_subscription_default() -> str:
         return result.stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
+
+
+def parse_key_value_pairs(values: List[str]) -> Dict[str, str]:
+    """Parse key=value pairs from command line arguments."""
+    kv_pairs = {}
+    for value in values:
+        if "=" not in value:
+            raise typer.BadParameter(f"Invalid format for key-value pair: {value}. Expected format is key=value.")
+        key, val = value.split("=", 1)
+        kv_pairs[key.strip()] = val.strip()
+    return kv_pairs
 
 
 # Common option types with environment variable support
@@ -335,6 +347,318 @@ def policies_gen(
         target_path=os.path.abspath(target_path),
         policy_type=policy_type,
     )
+
+
+@aci_app.command("monitor")
+def aci_monitor(
+    deployment_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--deployment-name",
+            help="The name of the Azure deployment",
+            envvar="DEPLOYMENT_NAME",
+        ),
+    ] = None,
+    subscription: Annotated[
+        Optional[str],
+        typer.Option(
+            "--subscription",
+            help="The Azure subscription ID to use",
+            envvar="SUBSCRIPTION",
+        ),
+    ] = None,
+    resource_group: Annotated[
+        Optional[str],
+        typer.Option(
+            "--resource-group",
+            help="The Azure resource group to use",
+            envvar="RESOURCE_GROUP",
+        ),
+    ] = None,
+    follow: Annotated[
+        bool,
+        typer.Option(
+            "--follow/--no-follow",
+            help="Follow logs after deployment",
+        ),
+    ] = False,
+):
+    """Monitor ACI deployment."""
+    if not deployment_name:
+        deployment_name = typer.prompt("Deployment name")
+    if not subscription:
+        subscription = get_subscription_default() or typer.prompt("Subscription ID")
+    if not resource_group:
+        resource_group = typer.prompt("Resource group")
+    
+    from ..tools.aci_monitor import aci_monitor
+    aci_monitor(
+        deployment_name=deployment_name,
+        subscription=subscription,
+        resource_group=resource_group,
+        follow=follow,
+    )
+
+
+@aci_app.command("remove")
+def aci_remove(
+    deployment_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--deployment-name",
+            help="The name of the Azure deployment",
+            envvar="DEPLOYMENT_NAME",
+        ),
+    ] = None,
+    subscription: Annotated[
+        Optional[str],
+        typer.Option(
+            "--subscription",
+            help="The Azure subscription ID to use",
+            envvar="SUBSCRIPTION",
+        ),
+    ] = None,
+    resource_group: Annotated[
+        Optional[str],
+        typer.Option(
+            "--resource-group",
+            help="The Azure resource group to use",
+            envvar="RESOURCE_GROUP",
+        ),
+    ] = None,
+):
+    """Remove ACI deployment."""
+    if not deployment_name:
+        deployment_name = typer.prompt("Deployment name")
+    if not subscription:
+        subscription = get_subscription_default() or typer.prompt("Subscription ID")
+    if not resource_group:
+        resource_group = typer.prompt("Resource group")
+    
+    from ..tools.aci_remove import aci_remove
+    aci_remove(
+        deployment_name=deployment_name,
+        subscription=subscription,
+        resource_group=resource_group,
+    )
+
+
+@aci_app.command("param_set")
+def aci_param_set(
+    target_path: Annotated[
+        str,
+        typer.Argument(
+            help="The relative path to the c-aci-testing target directory",
+        ),
+    ] = os.getcwd(),
+    parameters: Annotated[
+        Optional[List[str]],
+        typer.Option(
+            "--parameters",
+            help="The parameter key value pair to add in the format key=value",
+        ),
+    ] = None,
+    add: Annotated[
+        bool,
+        typer.Option(
+            "--add/--no-add",
+            help="Add the parameter to the list if it isn't already present",
+        ),
+    ] = True,
+):
+    """Set parameters in ACI deployment."""
+    parameters_dict = {}
+    if parameters:
+        parameters_dict = parse_key_value_pairs(parameters)
+    
+    from ..tools.aci_param_set import aci_param_set
+    aci_param_set(
+        target_path=os.path.abspath(target_path),
+        parameters=parameters_dict,
+        add=add,
+    )
+
+
+@aci_get_app.command("ips")
+def aci_get_ips(
+    deployment_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--deployment-name",
+            help="The name of the Azure deployment",
+            envvar="DEPLOYMENT_NAME",
+        ),
+    ] = None,
+    subscription: Annotated[
+        Optional[str],
+        typer.Option(
+            "--subscription",
+            help="The Azure subscription ID to use",
+            envvar="SUBSCRIPTION",
+        ),
+    ] = None,
+    resource_group: Annotated[
+        Optional[str],
+        typer.Option(
+            "--resource-group",
+            help="The Azure resource group to use",
+            envvar="RESOURCE_GROUP",
+        ),
+    ] = None,
+):
+    """Get ACI container IPs."""
+    if not deployment_name:
+        deployment_name = typer.prompt("Deployment name")
+    if not subscription:
+        subscription = get_subscription_default() or typer.prompt("Subscription ID")
+    if not resource_group:
+        resource_group = typer.prompt("Resource group")
+    
+    from ..tools.aci_get_ips import aci_get_ips
+    result = aci_get_ips(
+        deployment_name=deployment_name,
+        subscription=subscription,
+        resource_group=resource_group,
+    )
+    print(result)
+
+
+@aci_get_app.command("is_live")
+def aci_get_is_live(
+    deployment_name: Annotated[
+        Optional[str],
+        typer.Option(
+            "--deployment-name",
+            help="The name of the Azure deployment",
+            envvar="DEPLOYMENT_NAME",
+        ),
+    ] = None,
+    subscription: Annotated[
+        Optional[str],
+        typer.Option(
+            "--subscription",
+            help="The Azure subscription ID to use",
+            envvar="SUBSCRIPTION",
+        ),
+    ] = None,
+    resource_group: Annotated[
+        Optional[str],
+        typer.Option(
+            "--resource-group",
+            help="The Azure resource group to use",
+            envvar="RESOURCE_GROUP",
+        ),
+    ] = None,
+):
+    """Check if ACI deployment is live."""
+    if not deployment_name:
+        deployment_name = typer.prompt("Deployment name")
+    if not subscription:
+        subscription = get_subscription_default() or typer.prompt("Subscription ID")
+    if not resource_group:
+        resource_group = typer.prompt("Resource group")
+    
+    from ..tools.aci_get_is_live import aci_get_is_live
+    result = aci_get_is_live(
+        deployment_name=deployment_name,
+        subscription=subscription,
+        resource_group=resource_group,
+    )
+    print(result)
+
+
+@images_app.command("push")
+def images_push(
+    target_path: Annotated[
+        str,
+        typer.Argument(
+            help="The relative path to the c-aci-testing target directory",
+        ),
+    ] = os.getcwd(),
+    registry: Annotated[
+        Optional[str],
+        typer.Option(
+            "--registry",
+            help="The container registry to use",
+            envvar="REGISTRY",
+        ),
+    ] = None,
+    repository: RepositoryOption = None,
+    tag: TagOption = None,
+):
+    """Push container images."""
+    if not registry:
+        registry = typer.prompt("Container registry")
+    
+    from ..tools.images_push import images_push
+    images_push(
+        target_path=os.path.abspath(target_path),
+        registry=registry,
+        repository=repository,
+        tag=tag,
+    )
+
+
+@images_app.command("pull")
+def images_pull(
+    target_path: Annotated[
+        str,
+        typer.Argument(
+            help="The relative path to the c-aci-testing target directory",
+        ),
+    ] = os.getcwd(),
+    registry: Annotated[
+        Optional[str],
+        typer.Option(
+            "--registry",
+            help="The container registry to use",
+            envvar="REGISTRY",
+        ),
+    ] = None,
+    repository: RepositoryOption = None,
+    tag: TagOption = None,
+):
+    """Pull container images."""
+    if not registry:
+        registry = typer.prompt("Container registry")
+    
+    from ..tools.images_pull import images_pull
+    images_pull(
+        target_path=os.path.abspath(target_path),
+        registry=registry,
+        repository=repository,
+        tag=tag,
+    )
+
+
+# GitHub commands
+@github_app.command("workflow")
+def github_workflow(
+    target_path: Annotated[
+        str,
+        typer.Argument(
+            help="The relative path to the c-aci-testing target directory",
+        ),
+    ] = os.getcwd(),
+):
+    """GitHub workflow operations."""
+    from ..tools.github_workflow import github_workflow
+    github_workflow(target_path=os.path.abspath(target_path))
+
+
+# VSCode commands
+@vscode_app.command("run_debug")
+def vscode_run_debug(
+    target_path: Annotated[
+        str,
+        typer.Argument(
+            help="The relative path to the c-aci-testing target directory",
+        ),
+    ] = os.getcwd(),
+):
+    """Run debug configuration in VSCode."""
+    from ..tools.vscode_run_debug import vscode_run_debug
+    vscode_run_debug(target_path=os.path.abspath(target_path))
 
 
 # Target commands
