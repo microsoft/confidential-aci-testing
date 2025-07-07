@@ -907,20 +907,5 @@ def infra_deploy(
     )
 
 
-def parse_command():
-    """Parse command line arguments using Typer."""
-    # This function maintains compatibility with the existing main.py structure
-    # by converting Typer's execution into a namespace-like object
-    
-    class Args:
-        def __init__(self, **kwargs):
-            for key, value in kwargs.items():
-                setattr(self, key, value)
-    
-    # This would need to be implemented to capture Typer's execution result
-    # For now, we'll use a simpler approach by calling the app directly
-    return app()
-
-
 if __name__ == "__main__":
     app()
