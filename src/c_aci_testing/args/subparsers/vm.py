@@ -19,7 +19,15 @@ from ..parameters.registry import parse_registry
 from ..parameters.repository import parse_repository
 from ..parameters.tag import parse_tag
 from ..parameters.cplat import parse_cplat_args
-from ..parameters.vm import parse_vm_image, parse_vm_size, parse_vm_win_flavor, parse_runc_prefix, parse_vm_zones
+from ..parameters.vm import (
+    parse_vm_image,
+    parse_vm_size,
+    parse_vm_win_flavor,
+    parse_runc_prefix,
+    parse_vm_zones,
+    parse_uvm_rootfs,
+    parse_uvm_kernel,
+)
 from ..parameters.storage_account import parse_storage_account
 from ..parameters.resource_tags import parse_resource_tags
 
@@ -40,6 +48,8 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_vm_size(create)
     parse_vm_zones(create)
     parse_resource_tags(create)
+    parse_uvm_rootfs(create)
+    parse_uvm_kernel(create)
 
     create_noinit = vm_subparser.add_parser("create_noinit")
     parse_deployment_name(create_noinit)

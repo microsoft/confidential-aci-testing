@@ -8,6 +8,8 @@ from __future__ import annotations
 import os
 import subprocess
 import time
+import shutil
+import tempfile
 
 from c_aci_testing.utils.vm import (
     run_on_vm,
@@ -66,6 +68,8 @@ def vm_create(
     storage_account: str,
     vm_size: str,
     vm_zone: str,
+    uvm_rootfs: str,
+    uvm_kernel: str,
     resource_tags: dict[str, str],
     **kwargs,
 ) -> list[str]:
@@ -192,5 +196,31 @@ def vm_create(
     )
     if "containerd" not in output:
         raise Exception("ContainerPlat check failed")
+
+    uvm_components = {}
+    if uvm_rootfs:
+        uvm_components["rootfs.vhd"] = uvm_rootfs
+    if uvm_kernel:
+        uvm_components["kernel.vmgs"] = uvm_kernel
+    if uvm_components:
+        print("Uploading custom UVM image")
+        print(os.linesep.join((f"{c}: {p}" for c, p in uvm_components.items())))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for component, path in uvm_components.items():
+                shutil.copy(path, os.path.join(temp_dir, component))
+            upload_to_vm_and_run(
+                src=temp_dir,
+                dst="C:\\uvm",
+                subscription=subscription,
+                resource_group=resource_group,
+                vm_name=vm_name,
+                storage_account=storage_account,
+                container_name=VM_CONTAINER_NAME,
+                blob_name=f"{deployment_name}_uvm",
+                commands=[
+                    f"cp C:\\uvm\\{component} C:\\ContainerPlat\\LinuxBootFiles\\{component}"
+                    for component in uvm_components.keys()
+                ],
+            )
 
     return ids

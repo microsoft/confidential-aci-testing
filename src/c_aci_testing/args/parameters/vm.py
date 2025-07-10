@@ -75,3 +75,20 @@ def parse_vm_zones(parser: ArgumentParser):
         dest="vm_zone",
         help="The zone to use for the VM, or empty",
     )
+
+def parse_uvm_rootfs(parser: ArgumentParser):
+    parser.add_argument(
+        "--uvm-rootfs",
+        type=lambda x: os.path.abspath(x) if x else "",
+        default=os.getenv("UMV_ROOTFS", ""),
+        help="A path to a custom rootfs for the UVM (Leave empty to use default)",
+    )
+
+
+def parse_uvm_kernel(parser: ArgumentParser):
+    parser.add_argument(
+        "--uvm-kernel",
+        type=lambda x: os.path.abspath(x) if x else "",
+        default=os.getenv("UMV_KERNEL", ""),
+        help="A path to a custom kernel for the UVM (Leave empty to use default)",
+    )
