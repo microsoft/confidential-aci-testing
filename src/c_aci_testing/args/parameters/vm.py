@@ -80,7 +80,7 @@ def parse_uvm_rootfs(parser: ArgumentParser):
     parser.add_argument(
         "--uvm-rootfs",
         type=lambda x: os.path.abspath(x) if x else "",
-        default=os.getenv("UMV_ROOTFS", ""),
+        default=os.getenv("UVM_ROOTFS", ""),
         help="A path to a custom rootfs for the UVM (Leave empty to use default)",
     )
 
@@ -89,6 +89,6 @@ def parse_uvm_kernel(parser: ArgumentParser):
     parser.add_argument(
         "--uvm-kernel",
         type=lambda x: os.path.abspath(x) if x else "",
-        default=os.getenv("UMV_KERNEL", ""),
+        default=os.getenv("UVM_KERNEL", ""),
         help="A path to a custom kernel for the UVM (Leave empty to use default)",
     )
