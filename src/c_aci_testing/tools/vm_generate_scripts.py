@@ -127,6 +127,8 @@ def make_configs(
         tag,
     )
 
+    has_privileged_containers = False
+
     for container_group, containers in arm_template_for_each_container_group(arm_template_json):
         # Derive container group ID
         container_group_id = (
@@ -271,6 +273,11 @@ def make_configs(
                         for env in container["properties"]["environmentVariables"]
                     ]
                 container_json["log_path"] = f"C:\\{prefix}\\container_log_{container_group_id}_{container_id}.log"
+                if "securityContext" in container["properties"]:
+                    container_sec_ctx = container["properties"]["securityContext"]
+                    if container_sec_ctx.get("privileged", False):
+                        container_json["linux"]["security_context"]["privileged"] = True
+                        has_privileged_containers = True
                 json.dump(container_json, f, indent=2)
 
             # Create Container
@@ -343,6 +350,9 @@ def make_configs(
                 raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
 
             annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
+
+            if has_privileged_containers:
+                container_group_json["linux"]["security_context"]["privileged"] = True
 
             json.dump(container_group_json, f, indent=2)
 
