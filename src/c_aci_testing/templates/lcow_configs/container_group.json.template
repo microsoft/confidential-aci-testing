@@ -6,7 +6,6 @@
     },
     "linux": {
         "security_context": {
-            "privileged": true
         }
     },
     "annotations": {
