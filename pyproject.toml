@@ -22,7 +22,8 @@ classifiers = [
 requires-python = ">=3.8.1"
 dynamic = ["version"]
 dependencies = [
-    "pyyaml~=6.0.2"
+    "pyyaml~=6.0.2",
+    "typer~=0.12.0"
 ]
 
 [project.scripts]
