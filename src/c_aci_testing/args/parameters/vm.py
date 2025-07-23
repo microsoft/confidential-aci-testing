@@ -92,3 +92,12 @@ def parse_uvm_kernel(parser: ArgumentParser):
         default=os.getenv("UVM_KERNEL", ""),
         help="A path to a custom kernel for the UVM (Leave empty to use default)",
     )
+
+
+def parse_uvm_containerd_shim(parser: ArgumentParser):
+    parser.add_argument(
+        "--uvm-containerd-shim",
+        type=lambda x: os.path.abspath(x) if x else "",
+        default=os.getenv("UVM_CONTAINERD_SHIM", ""),
+        help="A path to a custom containerd shim for the UVM (Leave empty to use default)",
+    )

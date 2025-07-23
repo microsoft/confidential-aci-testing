@@ -27,6 +27,7 @@ from ..parameters.vm import (
     parse_vm_zones,
     parse_uvm_rootfs,
     parse_uvm_kernel,
+    parse_uvm_containerd_shim,
 )
 from ..parameters.storage_account import parse_storage_account
 from ..parameters.resource_tags import parse_resource_tags
@@ -50,6 +51,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_resource_tags(create)
     parse_uvm_rootfs(create)
     parse_uvm_kernel(create)
+    parse_uvm_containerd_shim(create)
 
     create_noinit = vm_subparser.add_parser("create_noinit")
     parse_deployment_name(create_noinit)
