@@ -70,6 +70,7 @@ def vm_create(
     vm_zone: str,
     uvm_rootfs: str,
     uvm_kernel: str,
+    uvm_containerd_shim: str,
     resource_tags: dict[str, str],
     **kwargs,
 ) -> list[str]:
@@ -199,15 +200,19 @@ def vm_create(
 
     uvm_components = {}
     if uvm_rootfs:
-        uvm_components["rootfs.vhd"] = uvm_rootfs
+        uvm_components["LinuxBootFiles/rootfs.vhd"] = uvm_rootfs
     if uvm_kernel:
-        uvm_components["kernel.vmgs"] = uvm_kernel
+        uvm_components["LinuxBootFiles/kernel.vmgs"] = uvm_kernel
+    if uvm_containerd_shim:
+        uvm_components["containerd-shim-runhcs-v1.exe"] = uvm_containerd_shim
     if uvm_components:
         print("Uploading custom UVM image")
         print(os.linesep.join((f"{c}: {p}" for c, p in uvm_components.items())))
         with tempfile.TemporaryDirectory() as temp_dir:
             for component, path in uvm_components.items():
-                shutil.copy(path, os.path.join(temp_dir, component))
+                dest_path = os.path.join(temp_dir, component)
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                shutil.copy(path, dest_path)
             upload_to_vm_and_run(
                 src=temp_dir,
                 dst="C:\\uvm",
@@ -218,7 +223,7 @@ def vm_create(
                 container_name=VM_CONTAINER_NAME,
                 blob_name=f"{deployment_name}_uvm",
                 commands=[
-                    f"cp C:\\uvm\\{component} C:\\ContainerPlat\\LinuxBootFiles\\{component}"
+                    f"cp C:\\uvm\\{component} C:\\ContainerPlat\\{component}"
                     for component in uvm_components.keys()
                 ],
             )
