@@ -28,7 +28,7 @@ def vn2_policygen(
     if not yaml_path:
         yaml_path = os.path.join(target_path, f"{bicep_file_name}.yaml")
 
-    rego_output_path = Path(target_path) / f"{bicep_file_name}.rego"
+    rego_output_path = Path(target_path) / f"policy_{bicep_file_name}.rego"
 
     print("Calling acipolicygen and saving policy to file")
     subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)

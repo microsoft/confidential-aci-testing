@@ -25,8 +25,8 @@ def vn2_generate_yaml(
     deployment_name: str,
     managed_identity: str,
     registry: str,
-    repository: str,
-    tag: str,
+    repository: str | None,
+    tag: str | None,
     replicas: int,
     **kwargs,
 ):
@@ -53,7 +53,14 @@ def vn2_generate_yaml(
         tag,
     )
 
-    annotations = {}
+    annotations = {
+        # This is needed to get rid of the "nameserver 10.0.0.10" in
+        # /etc/resolv.conf.
+        # Otherwise, every web request will fail / hang for 30 seconds, since
+        # the cluster DNS is not reachable from the ACI instance.
+        # https://github.com/azure-core-compute/VirtualNodesOnACI-1P/blob/main/Docs/PodCustomizations.md#disable-k8s-dns-injection
+        "microsoft.containerinstance.virtualnode.injectdns": "false",
+    }
     containers = []
 
     template_spec = {
@@ -140,12 +147,12 @@ def vn2_generate_yaml(
         if "command" in props:
             container_def["command"] = props["command"]
 
-        if registry:
-            secret_name = get_pull_secret_name(registry)
-            if secret_name:
-                template_spec["imagePullSecrets"] = [{"name": secret_name}]
-                print(f"Creating short-lived pull secret {secret_name}", flush=True)
-                vn2_create_pull_secret(registry)
+    if registry:
+        secret_name = get_pull_secret_name(registry)
+        if secret_name:
+            template_spec["imagePullSecrets"] = [{"name": secret_name}]
+            print(f"Creating short-lived pull secret {secret_name}", flush=True)
+            vn2_create_pull_secret(registry)
 
     if container_group["properties"].get("ipAddress", {}).get("type") == "Public":
         ports = {"port": p["port"] for p in container_group["properties"]["ipAddress"]["ports"]}

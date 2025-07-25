@@ -22,6 +22,8 @@ from ..parameters.infrastructure_svn import parse_infrastructure_svn
 from ..parameters.follow import parse_follow
 from ..parameters.monitor_duration_secs import parse_monitor_duration_secs
 from ..parameters.deploy_output_file import parse_deploy_output_file
+from ..parameters.no_cleanup import parse_no_cleanup
+from ..parameters.prefer_pull import parse_prefer_pull
 from ..parameters.replicas import parse_replicas
 
 
@@ -77,3 +79,21 @@ def subparse_vn2(vm: argparse.ArgumentParser):
 
     create_pull_secret = vn2_subparser.add_parser("create_pull_secret")
     parse_registry(create_pull_secret)
+
+    target = vn2_subparser.add_parser("target")
+    target_subparser = target.add_subparsers(dest="target_command", required=True)
+
+    run = target_subparser.add_parser("run")
+    parse_target_path(run)
+    parse_deployment_name(run)
+    parse_subscription(run)
+    parse_resource_group(run)
+    parse_registry(run)
+    parse_repository(run)
+    parse_tag(run)
+    parse_managed_identity(run)
+    parse_policy_type(run)
+    parse_follow(run)
+    parse_prefer_pull(run)
+    parse_replicas(run)
+    parse_monitor_duration_secs(run)
