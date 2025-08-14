@@ -101,6 +101,11 @@ def _resolve_arm_functions(
                 assert isinstance(key, str)
                 obj[key] = value
             return obj
+        elif func_name == "createArray":
+            return args
+        elif func_name == "equals":
+            assert len(args) == 2
+            return args[0] == args[1]
         else:
             ret_str = f"{func_name}("
             first = True
