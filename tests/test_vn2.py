@@ -86,6 +86,7 @@ spec:
       labels:
         app: {target_name}
       annotations:
+        microsoft.containerinstance.virtualnode.injectdns: 'false'
         microsoft.containerinstance.virtualnode.ccepolicy: ''
         microsoft.containerinstance.virtualnode.identity: /subscriptions/{args["subscription"]}/resourceGroups/{args["resource_group"]}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{args["managed_identity"]}
     spec:
