@@ -106,6 +106,9 @@ def _resolve_arm_functions(
         elif func_name == "equals":
             assert len(args) == 2
             return args[0] == args[1]
+        elif func_name == "null":
+            assert len(args) == 0
+            return None
         else:
             ret_str = f"{func_name}("
             first = True
