@@ -18,6 +18,8 @@ from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 from ..parameters.tag import parse_tag
 from ..parameters.target_path import parse_target_path
+from ..parameters.no_cleanup import parse_no_cleanup
+from ..parameters.prefer_pull import parse_prefer_pull
 
 
 def subparse_target(target: argparse.ArgumentParser):
@@ -49,14 +51,5 @@ def subparse_target(target: argparse.ArgumentParser):
     parse_managed_identity(run)
     parse_policy_type(run)
     parse_follow(run)
-    run.add_argument(
-        "--no-cleanup",
-        dest="cleanup",
-        help="Cleanup the target resources after completion",
-        action="store_false",
-    )
-    run.add_argument(
-        "--prefer-pull",
-        help="Attempt to pull images before building them",
-        action="store_true",
-    )
+    parse_no_cleanup(run)
+    parse_prefer_pull(run)
