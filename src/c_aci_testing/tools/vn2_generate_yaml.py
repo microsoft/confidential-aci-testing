@@ -122,7 +122,12 @@ def vn2_generate_yaml(
         armSubnetIds = container_group["properties"]["subnetIds"]
         if len(armSubnetIds) > 1:
             raise ValueError("VN2 does not support multiple subnets")
-        annotations["microsoft.containerinstance.virtualnode.subnets.primary"] = armSubnetIds[0]["id"]
+        elif len(armSubnetIds) == 1:
+            annotations["microsoft.containerinstance.virtualnode.subnets.primary"] = armSubnetIds[0]["id"]
+        else:
+            print(
+                "Warning: using vn2 implies vnet, but subnetIds is specified as an empty array. Container group will still use the AKS vnet."
+            )
 
     for arm_container in arm_containers:
         props = arm_container.get("properties", {})
