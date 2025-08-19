@@ -22,7 +22,7 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   name: managedIDName
 }
 
-resource publicIPAddress 'Microsoft.Network/publicIpAddresses@2020-08-01' = {
+resource publicIPAddress 'Microsoft.Network/publicIpAddresses@2021-05-01' = {
   name: '${deployment().name}-ip'
   location: location
   properties: {
@@ -33,7 +33,7 @@ resource publicIPAddress 'Microsoft.Network/publicIpAddresses@2020-08-01' = {
   }
 }
 
-resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-01' = {
+resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2021-05-01' = {
   name: '${deployment().name}-nsg'
   location: location
   properties: {
@@ -77,11 +77,24 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2019-02-0
           destinationPortRanges: containerPorts
         }
       }
+      {
+        name: 'AnyOutbound'
+        properties: {
+          priority: 300
+          protocol: '*'
+          access: 'Allow'
+          direction: 'Outbound'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+        }
+      }
     ]
   }
 }
 
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-01-01' = {
+resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-05-01' = {
   name: '${deployment().name}-vnet'
   location: location
   properties: {
@@ -95,6 +108,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2021-01-01' = {
         name: '${deployment().name}-subnet'
         properties: {
           addressPrefix: '10.0.0.0/24'
+          defaultOutboundAccess: false
         }
       }
     ]
