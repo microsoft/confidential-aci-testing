@@ -192,6 +192,7 @@ def vn2_deploy(target_path: str, yaml_path: str, monitor_duration_secs: int, dep
         nb_good_pod = 0
         for pod in sorted(pods_data["items"], key=lambda x: x["metadata"]["name"]):
             print(f"Pod {pod['metadata']['name']} status: {pod['status']['phase']}")
+            print(f"  Uid: {pod['metadata'].get('uid', '???')}")
             pod_print_conditions(pod)
             sys.stdout.flush()
             if pod.get("status", {}).get("phase") == "Running":
@@ -246,6 +247,7 @@ def vn2_deploy(target_path: str, yaml_path: str, monitor_duration_secs: int, dep
                 f"Pod {pod_name} - Status: {status}, Start Time: {start_time}",
                 file=out_buf,
             )
+            print(f"  Uid: {pod['metadata'].get('uid', '???')}", file=out_buf)
             pod_print_conditions(pod, out_buf)
             if status != "Running":
                 print(f"  !: Status is not running!", file=out_buf)
