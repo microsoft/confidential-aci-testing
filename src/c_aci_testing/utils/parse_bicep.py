@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import base64
 from typing import Iterable, Tuple, Any, Dict, List
 
 from c_aci_testing.tools.aci_param_set import aci_param_set
@@ -109,6 +110,11 @@ def _resolve_arm_functions(
         elif func_name == "null":
             assert len(args) == 0
             return None
+        elif func_name == "loadFileAsBase64":
+            assert len(args) == 1
+            assert isinstance(args[0], str)
+            with open(args[0], "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
         else:
             ret_str = f"{func_name}("
             first = True
