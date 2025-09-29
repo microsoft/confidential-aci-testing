@@ -109,7 +109,7 @@ def vn2_generate_yaml(
     annotations["microsoft.containerinstance.virtualnode.ccepolicy"] = (
         container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
     )
-    if "zones" in container_group:
+    if container_group.get("zones"):
         annotations["microsoft.containerinstance.virtualnode.zones"] = ",".join(container_group["zones"])
 
     identity = container_group.get("identity", {})
