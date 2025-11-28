@@ -176,6 +176,11 @@ def main():
 
             vm_cp_into(**vars(args))
 
+        elif args.vm_command == "cp_out":
+            from .tools.vm_cp_out import vm_cp_out
+
+            vm_cp_out(**vars(args))
+
         elif args.vm_command == "exec":
             from .tools.vm_exec import vm_exec
 
