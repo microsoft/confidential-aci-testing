@@ -19,4 +19,4 @@ sudo apt-get install --allow-downgrades azure-cli=${AZ_CLI_VERSION:-2.72.0}-1~${
 
 # Upgrade typing_extensions to fix compatibility with az confcom extension
 # The confcom extension requires typing_extensions >= 4.14.0 (for Sentinel support)
-pip install --upgrade "typing_extensions>=4.14.0"
+python3 -m pip install --upgrade "typing_extensions>=4.14.0"
