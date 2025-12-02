@@ -14,4 +14,9 @@ Components: main
 Architectures: $(dpkg --print-architecture)
 Signed-by: /etc/apt/keyrings/microsoft.gpg" | sudo tee /etc/apt/sources.list.d/azure-cli.sources
 
+sudo apt-get update
 sudo apt-get install --allow-downgrades azure-cli=${AZ_CLI_VERSION:-2.72.0}-1~${AZ_DIST}
+
+# Upgrade typing_extensions to fix compatibility with az confcom extension
+# The confcom extension requires typing_extensions >= 4.14.0 (for Sentinel support)
+pip install --upgrade "typing_extensions>=4.14.0"
