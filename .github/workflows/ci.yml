@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZ_CLI_VERSION: 2.72.0
+  AZ_CLI_VERSION: 2.80.0
 
 jobs:
   test_target_run:
