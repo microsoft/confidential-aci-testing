@@ -312,7 +312,7 @@ def make_configs(
                 "; ".join(
                     [
                         f"$containerId=crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q -a",
-                        "if ($containerId) { crictl stop $containerId",
+                        "if ($containerId) { crictl stop -t 10 $containerId",
                         "crictl rm $containerId }",
                     ]
                 )

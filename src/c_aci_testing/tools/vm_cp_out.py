@@ -5,25 +5,20 @@
 
 from __future__ import annotations
 
-import sys
-import tempfile
-import os
-
 from c_aci_testing.tools.vm_create import VM_CONTAINER_NAME
-from ..utils.vm import download_single_file_from_vm, decode_utf8_or_utf16
+from ..utils.vm import download_single_file_from_vm
 
 
-def vm_cat(
+def vm_cp_out(
     file_path: str,
     deployment_name: str,
     subscription: str,
     resource_group: str,
     storage_account: str,
+    out_file: str,
     **kwargs,
 ):
     vm_name = f"{deployment_name}-vm"
-    fd, tmp_file = tempfile.mkstemp()
-    os.close(fd)
     download_single_file_from_vm(
         vm_name=vm_name,
         subscription=subscription,
@@ -31,12 +26,6 @@ def vm_cat(
         file_path=file_path,
         storage_account=storage_account,
         container_name=VM_CONTAINER_NAME,
-        binary=False,
-        out_file=tmp_file,
+        binary=True,
+        out_file=out_file,
     )
-
-    with open(tmp_file, "rb") as f:
-        raw_data = f.read()
-    os.remove(tmp_file)
-
-    sys.stdout.write(decode_utf8_or_utf16(raw_data))

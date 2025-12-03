@@ -153,17 +153,21 @@ def vm_create(
     )
 
     tries = 0
+    fd, tmp_log_file = tempfile.mkstemp()
+    os.close(fd)
     while True:
         tries += 1
 
         try:
-            raw_output = download_single_file_from_vm(
+            download_single_file_from_vm(
                 vm_name=vm_name,
                 subscription=subscription,
                 resource_group=resource_group,
                 storage_account=storage_account,
                 container_name=VM_CONTAINER_NAME,
                 file_path="C:\\bootstrap.log",
+                binary=False,
+                out_file=tmp_log_file,
             )
         except Exception as e:
             print(f"Failed to download bootstrap.log: {e}")
@@ -173,7 +177,10 @@ def vm_create(
                 continue
             raise
 
-        output = decode_utf8_or_utf16(raw_output)
+        with open(tmp_log_file, "rb") as f:
+            output = decode_utf8_or_utf16(f.read())
+        os.remove(tmp_log_file)
+
         if "DEPLOY-SUCCESS" in output:
             print(output)
             break

@@ -134,6 +134,14 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_resource_group(cp_into)
     parse_storage_account(cp_into)
 
+    cp_out = vm_subparser.add_parser("cp_out")
+    cp_out.add_argument("file_path", type=str)
+    cp_out.add_argument("out_file", type=str)
+    parse_deployment_name(cp_out)
+    parse_subscription(cp_out)
+    parse_resource_group(cp_out)
+    parse_storage_account(cp_out)
+
     exec = vm_subparser.add_parser("exec")
     parse_deployment_name(exec)
     parse_subscription(exec)

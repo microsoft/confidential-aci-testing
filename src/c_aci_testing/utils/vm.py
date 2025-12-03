@@ -37,37 +37,6 @@ def async_delete_storage_blob(storage_account: str, container_name: str, blob_na
     )
 
 
-def download_storage_blob(storage_account: str, container_name: str, blob_name: str) -> bytes:
-    temp_file = tempfile.mktemp()
-    subprocess.run(
-        [
-            "az",
-            "storage",
-            "blob",
-            "download",
-            "--account-name",
-            storage_account,
-            "--container-name",
-            container_name,
-            "--name",
-            blob_name,
-            "--auth-mode",
-            "login",
-            "--file",
-            temp_file,
-        ],
-        check=True,
-        stdout=subprocess.PIPE,
-    )
-
-    with open(temp_file, "rb") as f:
-        data = f.read()
-
-    os.remove(temp_file)
-
-    return data
-
-
 ### NOTE on output truncation ###
 # az vm run-command invoke does not give you the full output.
 # There is a way to stream output to a storage account via az vm run-command create --output-blob-uri,
@@ -138,21 +107,43 @@ def download_single_file_from_vm(
     storage_account: str,
     container_name: str,
     file_path: str,
-) -> bytes:
+    out_file: str,
+    binary: bool,
+):
     ts = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d%H%M%S%f")
     blob_name = f"{vm_name}_{ts}_download"
     blobUrl = f"https://{storage_account}.blob.core.windows.net/{container_name}/{blob_name}"
+
+    maybeBinary = "-Binary" if binary else ""
 
     run_on_vm(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
-        command=f'C:\\storage_put.ps1 -Uri "{blobUrl}" -InFile "{file_path}"',
+        command=f'C:\\storage_put.ps1 -Uri "{blobUrl}" -InFile "{file_path}" {maybeBinary}',
     )
 
-    data = download_storage_blob(storage_account, container_name, blob_name)
+    subprocess.run(
+        [
+            "az",
+            "storage",
+            "blob",
+            "download",
+            "--account-name",
+            storage_account,
+            "--container-name",
+            container_name,
+            "--name",
+            blob_name,
+            "--auth-mode",
+            "login",
+            "--file",
+            out_file,
+        ],
+        check=True,
+        stdout=subprocess.PIPE,
+    )
     async_delete_storage_blob(storage_account, container_name, blob_name)
-    return data
 
 
 def upload_to_vm_and_run(
