@@ -225,15 +225,15 @@ def make_configs(
                 f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
             if registry.endswith(".azurecr.io") and image.startswith(registry):
-                need_acr_pull = True
+                if not need_acr_pull:
+                    pull_commands.append("  . .\\_acr_pull.ps1")
+                    need_acr_pull = True
                 pull_commands.append(
                     "  "
                     + " ".join(
                         [
-                            ".\\acr_pull.ps1",
-                            registry,
+                            "Pull-Image",
                             ".\\pull.json",
-                            "(Get-Content -Raw C:\\managed_identity_client_id.txt)",
                             image,
                         ]
                     )
@@ -378,11 +378,11 @@ def make_configs(
 
     if need_acr_pull:
         with open(
-            os.path.join(os.path.dirname(__file__), "..", "templates", "acr_pull.ps1"),
+            os.path.join(os.path.dirname(__file__), "..", "templates", "_acr_pull.ps1"),
             "rt",
             encoding="utf-8",
         ) as acr_pull_script:
-            write_script("acr_pull.ps1", [l.rstrip() for l in acr_pull_script.readlines()])
+            write_script("_acr_pull.ps1", [l.rstrip() for l in acr_pull_script.readlines()])
 
     write_script(
         "run.ps1",
