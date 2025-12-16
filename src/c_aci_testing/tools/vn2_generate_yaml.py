@@ -166,16 +166,16 @@ def vn2_generate_yaml(
                 "apiVersion": "v1",
                 "kind": "Service",
                 "metadata": {
-                    "name": deployment_name,
+                    "name": pod_name,
                     "annotations": {
-                        "external-dns.alpha.kubernetes.io/hostname": f"{deployment_name}.azure.net",
-                        "external-dns.alpha.kubernetes.io/internal-hostname": f"clusterip.{deployment_name}.azure.net",
+                        "external-dns.alpha.kubernetes.io/hostname": f"{pod_name}.azure.net",
+                        "external-dns.alpha.kubernetes.io/internal-hostname": f"clusterip.{pod_name}.azure.net",
                     },
                 },
                 "spec": {
                     "type": "LoadBalancer",
                     "ports": [ports],
-                    "selector": {"app": deployment_name},
+                    "selector": {"app": pod_name},
                 },
             }
             extra_resources.append(service)
