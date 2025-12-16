@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import traceback
 import json
 import subprocess
 import sys
@@ -127,7 +128,13 @@ def _resolve_arm_functions(
 
     def _resolve_val(val: Any) -> Any:
         if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
-            return evaluate_expr(val[1:-1], _handle_func)
+            try:
+                return evaluate_expr(val[1:-1], _handle_func)
+            except Exception:
+                sys.stdout.flush()
+                print(f"Warning: Failed to parse expression '{val}':", flush=True, file=sys.stderr)
+                traceback.print_exc()
+                return val
         elif isinstance(val, list):
             return [_resolve_val(v) for v in val]
         elif isinstance(val, dict):
