@@ -209,6 +209,11 @@ def test_vn2_generate_yaml_ignore_vnets():
             "Subnet annotation should be present when ignore_vnets=False"
 
         # Verify the subnet ID is correctly included
-        expected_subnet_id = f"/subscriptions/{args['subscription']}/resourceGroups/{args['resource_group']}/providers/Microsoft.Network/virtualNetworks/{TEST_VNET_NAME}/subnets/{TEST_SUBNET_NAME}"
+        expected_subnet_id = (
+            f"/subscriptions/{args['subscription']}"
+            f"/resourceGroups/{args['resource_group']}"
+            f"/providers/Microsoft.Network/virtualNetworks/{TEST_VNET_NAME}"
+            f"/subnets/{TEST_SUBNET_NAME}"
+        )
         assert expected_subnet_id in generated_yaml_include, \
             "Correct subnet ID should be present in the annotation"
