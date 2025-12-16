@@ -129,3 +129,91 @@ spec:
             target_path=target_path,
             **args,
         )
+
+
+def test_vn2_generate_yaml_ignore_vnets():
+    """Test that ignore_vnets parameter correctly controls subnet annotation generation."""
+    set_env()
+    args = parse_args()
+
+    # Test constants
+    SUBNET_ANNOTATION_KEY = "microsoft.containerinstance.virtualnode.subnets.primary"
+    TEST_VNET_NAME = "test-vnet"
+    TEST_SUBNET_NAME = "test-subnet"
+
+    with tempfile.TemporaryDirectory(prefix="target_") as target_path:
+
+        # Create the target
+        target_name = "".join(random.choices(string.ascii_lowercase, k=8))
+        target_create(target_path=target_path, name=target_name)
+
+        # Modify the Bicep template to include subnetIds
+        bicep_path = os.path.join(target_path, f"{target_name}.bicep")
+        with open(bicep_path, "rt") as f:
+            bicep_content = f.read()
+
+        # Add subnetIds to the Bicep template properties
+        # Insert after osType to ensure proper placement
+        bicep_content = bicep_content.replace(
+            "    osType: 'Linux'",
+            f"""    osType: 'Linux'
+    subnetIds: [
+      {{
+        id: '/subscriptions/${{subscription().subscriptionId}}/resourceGroups/${{resourceGroup().name}}/providers/Microsoft.Network/virtualNetworks/{TEST_VNET_NAME}/subnets/{TEST_SUBNET_NAME}'
+      }}
+    ]"""
+        )
+
+        with open(bicep_path, "wt") as f:
+            f.write(bicep_content)
+
+        images_build(target_path=target_path, **args)
+        images_push(target_path=target_path, **args)
+
+        # Test 1: Generate YAML with ignore_vnets=True
+        yaml_path_ignore = os.path.join(target_path, f"{target_name}_ignore.yaml")
+        vn2_generate_yaml(
+            target_path=target_path,
+            deployment_name=target_name,
+            yaml_path=yaml_path_ignore,
+            ignore_vnets=True,
+            **args,
+        )
+
+        print("Generated YAML with ignore_vnets=True:")
+        with open(yaml_path_ignore, "rt") as f:
+            generated_yaml_ignore = f.read()
+            print(generated_yaml_ignore)
+
+        # Verify that subnet annotation is NOT present when ignore_vnets=True
+        assert SUBNET_ANNOTATION_KEY not in generated_yaml_ignore, \
+            "Subnet annotation should not be present when ignore_vnets=True"
+
+        # Test 2: Generate YAML with ignore_vnets=False
+        yaml_path_include = os.path.join(target_path, f"{target_name}_include.yaml")
+        vn2_generate_yaml(
+            target_path=target_path,
+            deployment_name=target_name,
+            yaml_path=yaml_path_include,
+            ignore_vnets=False,
+            **args,
+        )
+
+        print("Generated YAML with ignore_vnets=False:")
+        with open(yaml_path_include, "rt") as f:
+            generated_yaml_include = f.read()
+            print(generated_yaml_include)
+
+        # Verify that subnet annotation IS present when ignore_vnets=False
+        assert SUBNET_ANNOTATION_KEY in generated_yaml_include, \
+            "Subnet annotation should be present when ignore_vnets=False"
+
+        # Verify the subnet ID is correctly included
+        expected_subnet_id = (
+            f"/subscriptions/{args['subscription']}"
+            f"/resourceGroups/{args['resource_group']}"
+            f"/providers/Microsoft.Network/virtualNetworks/{TEST_VNET_NAME}"
+            f"/subnets/{TEST_SUBNET_NAME}"
+        )
+        assert expected_subnet_id in generated_yaml_include, \
+            "Correct subnet ID should be present in the annotation"
