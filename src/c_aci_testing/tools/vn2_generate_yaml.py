@@ -5,9 +5,7 @@
 
 from __future__ import annotations
 
-import json
 import os
-import pathlib
 import yaml
 import re
 
@@ -28,6 +26,7 @@ def vn2_generate_yaml(
     repository: str | None,
     tag: str | None,
     replicas: int,
+    ignore_vnets: bool,
     **kwargs,
 ):
     bicep_file_path, _ = find_bicep_files(target_path)
@@ -123,7 +122,7 @@ def vn2_generate_yaml(
 
         if "subnetIds" in container_group["properties"]:
             armSubnetIds = container_group["properties"]["subnetIds"]
-            if armSubnetIds is not None:
+            if armSubnetIds is not None and not ignore_vnets:
                 if len(armSubnetIds) > 1:
                     raise ValueError("VN2 does not support multiple subnets")
                 elif len(armSubnetIds) == 1:

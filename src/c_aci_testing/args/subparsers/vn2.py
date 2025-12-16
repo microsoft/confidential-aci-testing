@@ -42,6 +42,11 @@ def subparse_vn2(vm: argparse.ArgumentParser):
     parse_tag(generate_yaml)
     parse_yaml_path(generate_yaml)
     parse_replicas(generate_yaml)
+    generate_yaml.add_argument(
+        "--ignore-vnets",
+        action="store_true",
+        help="Ignore subnetIds defined for container groups by the Bicep template",
+    )
 
     # Deploy command
     deploy = vn2_subparser.add_parser("deploy")
