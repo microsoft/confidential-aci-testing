@@ -58,6 +58,9 @@ def vn2_generate_yaml(
     if yaml_path and len(container_groups) > 1:
         raise ValueError("Cannot specify single YAML output path when multiple container groups are present")
 
+    # Track created pull secrets to avoid redundant API calls
+    created_pull_secrets = set()
+
     for container_group, arm_containers in container_groups:
         pod_name = deployment_name
         if len(container_groups) > 1:
@@ -157,8 +160,11 @@ def vn2_generate_yaml(
             secret_name = get_pull_secret_name(registry)
             if secret_name:
                 template_spec["imagePullSecrets"] = [{"name": secret_name}]
-                print(f"Creating short-lived pull secret {secret_name}", flush=True)
-                vn2_create_pull_secret(registry)
+                # Only create the pull secret if it hasn't been created yet
+                if secret_name not in created_pull_secrets:
+                    print(f"Creating short-lived pull secret {secret_name}", flush=True)
+                    vn2_create_pull_secret(registry)
+                    created_pull_secrets.add(secret_name)
 
         if container_group["properties"].get("ipAddress", {}).get("type") == "Public":
             ports = {"port": p["port"] for p in container_group["properties"]["ipAddress"]["ports"]}
