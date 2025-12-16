@@ -154,10 +154,10 @@ def vn2_generate_yaml(
                 container_def["command"] = props["command"]
 
         if registry:
-            secret_name = get_pull_secret_name(registry)
-            if secret_name:
-                template_spec["imagePullSecrets"] = [{"name": secret_name}]
-                print(f"Creating short-lived pull secret {secret_name}", flush=True)
+            pull_secret_name = get_pull_secret_name(registry)
+            if pull_secret_name:
+                template_spec["imagePullSecrets"] = [{"name": pull_secret_name}]
+                print(f"Creating short-lived pull secret {pull_secret_name}", flush=True)
                 vn2_create_pull_secret(registry)
 
         if container_group["properties"].get("ipAddress", {}).get("type") == "Public":
