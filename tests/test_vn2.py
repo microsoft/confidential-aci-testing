@@ -147,11 +147,11 @@ def test_vn2_generate_yaml_ignore_vnets():
         with open(bicep_path, "rt") as f:
             bicep_content = f.read()
 
-        # Add a subnetId parameter and property to the Bicep template
-        # Find the properties section and add subnetIds
+        # Add subnetIds to the Bicep template properties
+        # Insert after osType to ensure proper placement
         bicep_content = bicep_content.replace(
-            "  properties: {",
-            """  properties: {
+            "    osType: 'Linux'",
+            """    osType: 'Linux'
     subnetIds: [
       {
         id: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/test-subnet'
