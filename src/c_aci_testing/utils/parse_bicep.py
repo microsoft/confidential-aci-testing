@@ -130,7 +130,7 @@ def _resolve_arm_functions(
         if isinstance(val, str) and val.startswith("[") and val.endswith("]"):
             try:
                 return evaluate_expr(val[1:-1], _handle_func)
-            except ValueError:
+            except Exception:
                 sys.stdout.flush()
                 print(f"Warning: Failed to parse expression '{val}':", flush=True, file=sys.stderr)
                 traceback.print_exc()
