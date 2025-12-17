@@ -33,6 +33,7 @@ def vn2_target_run_ctx(
     prefer_pull: bool = False,
     replicas: int = 1,
     monitor_duration_secs: int = 60,
+    ignore_vnets: bool = False,
     **kwargs,
 ):
     unpulled_services = []
@@ -68,6 +69,7 @@ def vn2_target_run_ctx(
         repository=repository,
         tag=tag,
         replicas=replicas,
+        ignore_vnets=ignore_vnets,
     )
     vn2_policygen(
         target_path=target_path,
