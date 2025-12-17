@@ -63,6 +63,7 @@ def test_vn2_generate_yaml():
         vn2_generate_yaml(
             target_path=target_path,
             deployment_name=target_name,
+            ignore_vnets=False,
             **args,
         )
 
