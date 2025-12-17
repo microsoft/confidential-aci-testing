@@ -66,9 +66,11 @@ def vn2_deploy(target_path: str, yaml_path: str, monitor_duration_secs: int, dep
 
     annotations = yaml_data["spec"]["template"]["metadata"].get("annotations", {})
     if not annotations.get("microsoft.containerinstance.virtualnode.ccepolicy", ""):
-        raise ValueError(
-            "YAML does not have a ccepolicy, which will result in non-confidential VN2. Refusing to continue.\n"
-            + "Run `c-aci-testing vn2 policygen .` to populate the policy."
+        print(
+            "YAML does not have a ccepolicy, which will result in non-confidential VN2.\n"
+            + "Run `c-aci-testing vn2 policygen .` to populate the policy.\n"
+            + 'Continuing deployment anyway.',
+            flush=True,
         )
 
     print(f"Deployment name: {deployment_name}")
