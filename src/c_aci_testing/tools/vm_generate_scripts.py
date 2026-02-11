@@ -129,13 +129,7 @@ def make_configs(
         )
 
         stop_pod_commands.append(
-            "; ".join(
-                [
-                    f"$podId = crictl pods --name {pod_name} -q",
-                    "if ($podId) { crictl stopp $podId",
-                    "crictl rmp $podId }",
-                ]
-            )
+            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ crictl stopp $podId; crictl rmp $podId }}"
         )
 
         write_script(
@@ -260,7 +254,7 @@ def make_configs(
                 " ".join(
                     [
                         "crictl create --no-pull",
-                        f"(crictl pods --name {pod_name} -q)",
+                        f"(get_pod_id {pod_name})",
                         container_json_file,
                         pod_json_file,
                     ]
@@ -268,14 +262,14 @@ def make_configs(
             )
 
             # Start Container
+            start_container_commands.append("try {")
             start_container_commands.append(
-                f"$containerId=(crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q -a)"
+                f"  $containerId = (get_container_id {pod_name} {container_name})"
             )
-            start_container_commands.append("if (!$containerId) {")
-            start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
-            start_container_commands.append("} else {")
             start_container_commands.append("  crictl start $containerId")
             start_container_commands.append(f"  Write-Output 'Started container {container_name} with ID: ' $containerId")
+            start_container_commands.append("} catch {")
+            start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
             start_container_commands.append("}")
 
             check_commands.append(
@@ -292,13 +286,7 @@ def make_configs(
             )
 
             stop_container_commands.append(
-                "; ".join(
-                    [
-                        f"$containerId=(crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q -a)",
-                        "if ($containerId) { crictl stop -t 10 $containerId",
-                        "crictl rm $containerId }",
-                    ]
-                )
+                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ crictl stop -t 10 $containerId; crictl rm $containerId }}"
             )
 
             write_script(
