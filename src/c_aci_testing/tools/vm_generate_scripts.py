@@ -29,52 +29,15 @@ def make_configs(
 
     bicep_file_path, _ = find_bicep_files(target_path)
 
-    lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
+    templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+    lcow_config_dir = os.path.join(templates_dir, "lcow_configs")
 
     def write_script(file, script):
         with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
             f.write("\r\n".join(script))
 
-    write_script(
-        "common.ps1",
-        [
-            r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
-            "Set-Alias -Name shimdiag -Value C:\\ContainerPlat\\shimdiag.exe",
-            "",
-            "function shimdiag_exec_pod {",
-            "  param(",
-            "    [string]$podName,",
-            "    [switch]$t,",
-            "    [parameter(ValueFromRemainingArguments=$true)]",
-            "    [string[]]$argv",  # can't use $args
-            "  )",
-            "  $podId=(crictl pods --name $podName -q)",
-            '  if (!$podId) { throw "Pod $podName not found"; }',
-            "  $opts = @()",
-            "  if ($t) { $opts += '-t' }",
-            '  shimdiag exec @opts ("k8s.io-"+$podId) $argv',
-            "}",
-            "",
-            "function container_exec {",
-            "  param(",
-            "    [string]$podName,",
-            "    [string]$containerName,",
-            "    [switch]$it,",
-            "    [parameter(ValueFromRemainingArguments=$true)]",
-            "    [string[]]$argv",  # can't use $args
-            "  )",
-            "  $podId=(crictl pods --name $podName -q)",
-            '  if (!$podId) { throw "Pod $podName not found"; }',
-            "  $containerId=(crictl ps --pod $podId --name $containerName -q)",
-            '  if (!$containerId) { throw "Container $containerName not found in pod $podName"; }',
-            "  $opts = @()",
-            "  if ($it) { $opts += '-it' }",
-            "  crictl exec @opts $containerId $argv",
-            "}",
-            "",
-            "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
-        ],
-    )
+    with open(os.path.join(templates_dir, "common.ps1"), "rt", encoding="utf-8") as f:
+        write_script("common.ps1", [l.rstrip() for l in f.readlines()])
 
     script_head = [
         "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
@@ -399,7 +362,7 @@ def make_configs(
 
     if need_acr_pull:
         with open(
-            os.path.join(os.path.dirname(__file__), "..", "templates", "_acr_pull.ps1"),
+            os.path.join(templates_dir, "_acr_pull.ps1"),
             "rt",
             encoding="utf-8",
         ) as acr_pull_script:
