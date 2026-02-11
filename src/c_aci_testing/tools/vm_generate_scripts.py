@@ -93,7 +93,9 @@ def make_configs(
 
     has_privileged_containers = False
 
-    for container_group, containers in arm_template_for_each_container_group(arm_template_json):
+    cgs = list(arm_template_for_each_container_group(arm_template_json))
+    single_pod = len(cgs) <= 1
+    for container_group, containers in cgs:
         # Derive container group ID
         container_group_id = (
             container_group["name"]
@@ -108,7 +110,11 @@ def make_configs(
         group_memory = 0
 
         pod_name = f"{prefix}_{container_group_id}"
-        pod_json_file = f"pod_{container_group_id}.json)"
+        if single_pod:
+            pod_name = prefix
+        pod_json_file = f"pod_{container_group_id}.snp.json"
+        if single_pod:
+            pod_json_file = "pod.snp.json"
 
         start_pod_commands.append(f"$group_id = (crictl runp --runtime runhcs-lcow {pod_json_file})")
         start_pod_commands.append(f"Write-Output 'Started pod {pod_name} with ID: ' $group_id")
@@ -132,8 +138,11 @@ def make_configs(
             f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ crictl stopp $podId; crictl rmp $podId }}"
         )
 
+        connect_script_name = f"connect_{container_group_id}.ps1"
+        if single_pod:
+            connect_script_name = "connect.ps1"
         write_script(
-            f"connect_{container_group_id}.ps1",
+            connect_script_name,
             [
                 "param(",
                 "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
@@ -169,6 +178,9 @@ def make_configs(
         #         ]
         #     )
         # )
+
+        containers = list(containers)
+        single_container = len(containers) <= 1
 
         for container in containers:
             image = container["properties"]["image"]
@@ -207,8 +219,15 @@ def make_configs(
             container_name = f"{prefix}_{container_group_id}_{container_id}"
             group_cpus += container["properties"]["resources"]["requests"]["cpu"]
             group_memory += container["properties"]["resources"]["requests"]["memoryInGB"]
+
+            container_json_file = f"container_{container_group_id}_{container_id}.json"
+            if single_pod and single_container:
+                container_json_file = "container.json"
+            elif single_pod:
+                container_json_file = f"container_{container_id}.json"
+
             with open(
-                os.path.join(output_conf_dir, f"container_{container_group_id}_{container_id}.json"),
+                os.path.join(output_conf_dir, container_json_file),
                 "w",
                 encoding="utf-8",
             ) as f:
@@ -232,8 +251,11 @@ def make_configs(
                 json.dump(container_json, f, indent=2)
 
             # Create Container
-            container_json_file = f"container_{container_group_id}_{container_id}.json"
             container_log_filename = f"container_log_{container_group_id}_{container_id}.log"
+            if single_pod and single_container:
+                container_log_filename = "container.log"
+            elif single_pod:
+                container_log_filename = f"container_{container_id}.log"
 
             create_container_commands.append("# Fix log_path to use correct absolute path")
             create_container_commands.append(
@@ -289,8 +311,14 @@ def make_configs(
                 f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ crictl stop -t 10 $containerId; crictl rm $containerId }}"
             )
 
+            container_exec_script_name = f"container_exec_{container_group_id}_{container_id}.ps1"
+            if single_pod and single_container:
+                container_exec_script_name = "container.ps1"
+            elif single_pod:
+                container_exec_script_name = f"container_{container_id}.ps1"
+
             write_script(
-                f"container_exec_{container_group_id}_{container_id}.ps1",
+                container_exec_script_name,
                 [
                     "param(",
                     "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
@@ -304,7 +332,7 @@ def make_configs(
             )
 
         with open(
-            os.path.join(output_conf_dir, f"pod_{container_group_id}.json"),
+            os.path.join(output_conf_dir, pod_json_file),
             "w",
             encoding="utf-8",
         ) as f:
