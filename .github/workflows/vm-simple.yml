@@ -33,10 +33,6 @@ on:
         description: 'The name of the containerplat blob to use'
         required: true
         default: 'containerplat-0.2.4-rc.3'
-      location:
-        description: 'Azure region to use'
-        required: true
-        default: 'northeurope'
       cpu:
         description: 'Number of CPUs to assign to the VM'
         required: true
@@ -47,12 +43,12 @@ on:
         default: '4'
 
 env:
-  DEPLOYMENT_NAME: vm-simple-${{ inputs.location }}-${{ github.run_number }}
+  DEPLOYMENT_NAME: vm-simple-${{ vars.REGION }}-${{ github.run_number }}
   SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
   RESOURCE_GROUP: c-aci-testing
-  MANAGED_IDENTITY: c-aci-testing
-  STORAGE_ACCOUNT: cacitestingstorage
-  LOCATION: ${{ inputs.location || 'northeurope' }}
+  MANAGED_IDENTITY: cacitesting
+  STORAGE_ACCOUNT: cacitestingstorageaci
+  LOCATION: ${{ vars.REGION }}
   CPU: ${{ inputs.cpu || 4 }}
   MEMORY_IN_GB: ${{ inputs.memory_in_gb || 4 }}
   VM_SIZE: ${{ inputs.vm_size || 'Standard_DC4ads_cc_v5' }}
