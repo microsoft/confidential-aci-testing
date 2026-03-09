@@ -11,6 +11,7 @@ import pathlib
 
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
+from c_aci_testing.utils.vm import resolve_manifest_hash
 
 
 def make_configs(
@@ -24,57 +25,21 @@ def make_configs(
     tag: str,
     prefix: str,
     output_conf_dir: str,
+    no_resolve_manifest_hash: bool = False,
 ):
     print(f"Constructing LCOW configs and scripts in {output_conf_dir}...")
 
     bicep_file_path, _ = find_bicep_files(target_path)
 
-    lcow_config_dir = os.path.join(os.path.dirname(__file__), "..", "templates", "lcow_configs")
+    templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+    lcow_config_dir = os.path.join(templates_dir, "lcow_configs")
 
     def write_script(file, script):
         with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
             f.write("\r\n".join(script))
 
-    write_script(
-        "common.ps1",
-        [
-            r"Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe",
-            "Set-Alias -Name shimdiag -Value C:\\ContainerPlat\\shimdiag.exe",
-            "",
-            "function shimdiag_exec_pod {",
-            "  param(",
-            "    [string]$podName,",
-            "    [switch]$t,",
-            "    [parameter(ValueFromRemainingArguments=$true)]",
-            "    [string[]]$argv",  # can't use $args
-            "  )",
-            "  $podId=(crictl pods --name $podName -q)",
-            '  if (!$podId) { throw "Pod $podName not found"; }',
-            "  $opts = @()",
-            "  if ($t) { $opts += '-t' }",
-            '  shimdiag exec @opts ("k8s.io-"+$podId) $argv',
-            "}",
-            "",
-            "function container_exec {",
-            "  param(",
-            "    [string]$podName,",
-            "    [string]$containerName,",
-            "    [switch]$it,",
-            "    [parameter(ValueFromRemainingArguments=$true)]",
-            "    [string[]]$argv",  # can't use $args
-            "  )",
-            "  $podId=(crictl pods --name $podName -q)",
-            '  if (!$podId) { throw "Pod $podName not found"; }',
-            "  $containerId=(crictl ps --pod $podId --name $containerName -q)",
-            '  if (!$containerId) { throw "Container $containerName not found in pod $podName"; }',
-            "  $opts = @()",
-            "  if ($it) { $opts += '-it' }",
-            "  crictl exec @opts $containerId $argv",
-            "}",
-            "",
-            "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
-        ],
-    )
+    with open(os.path.join(templates_dir, "common.ps1"), "rt", encoding="utf-8") as f:
+        write_script("common.ps1", [l.rstrip() for l in f.readlines()])
 
     script_head = [
         "cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))",
@@ -83,6 +48,7 @@ def make_configs(
 
     pull_commands = script_head.copy()
     start_pod_commands = script_head.copy()
+    create_container_commands = script_head.copy()
     start_container_commands = script_head.copy()
     check_commands = script_head.copy()
     stop_container_commands = script_head.copy()
@@ -129,7 +95,9 @@ def make_configs(
 
     has_privileged_containers = False
 
-    for container_group, containers in arm_template_for_each_container_group(arm_template_json):
+    cgs = list(arm_template_for_each_container_group(arm_template_json))
+    single_pod = len(cgs) <= 1
+    for container_group, containers in cgs:
         # Derive container group ID
         container_group_id = (
             container_group["name"]
@@ -144,16 +112,14 @@ def make_configs(
         group_memory = 0
 
         pod_name = f"{prefix}_{container_group_id}"
+        if single_pod:
+            pod_name = prefix
+        pod_json_file = f"pod_{container_group_id}.snp.json"
+        if single_pod:
+            pod_json_file = "pod.snp.json"
 
-        start_pod_commands.append(
-            " ".join(
-                [
-                    "$group_id = (crictl runp",
-                    "--runtime runhcs-lcow",
-                    f"./pod_{container_group_id}.json)",
-                ]
-            )
-        )
+        start_pod_commands.append(f"$group_id = (crictl runp --runtime runhcs-lcow {pod_json_file})")
+        start_pod_commands.append(f"Write-Output 'Started pod {pod_name} with ID: ' $group_id")
 
         shimdiag_exec_pod = f'shimdiag_exec_pod -podName "{pod_name}" --'
 
@@ -171,17 +137,14 @@ def make_configs(
         )
 
         stop_pod_commands.append(
-            "; ".join(
-                [
-                    f"$podId = crictl pods --name {pod_name} -q",
-                    "if ($podId) { crictl stopp $podId",
-                    "crictl rmp $podId }",
-                ]
-            )
+            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ crictl stopp $podId; crictl rmp $podId }}"
         )
 
+        connect_script_name = f"connect_{container_group_id}.ps1"
+        if single_pod:
+            connect_script_name = "connect.ps1"
         write_script(
-            f"connect_{container_group_id}.ps1",
+            connect_script_name,
             [
                 "param(",
                 "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
@@ -218,51 +181,51 @@ def make_configs(
         #     )
         # )
 
+        containers = list(containers)
+        single_container = len(containers) <= 1
+
         for container in containers:
             image = container["properties"]["image"]
+
+            if not no_resolve_manifest_hash:
+                orig_image = image
+                image = resolve_manifest_hash(image)
+                print(f"Resolved {orig_image} to {image}")
+
+            is_acr_image = registry.endswith(".azurecr.io") and image.startswith(registry)
+
+            if is_acr_image and not need_acr_pull:
+                pull_commands.append(". .\\_acr_pull.ps1")
+                need_acr_pull = True
 
             pull_commands.append(
                 f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
-            if registry.endswith(".azurecr.io") and image.startswith(registry):
-                if not need_acr_pull:
-                    pull_commands.append("  . .\\_acr_pull.ps1")
-                    need_acr_pull = True
-                pull_commands.append(
-                    "  "
-                    + " ".join(
-                        [
-                            "Pull-Image",
-                            ".\\pull.json",
-                            image,
-                        ]
-                    )
-                )
+            if is_acr_image:
+                pull_commands.append(f"  Pull-Image .\\pull.json {image}")
             else:
-                pull_commands.append(
-                    "  "
-                    + " ".join(
-                        [
-                            "crictl pull",
-                            "--pod-config ./pull.json",
-                            container["properties"]["image"],
-                        ]
-                    )
-                )
+                pull_commands.append(f"  crictl pull --pod-config ./pull.json {image}")
             pull_commands.append("}")
 
             container_id = container["name"]
             container_name = f"{prefix}_{container_group_id}_{container_id}"
             group_cpus += container["properties"]["resources"]["requests"]["cpu"]
             group_memory += container["properties"]["resources"]["requests"]["memoryInGB"]
+
+            container_json_file = f"container_{container_group_id}_{container_id}.json"
+            if single_pod and single_container:
+                container_json_file = "container.json"
+            elif single_pod:
+                container_json_file = f"container_{container_id}.json"
+
             with open(
-                os.path.join(output_conf_dir, f"container_{container_group_id}_{container_id}.json"),
+                os.path.join(output_conf_dir, container_json_file),
                 "w",
                 encoding="utf-8",
             ) as f:
                 container_json = container_template.copy()
                 container_json["metadata"]["name"] = container_name
-                container_json["image"]["image"] = container["properties"]["image"]
+                container_json["image"]["image"] = image
                 if "ports" in container["properties"]:
                     container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
                 if "command" in container["properties"]:
@@ -272,7 +235,6 @@ def make_configs(
                         {"key": env["name"], "value": env["value"]}
                         for env in container["properties"]["environmentVariables"]
                     ]
-                container_json["log_path"] = f"C:\\{prefix}\\container_log_{container_group_id}_{container_id}.log"
                 if "securityContext" in container["properties"]:
                     container_sec_ctx = container["properties"]["securityContext"]
                     if container_sec_ctx.get("privileged", False):
@@ -281,19 +243,48 @@ def make_configs(
                 json.dump(container_json, f, indent=2)
 
             # Create Container
-            start_container_commands.append(
+            container_log_filename = f"container_log_{container_group_id}_{container_id}.log"
+            if single_pod and single_container:
+                container_log_filename = "container.log"
+            elif single_pod:
+                container_log_filename = f"container_{container_id}.log"
+
+            create_container_commands.append("# Fix log_path to use correct absolute path")
+            create_container_commands.append(
+                f"$containerJson = Get-Content {container_json_file} | ConvertFrom-Json"
+            )
+            # Using .log_path raises "The property 'log_path' cannot be found on this object".
+            # Using ["log_path"] raises "Unable to index into an object of type "System.Management.Automation.PSObject"."
+            create_container_commands.append(
+                f'Add-Member -InputObject $containerJson -NotePropertyName log_path -NotePropertyValue "$PWD\\{container_log_filename}" -Force'
+            )
+
+            create_container_commands.append(
+                f'$containerJson | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 {container_json_file}'
+            )
+            create_container_commands.append("")
+
+            create_container_commands.append(
                 " ".join(
                     [
-                        "$container_id = (crictl create --no-pull",
-                        f"(crictl pods --name {pod_name} -q)",
-                        f"./container_{container_group_id}_{container_id}.json",
-                        f"./pod_{container_group_id}.json)",
+                        "crictl create --no-pull",
+                        f"(get_pod_id {pod_name})",
+                        container_json_file,
+                        pod_json_file,
                     ]
                 )
             )
 
             # Start Container
-            start_container_commands.append("crictl start $container_id")
+            start_container_commands.append("try {")
+            start_container_commands.append(
+                f"  $containerId = (get_container_id {pod_name} {container_name})"
+            )
+            start_container_commands.append("  crictl start $containerId")
+            start_container_commands.append(f"  Write-Output 'Started container {container_name} with ID: ' $containerId")
+            start_container_commands.append("} catch {")
+            start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
+            start_container_commands.append("}")
 
             check_commands.append(
                 f"$res=(container_exec -podName {pod_name} -containerName {container_name} -- "
@@ -309,17 +300,17 @@ def make_configs(
             )
 
             stop_container_commands.append(
-                "; ".join(
-                    [
-                        f"$containerId=crictl ps --pod (crictl pods --name {pod_name} -q) --name {container_name} -q -a",
-                        "if ($containerId) { crictl stop -t 10 $containerId",
-                        "crictl rm $containerId }",
-                    ]
-                )
+                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ crictl stop -t 10 $containerId; crictl rm $containerId }}"
             )
 
+            container_exec_script_name = f"container_exec_{container_group_id}_{container_id}.ps1"
+            if single_pod and single_container:
+                container_exec_script_name = "container.ps1"
+            elif single_pod:
+                container_exec_script_name = f"container_{container_id}.ps1"
+
             write_script(
-                f"container_exec_{container_group_id}_{container_id}.ps1",
+                container_exec_script_name,
                 [
                     "param(",
                     "  [parameter(ValueFromRemainingArguments=$true)][string[]]$argv",
@@ -333,7 +324,7 @@ def make_configs(
             )
 
         with open(
-            os.path.join(output_conf_dir, f"pod_{container_group_id}.json"),
+            os.path.join(output_conf_dir, pod_json_file),
             "w",
             encoding="utf-8",
         ) as f:
@@ -358,6 +349,7 @@ def make_configs(
 
     write_script("pull.ps1", pull_commands)
     write_script("runp.ps1", start_pod_commands)
+    write_script("createc.ps1", create_container_commands)
     write_script("startc.ps1", start_container_commands)
     write_script(
         "check.ps1",
@@ -378,7 +370,7 @@ def make_configs(
 
     if need_acr_pull:
         with open(
-            os.path.join(os.path.dirname(__file__), "..", "templates", "_acr_pull.ps1"),
+            os.path.join(templates_dir, "_acr_pull.ps1"),
             "rt",
             encoding="utf-8",
         ) as acr_pull_script:
@@ -391,6 +383,7 @@ def make_configs(
             ".\\pull.ps1",
             ".\\stop.ps1",
             ".\\runp.ps1",
+            ".\\createc.ps1",
             ".\\startc.ps1",
             ".\\check.ps1",
         ],
@@ -407,6 +400,7 @@ def vm_generate_scripts(
     repository: str,
     tag: str,
     prefix: str,
+    no_resolve_manifest_hash: bool = False,
     **kwargs,
 ):
     if not os.path.exists(output_dir):
@@ -423,4 +417,5 @@ def vm_generate_scripts(
         tag=tag,
         prefix=prefix,
         output_conf_dir=output_dir,
+        no_resolve_manifest_hash=no_resolve_manifest_hash,
     )

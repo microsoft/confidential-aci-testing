@@ -23,6 +23,7 @@ def vm_runc(
     repository: str,
     tag: str,
     prefix: str,
+    no_resolve_manifest_hash: bool = False,
     **kwargs,
 ):
     lcow_config_blob_name = f"lcow_config_{deployment_name}"
@@ -41,6 +42,7 @@ def vm_runc(
         tag=tag,
         prefix=prefix,
         output_conf_dir=temp_dir,
+        no_resolve_manifest_hash=no_resolve_manifest_hash,
     )
 
     print(f"Uploading LCOW config and scripts to {vm_name}...")
