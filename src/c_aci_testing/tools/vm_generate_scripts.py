@@ -192,34 +192,19 @@ def make_configs(
                 image = resolve_manifest_hash(image)
                 print(f"Resolved {orig_image} to {image}")
 
+            is_acr_image = registry.endswith(".azurecr.io") and image.startswith(registry)
+
+            if is_acr_image and not need_acr_pull:
+                pull_commands.append(". .\\_acr_pull.ps1")
+                need_acr_pull = True
+
             pull_commands.append(
                 f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
-            if registry.endswith(".azurecr.io") and image.startswith(registry):
-                if not need_acr_pull:
-                    pull_commands.append("  . .\\_acr_pull.ps1")
-                    need_acr_pull = True
-                pull_commands.append(
-                    "  "
-                    + " ".join(
-                        [
-                            "Pull-Image",
-                            ".\\pull.json",
-                            image,
-                        ]
-                    )
-                )
+            if is_acr_image:
+                pull_commands.append(f"  Pull-Image .\\pull.json {image}")
             else:
-                pull_commands.append(
-                    "  "
-                    + " ".join(
-                        [
-                            "crictl pull",
-                            "--pod-config ./pull.json",
-                            image,
-                        ]
-                    )
-                )
+                pull_commands.append(f"  crictl pull --pod-config ./pull.json {image}")
             pull_commands.append("}")
 
             container_id = container["name"]
