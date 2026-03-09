@@ -8,11 +8,11 @@ from __future__ import annotations
 import os
 
 
-def parse_deploy_output_file(parser):
+def parse_timeout(parser):
 
     parser.add_argument(
-        "--deploy-output-file",
-        help="Optional output path for deployment information",
-        type=str,
-        default=os.getenv("DEPLOY_OUTPUT_FILE", ""),
+        "--timeout",
+        help="Timeout in seconds for the deployment to complete. If not specified, wait indefinitely.",
+        type=int,
+        default=0,
     )

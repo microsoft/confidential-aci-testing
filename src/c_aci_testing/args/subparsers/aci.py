@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 
+from ..parameters.deploy_output_file import parse_deploy_output_file
 from ..parameters.deployment_name import parse_deployment_name
 from ..parameters.follow import parse_follow
 from ..parameters.location import parse_location
@@ -14,6 +15,7 @@ from ..parameters.managed_identity import parse_managed_identity
 from ..parameters.resource_group import parse_resource_group
 from ..parameters.subscription import parse_subscription
 from ..parameters.target_path import parse_target_path
+from ..parameters.timeout import parse_timeout
 
 from .. import extend_dict
 
@@ -29,6 +31,8 @@ def subparse_aci(aci: argparse.ArgumentParser):
     parse_resource_group(deploy)
     parse_location(deploy)
     parse_managed_identity(deploy)
+    parse_timeout(deploy)
+    parse_deploy_output_file(deploy)
 
     monitor = aci_subparser.add_parser("monitor")
     parse_deployment_name(monitor)
