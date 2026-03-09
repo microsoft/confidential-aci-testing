@@ -41,7 +41,7 @@ def resolve_manifest_hash(image_ref: str) -> str:
     If the image is multiarch, will use the manifest for linux/amd64.
     """
 
-    if image_ref.count("@") > 1:
+    if "@" in image_ref:
         # Already a digest reference
         return image_ref
 
@@ -61,7 +61,10 @@ def resolve_manifest_hash(image_ref: str) -> str:
     )
     digest = manifest_fetch["digest"]
 
-    return f"{image_ref.split(':')[0]}@{digest}"
+    # Strip optional tag suffix (e.g. :latest), but preserve host:port in the registry part.
+    # The tag is always in the last path component, so :[^/:@]+$ only matches the tag.
+    name = re.sub(r":[^/:@]+$", "", image_ref)
+    return f"{name}@{digest}"
 
 
 def async_delete_storage_blob(storage_account: str, container_name: str, blob_name: str):
