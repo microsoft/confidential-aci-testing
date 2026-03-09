@@ -28,6 +28,7 @@ from ..parameters.vm import (
     parse_uvm_rootfs,
     parse_uvm_kernel,
     parse_uvm_containerd_shim,
+    parse_no_resolve_manifest_hash,
 )
 from ..parameters.storage_account import parse_storage_account
 from ..parameters.resource_tags import parse_resource_tags
@@ -74,6 +75,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_repository(generate_scripts)
     parse_tag(generate_scripts)
     parse_runc_prefix(generate_scripts)
+    parse_no_resolve_manifest_hash(generate_scripts)
 
     runc = vm_subparser.add_parser("runc")
     parse_target_path(runc)
@@ -86,6 +88,7 @@ def subparse_vm(vm: argparse.ArgumentParser):
     parse_repository(runc)
     parse_tag(runc)
     parse_runc_prefix(runc)
+    parse_no_resolve_manifest_hash(runc)
 
     check = vm_subparser.add_parser("check")
     parse_deployment_name(check)

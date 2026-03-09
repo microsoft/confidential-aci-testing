@@ -16,6 +16,54 @@ import os
 import re
 
 
+def invoke_oras_get_json_output(argv: List[str]) -> dict:
+    try:
+        print(f"Invoking: {' '.join(argv)}")
+        res = subprocess.run(
+            argv,
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        return json.loads(res.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"Command failed with exit code {e.returncode}")
+        print(f"Stdout:\n{e.stdout}")
+        raise
+
+
+def resolve_manifest_hash(image_ref: str) -> str:
+    """
+    Resolve an image reference like
+        registry.azurecr.io/image:tag
+    to
+        registry.azurecr.io/image@sha256:1234abcd...
+    If the image is multiarch, will use the manifest for linux/amd64.
+    """
+
+    if image_ref.count("@") > 1:
+        # Already a digest reference
+        return image_ref
+
+    PLATFORM = "linux/amd64"
+    # --platform tells oras to fetch the manifest of a particular platform if the image is multiarch.
+    manifest_fetch = invoke_oras_get_json_output(
+        [
+            "oras",
+            "manifest",
+            "fetch",
+            "--format",
+            "json",
+            image_ref,
+            "--platform",
+            PLATFORM,
+        ]
+    )
+    digest = manifest_fetch["digest"]
+
+    return f"{image_ref.split(':')[0]}@{digest}"
+
+
 def async_delete_storage_blob(storage_account: str, container_name: str, blob_name: str):
     subprocess.Popen(
         [
