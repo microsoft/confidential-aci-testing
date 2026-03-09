@@ -64,7 +64,7 @@ jobs:
         SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
         RESOURCE_GROUP: c-aci-testing
         MANAGED_IDENTITY: c-aci-testing
-        LOCATION: northeurope
+        LOCATION: ${{ vars.REGION }}
       run: c-aci-testing aci deploy <TARGET_PATH>
 
     - name: Monitor Container Groups
