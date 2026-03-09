@@ -11,6 +11,7 @@ import pathlib
 
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
+from c_aci_testing.utils.vm import resolve_manifest_hash
 
 
 def make_configs(
@@ -24,6 +25,7 @@ def make_configs(
     tag: str,
     prefix: str,
     output_conf_dir: str,
+    no_resolve_manifest_hash: bool = False,
 ):
     print(f"Constructing LCOW configs and scripts in {output_conf_dir}...")
 
@@ -185,6 +187,11 @@ def make_configs(
         for container in containers:
             image = container["properties"]["image"]
 
+            if not no_resolve_manifest_hash:
+                orig_image = image
+                image = resolve_manifest_hash(image)
+                print(f"Resolved {orig_image} to {image}")
+
             pull_commands.append(
                 f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
@@ -209,7 +216,7 @@ def make_configs(
                         [
                             "crictl pull",
                             "--pod-config ./pull.json",
-                            container["properties"]["image"],
+                            image,
                         ]
                     )
                 )
@@ -233,7 +240,7 @@ def make_configs(
             ) as f:
                 container_json = container_template.copy()
                 container_json["metadata"]["name"] = container_name
-                container_json["image"]["image"] = container["properties"]["image"]
+                container_json["image"]["image"] = image
                 if "ports" in container["properties"]:
                     container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
                 if "command" in container["properties"]:
@@ -408,6 +415,7 @@ def vm_generate_scripts(
     repository: str,
     tag: str,
     prefix: str,
+    no_resolve_manifest_hash: bool = False,
     **kwargs,
 ):
     if not os.path.exists(output_dir):
@@ -424,4 +432,5 @@ def vm_generate_scripts(
         tag=tag,
         prefix=prefix,
         output_conf_dir=output_dir,
+        no_resolve_manifest_hash=no_resolve_manifest_hash,
     )

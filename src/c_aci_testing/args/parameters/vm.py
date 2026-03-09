@@ -101,3 +101,12 @@ def parse_uvm_containerd_shim(parser: ArgumentParser):
         default=os.getenv("UVM_CONTAINERD_SHIM", ""),
         help="A path to a custom containerd shim for the UVM (Leave empty to use default)",
     )
+
+
+def parse_no_resolve_manifest_hash(parser: ArgumentParser):
+    parser.add_argument(
+        "--no-resolve-manifest-hash",
+        action="store_true",
+        default=False,
+        help="Skip resolving image references to manifest digests",
+    )
