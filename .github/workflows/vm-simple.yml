@@ -51,7 +51,7 @@ env:
   SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
   RESOURCE_GROUP: c-aci-testing
   MANAGED_IDENTITY: c-aci-testing
-  STORAGE_ACCOUNT: cacitestingstorage
+  STORAGE_ACCOUNT: cacitestingstorageaci
   LOCATION: ${{ inputs.location || 'northeurope' }}
   CPU: ${{ inputs.cpu || 4 }}
   MEMORY_IN_GB: ${{ inputs.memory_in_gb || 4 }}
