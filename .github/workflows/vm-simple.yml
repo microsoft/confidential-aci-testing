@@ -50,7 +50,7 @@ env:
   DEPLOYMENT_NAME: vm-simple-${{ inputs.location }}-${{ github.run_number }}
   SUBSCRIPTION: ${{ vars.SUBSCRIPTION }}
   RESOURCE_GROUP: c-aci-testing
-  MANAGED_IDENTITY: c-aci-testing
+  MANAGED_IDENTITY: cacitesting
   STORAGE_ACCOUNT: cacitestingstorageaci
   LOCATION: ${{ inputs.location || 'northeurope' }}
   CPU: ${{ inputs.cpu || 4 }}
