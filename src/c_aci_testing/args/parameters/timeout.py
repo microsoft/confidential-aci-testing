@@ -5,9 +5,6 @@
 
 from __future__ import annotations
 
-import os
-
-
 def parse_timeout(parser):
 
     parser.add_argument(
