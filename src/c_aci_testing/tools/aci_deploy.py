@@ -62,7 +62,7 @@ def aci_deploy(
         "--resource-group",
         resource_group,
         "--template-file",
-        os.path.join(target_path, bicep_file_path),
+        bicep_file_path,
         "--parameters",
         bicepparam_file_path,
         "--no-wait",
