@@ -127,9 +127,27 @@ def aci_deploy(
             return _handle_success(show_result, start_time, deploy_output_file)
         elif state != "Running" and state != "Accepted":
             print(json.dumps(show_result, indent=2))
-            error_msg = f"Deployment failed with provisioningState: {state}"
+            error_msg = _build_error_message(show_result, state)
             _write_output_file(deploy_output_file, error=error_msg, correlation_id=correlation_id)
             raise RuntimeError(error_msg)
+
+
+def _build_error_message(show_result: dict, state: str) -> str:
+    parts = []
+    error = show_result.get("properties", {}).get("error", {})
+    if error:
+        code = error.get("code", "")
+        message = error.get("message", "")
+        if message:
+            parts.append(f"{code}: {message}" if code else message)
+        for detail in error.get("details", []) or []:
+            detail_code = detail.get("code", "")
+            detail_message = detail.get("message", "")
+            if detail_message:
+                parts.append(f"{detail_code}: {detail_message}" if detail_code else detail_message)
+    if not parts:
+        parts.append(f"Deployment failed with provisioningState: {state}")
+    return "\n".join(parts)
 
 
 def _show_deployment(deployment_name: str, subscription: str, resource_group: str) -> dict | None:
