@@ -40,7 +40,7 @@ def aci_get_ids(
         return ids
     except subprocess.CalledProcessError:
         print(
-            f"Failed to get deployment output for {deployment_name}." " Attempting to find container group by name...",
+            f"Failed to get deployment output for {deployment_name}. Attempting to find container group by name...",
             flush=True,
         )
 
