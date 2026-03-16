@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 
 def aci_get_ids(
@@ -42,6 +43,7 @@ def aci_get_ids(
         print(
             f"Failed to get deployment output for {deployment_name}. Attempting to find container group by name...",
             flush=True,
+            file=sys.stderr,
         )
 
     try:
@@ -71,6 +73,7 @@ def aci_get_ids(
         print(
             f"Failed to find container group {deployment_name} by name.",
             flush=True,
+            file=sys.stderr,
         )
 
     return []
