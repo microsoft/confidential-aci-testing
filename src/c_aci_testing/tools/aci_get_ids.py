@@ -36,35 +36,37 @@ def aci_get_ids(
             check=True,
             stdout=subprocess.PIPE,
         )
+        ids = [id for id in res.stdout.decode().split(os.linesep) if id]
+        return ids
     except subprocess.CalledProcessError:
-        # If the ARM deployment has expired or is not found, try to find
-        # the container group directly by name
-        try:
-            container_res = subprocess.run(
-                [
-                    "az",
-                    "container",
-                    "show",
-                    "--name",
-                    deployment_name,
-                    "--subscription",
-                    subscription,
-                    "--resource-group",
-                    resource_group,
-                    "--query",
-                    "id",
-                    "-o",
-                    "tsv",
-                ],
-                check=True,
-                stdout=subprocess.PIPE,
-            )
-            container_id = container_res.stdout.decode().strip()
-            if container_id:
-                return [container_id]
-        except subprocess.CalledProcessError:
-            pass
-        return []
+        print(
+            f"Failed to get deployment output for {deployment_name}." " Attempting to find container group by name..."
+        )
 
-    ids = [id for id in res.stdout.decode().split(os.linesep) if id]
-    return ids
+    try:
+        container_res = subprocess.run(
+            [
+                "az",
+                "container",
+                "show",
+                "--name",
+                deployment_name,
+                "--subscription",
+                subscription,
+                "--resource-group",
+                resource_group,
+                "--query",
+                "id",
+                "-o",
+                "tsv",
+            ],
+            check=True,
+            stdout=subprocess.PIPE,
+        )
+        container_id = container_res.stdout.decode().strip()
+        if container_id:
+            return [container_id]
+    except subprocess.CalledProcessError:
+        pass
+
+    return []
