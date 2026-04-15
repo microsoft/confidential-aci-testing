@@ -235,6 +235,15 @@ def make_configs(
                         {"key": env["name"], "value": env["value"]}
                         for env in container["properties"]["environmentVariables"]
                     ]
+                if "volumeMounts" in container["properties"]:
+                    container_json["volumeMounts"] = [
+                        {
+                            "name": vm["name"],
+                            "mountPath": vm["mountPath"],
+                            "mountPropagation": "Bidirectional",
+                        }
+                        for vm in container["properties"]["volumeMounts"]
+                    ]
                 if "securityContext" in container["properties"]:
                     container_sec_ctx = container["properties"]["securityContext"]
                     if container_sec_ctx.get("privileged", False):
@@ -333,6 +342,20 @@ def make_configs(
             annotations = container_group_json["annotations"]
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
             annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
+
+            # Add volumes from the container group
+            volumes = container_group["properties"].get("volumes", [])
+            for vol in volumes:
+                if "emptyDir" not in vol:
+                    raise Exception(f"Unsupported volume type for volume '{vol['name']}': only emptyDir is supported")
+            if volumes:
+                container_group_json["volumes"] = [
+                    {
+                        "name": vol["name"],
+                        "emptyDir": {},
+                    }
+                    for vol in volumes
+                ]
 
             security_policy = (
                 container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
