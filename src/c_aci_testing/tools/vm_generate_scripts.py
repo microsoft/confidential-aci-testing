@@ -13,6 +13,59 @@ from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_c
 from c_aci_testing.utils.find_bicep import find_bicep_files
 from c_aci_testing.utils.vm import resolve_manifest_hash
 
+MOUNTHOST_IMAGE = "mcr.microsoft.com/aci/virtual-node-2-mount-host:main_20260116.1"
+AZURE_FILE_VOLUME_HOST_PATH_PREFIX = "sandbox:///tmp/atlas/azureFileVolume"
+
+
+def _arm_container_to_cri(container, volume_info):
+    """
+    Convert an ARM container definition to a partial CRI container config dict.
+    Returns (cri_fields, is_privileged) where cri_fields has keys like
+    "image", "forwardPorts", "command", "envs", "mounts", "privileged".
+    """
+    props = container["properties"]
+    cri = {}
+
+    if "ports" in props:
+        cri["forwardPorts"] = [port["port"] for port in props["ports"]]
+    if "command" in props:
+        cri["command"] = props["command"]
+    if "environmentVariables" in props:
+        cri["envs"] = [{"key": env["name"], "value": env["value"]} for env in props["environmentVariables"]]
+
+    is_privileged = False
+    if "securityContext" in props:
+        if props["securityContext"].get("privileged", False):
+            is_privileged = True
+
+    # Volume mounts
+    if "volumeMounts" in props:
+        mounts = []
+        for vm in props["volumeMounts"]:
+            vol = volume_info.get(vm["name"])
+            if vol is None:
+                raise Exception(f"Volume '{vm['name']}' referenced in volumeMount but not defined in volumes")
+            if vol["type"] == "emptyDir":
+                mounts.append(
+                    {
+                        "container_path": vm["mountPath"],
+                        "host_path": f"{AZURE_FILE_VOLUME_HOST_PATH_PREFIX}/{vm['name']}",
+                        "propagation": 2,  # PROPAGATION_BIDIRECTIONAL
+                    }
+                )
+            elif vol["type"] == "azureFile":
+                mounts.append(
+                    {
+                        "container_path": vm["mountPath"],
+                        "host_path": f"{AZURE_FILE_VOLUME_HOST_PATH_PREFIX}/{vm['name']}/mnt",
+                        "propagation": 1,  # PROPAGATION_HOST_TO_CONTAINER
+                    }
+                )
+        if mounts:
+            cri["mounts"] = mounts
+
+    return cri, is_privileged
+
 
 def make_configs(
     target_path: str,
@@ -182,10 +235,31 @@ def make_configs(
         # )
 
         containers = list(containers)
-        single_container = len(containers) <= 1
 
-        for container in containers:
-            image = container["properties"]["image"]
+        # Build volume info map from ARM volumes
+        arm_volumes = container_group["properties"].get("volumes", [])
+        volume_info = {}  # name -> {"type": "emptyDir"|"azureFile", ...}
+        for vol in arm_volumes:
+            if "emptyDir" in vol:
+                volume_info[vol["name"]] = {"type": "emptyDir"}
+            elif "azureFile" in vol:
+                volume_info[vol["name"]] = {
+                    "type": "azureFile",
+                    "shareName": vol["azureFile"]["shareName"],
+                    "storageAccountName": vol["azureFile"]["storageAccountName"],
+                    "storageAccountKey": vol["azureFile"].get("storageAccountKey", ""),
+                }
+            else:
+                raise Exception(
+                    f"Unsupported volume type for volume '{vol['name']}': only emptyDir and azureFile are supported"
+                )
+
+        # Synthesize mounthost sidecar containers for azureFile volumes
+        azure_file_volumes = {name: info for name, info in volume_info.items() if info["type"] == "azureFile"}
+        single_container = (len(containers) + len(azure_file_volumes)) <= 1
+
+        def emit_container(image, container_id, cri_fields, is_privileged, cpu, memory_gb):
+            nonlocal need_acr_pull, has_privileged_containers, group_cpus, group_memory
 
             if not no_resolve_manifest_hash:
                 orig_image = image
@@ -207,10 +281,9 @@ def make_configs(
                 pull_commands.append(f"  crictl pull --pod-config ./pull.json {image}")
             pull_commands.append("}")
 
-            container_id = container["name"]
             container_name = f"{prefix}_{container_group_id}_{container_id}"
-            group_cpus += container["properties"]["resources"]["requests"]["cpu"]
-            group_memory += container["properties"]["resources"]["requests"]["memoryInGB"]
+            group_cpus += cpu
+            group_memory += memory_gb
 
             container_json_file = f"container_{container_group_id}_{container_id}.json"
             if single_pod and single_container:
@@ -218,37 +291,21 @@ def make_configs(
             elif single_pod:
                 container_json_file = f"container_{container_id}.json"
 
+            if is_privileged:
+                has_privileged_containers = True
+
+            container_json = container_template.copy()
+            container_json["metadata"]["name"] = container_name
+            container_json["image"]["image"] = image
+            container_json.update(cri_fields)
+            if is_privileged:
+                container_json["linux"]["security_context"]["privileged"] = True
+
             with open(
                 os.path.join(output_conf_dir, container_json_file),
                 "w",
                 encoding="utf-8",
             ) as f:
-                container_json = container_template.copy()
-                container_json["metadata"]["name"] = container_name
-                container_json["image"]["image"] = image
-                if "ports" in container["properties"]:
-                    container_json["forwardPorts"] = [port["port"] for port in container["properties"]["ports"]]
-                if "command" in container["properties"]:
-                    container_json["command"] = container["properties"]["command"]
-                if "environmentVariables" in container["properties"]:
-                    container_json["envs"] = [
-                        {"key": env["name"], "value": env["value"]}
-                        for env in container["properties"]["environmentVariables"]
-                    ]
-                if "volumeMounts" in container["properties"]:
-                    container_json["volumeMounts"] = [
-                        {
-                            "name": vm["name"],
-                            "mountPath": vm["mountPath"],
-                            "mountPropagation": "Bidirectional",
-                        }
-                        for vm in container["properties"]["volumeMounts"]
-                    ]
-                if "securityContext" in container["properties"]:
-                    container_sec_ctx = container["properties"]["securityContext"]
-                    if container_sec_ctx.get("privileged", False):
-                        container_json["linux"]["security_context"]["privileged"] = True
-                        has_privileged_containers = True
                 json.dump(container_json, f, indent=2)
 
             # Create Container
@@ -332,6 +389,46 @@ def make_configs(
                 ],
             )
 
+        # Emit mounthost sidecar containers for azureFile volumes
+        for vol_name, vol_info in azure_file_volumes.items():
+            sidecar_name = f"mounthost-{vol_name}".replace("-", "_")
+            emit_container(
+                image=MOUNTHOST_IMAGE,
+                container_id=sidecar_name,
+                cri_fields={
+                    "envs": [
+                        {"key": "storage_account", "value": vol_info["storageAccountName"]},
+                        {"key": "share_name", "value": vol_info["shareName"]},
+                        {"key": "storage_key", "value": vol_info["storageAccountKey"]},
+                        {"key": "mount_point", "value": "/volumemountscratch/mnt"},
+                    ],
+                    "command": ["./mount_azure_fileshare_2.sh"],
+                    "mounts": [
+                        {
+                            "container_path": "/volumemountscratch",
+                            "host_path": f"{AZURE_FILE_VOLUME_HOST_PATH_PREFIX}/{vol_name}",
+                            "propagation": 2,  # PROPAGATION_BIDIRECTIONAL
+                        },
+                    ],
+                },
+                is_privileged=True,
+                cpu=0,
+                memory_gb=0,
+            )
+
+        # Emit ARM-defined containers
+        for container in containers:
+            cri_fields, is_privileged = _arm_container_to_cri(container, volume_info)
+            props = container["properties"]
+            emit_container(
+                image=props["image"],
+                container_id=container["name"],
+                cri_fields=cri_fields,
+                is_privileged=is_privileged,
+                cpu=props["resources"]["requests"]["cpu"],
+                memory_gb=props["resources"]["requests"]["memoryInGB"],
+            )
+
         with open(
             os.path.join(output_conf_dir, pod_json_file),
             "w",
@@ -342,20 +439,6 @@ def make_configs(
             annotations = container_group_json["annotations"]
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
             annotations["io.microsoft.virtualmachine.computetopology.memory.sizeinmb"] = str(group_memory * 1024)
-
-            # Add volumes from the container group
-            volumes = container_group["properties"].get("volumes", [])
-            for vol in volumes:
-                if "emptyDir" not in vol:
-                    raise Exception(f"Unsupported volume type for volume '{vol['name']}': only emptyDir is supported")
-            if volumes:
-                container_group_json["volumes"] = [
-                    {
-                        "name": vol["name"],
-                        "emptyDir": {},
-                    }
-                    for vol in volumes
-                ]
 
             security_policy = (
                 container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
