@@ -444,9 +444,10 @@ def make_configs(
                 container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
             )
             if not security_policy or "parameters('ccePolicies')" in security_policy:
-                raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
-
-            annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
+                print("WARNING: ccePolicy not found or not resolved in ARM template, assuming non-confidential")
+                del annotations["io.microsoft.virtualmachine.lcow.securitypolicy"]
+            else:
+                annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
 
             if has_privileged_containers:
                 container_group_json["linux"]["security_context"]["privileged"] = True
