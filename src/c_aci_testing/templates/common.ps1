@@ -55,7 +55,7 @@ function container_exec {
   $containerId = get_container_id $podName $containerName
   $opts = @()
   if ($it) { $opts += '-it' }
-  crictl exec @opts $containerId $argv
+  azcrictl exec @opts $containerId $argv
 }
 
 cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))

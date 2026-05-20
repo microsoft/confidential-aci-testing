@@ -71,8 +71,8 @@ function Pull-Image {
   param (
     [Parameter(
       Mandatory = $true,
-      HelpMessage = "Pull config JSON"
-    )][string]$pullJson,
+      HelpMessage = "Pod config JSON"
+    )][string]$podJson,
     [Parameter(
       Mandatory = $true,
       HelpMessage = "Image reference"
@@ -96,5 +96,5 @@ function Pull-Image {
   }
 
   Write-Host "Pulling image: $imageName$maybeWithCredentialsMsg"
-  C:\ContainerPlat\crictl.exe pull @maybeCreds --pod-config $pullJson $imageName
+  C:\ContainerPlat\azcrictl.exe pull @maybeCreds --pod-config $podJson $imageName
 }

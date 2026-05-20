@@ -66,5 +66,5 @@ def vm_runc(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
-        command="C:/containerplat/crictl.exe pods; C:/containerplat/crictl.exe ps -a",
+        command="C:/containerplat/azcrictl.exe pods; C:/containerplat/azcrictl.exe ps -a",
     )

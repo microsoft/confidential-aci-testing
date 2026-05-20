@@ -107,12 +107,6 @@ def make_configs(
     need_acr_pull = False
 
     with open(
-        os.path.join(lcow_config_dir, "pull.json.template"),
-        encoding="utf-8",
-    ) as pull_template_file:
-        pull_template = json.load(pull_template_file)
-
-    with open(
         os.path.join(lcow_config_dir, "container.json.template"),
         encoding="utf-8",
     ) as container_template_file:
@@ -126,13 +120,6 @@ def make_configs(
 
     if win_flavor == "ws2022":
         del container_group_template["annotations"]["io.microsoft.virtualmachine.lcow.hcl-enabled"]
-
-    with open(
-        os.path.join(output_conf_dir, "pull.json"),
-        encoding="utf-8",
-        mode="w",
-    ) as pull_file:
-        json.dump(pull_template, pull_file, indent=2)
 
     arm_template_json = parse_bicep(
         target_path,
@@ -260,7 +247,7 @@ def make_configs(
         single_container = (len(containers) + len(azure_file_volumes)) <= 1
 
         def emit_container(image, container_id, cri_fields, is_privileged, cpu, memory_gb):
-            nonlocal need_acr_pull, has_privileged_containers, group_cpus, group_memory
+            nonlocal need_acr_pull, has_privileged_containers, group_cpus, group_memory, pod_json_file
 
             if not no_resolve_manifest_hash:
                 orig_image = image
@@ -277,9 +264,9 @@ def make_configs(
                 f'if (-not ((azcrictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
             if is_acr_image:
-                pull_commands.append(f"  Pull-Image .\\pull.json {image}")
+                pull_commands.append(f"  Pull-Image {pod_json_file} {image}")
             else:
-                pull_commands.append(f"  azcrictl pull --pod-config ./pull.json {image}")
+                pull_commands.append(f"  azcrictl pull --pod-config {pod_json_file} {image}")
             pull_commands.append("}")
 
             container_name = f"{prefix}_{container_group_id}_{container_id}"

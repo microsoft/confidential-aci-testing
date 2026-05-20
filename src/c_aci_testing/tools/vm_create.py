@@ -200,7 +200,7 @@ def vm_create(
         vm_name=vm_name,
         subscription=subscription,
         resource_group=resource_group,
-        command="C:/ContainerPlat/crictl.exe version; C:/ContainerPlat/crictl.exe ps",
+        command="C:/ContainerPlat/azcrictl.exe version; C:/ContainerPlat/azcrictl.exe ps",
     )
     if "containerd" not in output:
         raise Exception("ContainerPlat check failed")
