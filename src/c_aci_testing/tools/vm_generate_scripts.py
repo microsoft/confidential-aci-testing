@@ -180,6 +180,9 @@ def make_configs(
                 *script_head,
                 f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
                 f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
+                "if (-not $?) {",
+                f"  {shimdiag_exec_pod} cat /dev/kmsg >> dmesg_{container_group_id}.log",
+                "}",
             ],
         )
 
