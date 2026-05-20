@@ -21,13 +21,11 @@ def _arm_container_to_cri(container, volume_info):
     """
     Convert an ARM container definition to a partial CRI container config dict.
     Returns (cri_fields, is_privileged) where cri_fields has keys like
-    "image", "forwardPorts", "command", "envs", "mounts", "privileged".
+    "image", "command", "envs", "mounts", "privileged".
     """
     props = container["properties"]
     cri = {}
 
-    if "ports" in props:
-        cri["forwardPorts"] = [port["port"] for port in props["ports"]]
     if "command" in props:
         cri["command"] = props["command"]
     if "environmentVariables" in props:

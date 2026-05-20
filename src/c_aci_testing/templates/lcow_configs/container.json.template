@@ -11,6 +11,5 @@
     },
     "annotations" : {
         "io.microsoft.cri.container.imageattachedfragments" : "True"
-    },
-    "forwardPorts": []
+    }
 }
