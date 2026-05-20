@@ -1,4 +1,5 @@
 Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe
+Set-Alias -Name azcrictl -Value C:\ContainerPlat\azcrictl.exe
 Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe
 
 function get_pod_id {

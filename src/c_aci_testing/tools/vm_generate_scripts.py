@@ -171,7 +171,7 @@ def make_configs(
         if single_pod:
             pod_json_file = "pod.snp.json"
 
-        start_pod_commands.append(f"$group_id = (crictl runp --runtime runhcs-lcow {pod_json_file})")
+        start_pod_commands.append(f"$group_id = (azcrictl runp --runtime runhcs-lcow {pod_json_file})")
         start_pod_commands.append(f"Write-Output 'Started pod {pod_name} with ID: ' $group_id")
 
         shimdiag_exec_pod = f'shimdiag_exec_pod -podName "{pod_name}" --'
@@ -190,7 +190,7 @@ def make_configs(
         )
 
         stop_pod_commands.append(
-            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ crictl stopp $podId; crictl rmp $podId }}"
+            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ azcrictl stopp $podId; azcrictl rmp $podId }}"
         )
 
         connect_script_name = f"connect_{container_group_id}.ps1"
@@ -273,12 +273,12 @@ def make_configs(
                 need_acr_pull = True
 
             pull_commands.append(
-                f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
+                f'if (-not ((azcrictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
             if is_acr_image:
                 pull_commands.append(f"  Pull-Image .\\pull.json {image}")
             else:
-                pull_commands.append(f"  crictl pull --pod-config ./pull.json {image}")
+                pull_commands.append(f"  azcrictl pull --pod-config ./pull.json {image}")
             pull_commands.append("}")
 
             container_name = f"{prefix}_{container_group_id}_{container_id}"
@@ -333,7 +333,7 @@ def make_configs(
             create_container_commands.append(
                 " ".join(
                     [
-                        "crictl create --no-pull",
+                        "azcrictl create --no-pull",
                         f"(get_pod_id {pod_name})",
                         container_json_file,
                         pod_json_file,
@@ -346,7 +346,7 @@ def make_configs(
             start_container_commands.append(
                 f"  $containerId = (get_container_id {pod_name} {container_name})"
             )
-            start_container_commands.append("  crictl start $containerId")
+            start_container_commands.append("  azcrictl start $containerId")
             start_container_commands.append(f"  Write-Output 'Started container {container_name} with ID: ' $containerId")
             start_container_commands.append("} catch {")
             start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
@@ -366,7 +366,7 @@ def make_configs(
             )
 
             stop_container_commands.append(
-                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ crictl stop -t 10 $containerId; crictl rm $containerId }}"
+                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ azcrictl stop -t 10 $containerId; azcrictl rm $containerId }}"
             )
 
             container_exec_script_name = f"container_exec_{container_group_id}_{container_id}.ps1"
