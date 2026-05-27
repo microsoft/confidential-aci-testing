@@ -155,6 +155,19 @@ def vn2_generate_yaml(
             if "command" in props:
                 container_def["command"] = props["command"]
 
+            volume_mounts = props.get("volumeMounts", [])
+            if volume_mounts:
+                container_def["volumeMounts"] = [
+                    {"name": vm["name"], "mountPath": vm["mountPath"]} for vm in volume_mounts
+                ]
+
+        arm_volumes = container_group["properties"].get("volumes", [])
+        if arm_volumes:
+            for vol in arm_volumes:
+                if "emptyDir" not in vol:
+                    raise Exception(f"Unsupported volume type for volume '{vol['name']}': only emptyDir is supported")
+            template_spec["volumes"] = [{"name": vol["name"], "emptyDir": {}} for vol in arm_volumes]
+
         if registry:
             secret_name = get_pull_secret_name(registry)
             if secret_name:
