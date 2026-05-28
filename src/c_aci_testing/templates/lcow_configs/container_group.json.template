@@ -2,7 +2,11 @@
     "metadata": {
         "name": "<CONTAINER_GROUP_NAME>",
         "namespace": "default",
-        "attempt": 1
+        "attempt": 1,
+        "uid": "0"
+    },
+    "labels": {
+        "sandbox-platform": "linux/amd64"
     },
     "linux": {
         "security_context": {

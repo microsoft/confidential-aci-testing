@@ -1,4 +1,5 @@
 Set-Alias -Name crictl -Value C:\ContainerPlat\crictl.exe
+Set-Alias -Name azcrictl -Value C:\ContainerPlat\azcrictl.exe
 Set-Alias -Name shimdiag -Value C:\ContainerPlat\shimdiag.exe
 
 function get_pod_id {
@@ -6,7 +7,7 @@ function get_pod_id {
     [string]$podName,
     [switch]$NoError
   )
-  $podId = (crictl pods --name $podName -q)
+  $podId = (azcrictl pods --name $podName -q)
   if (!$podId) {
     if ($NoError) { return "" }
     throw "Pod $podName not found"
@@ -22,7 +23,7 @@ function get_container_id {
   )
   $podId = get_pod_id -NoError:$NoError $podName
   if (!$podId) { return "" }
-  $containerId = (crictl ps --pod $podId --name $containerName -a -q)
+  $containerId = (azcrictl ps --pod $podId --name $containerName -a -q)
   if (!$containerId) {
     if ($NoError) { return "" }
     throw "Container $containerName not found in pod $podName"
@@ -54,7 +55,7 @@ function container_exec {
   $containerId = get_container_id $podName $containerName
   $opts = @()
   if ($it) { $opts += '-it' }
-  crictl exec @opts $containerId $argv
+  azcrictl exec @opts $containerId $argv
 }
 
 cd (Split-Path -Parent ($MyInvocation.MyCommand.Path))

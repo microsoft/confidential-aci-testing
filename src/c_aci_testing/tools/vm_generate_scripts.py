@@ -21,13 +21,11 @@ def _arm_container_to_cri(container, volume_info):
     """
     Convert an ARM container definition to a partial CRI container config dict.
     Returns (cri_fields, is_privileged) where cri_fields has keys like
-    "image", "forwardPorts", "command", "envs", "mounts", "privileged".
+    "image", "command", "envs", "mounts", "privileged".
     """
     props = container["properties"]
     cri = {}
 
-    if "ports" in props:
-        cri["forwardPorts"] = [port["port"] for port in props["ports"]]
     if "command" in props:
         cri["command"] = props["command"]
     if "environmentVariables" in props:
@@ -109,12 +107,6 @@ def make_configs(
     need_acr_pull = False
 
     with open(
-        os.path.join(lcow_config_dir, "pull.json.template"),
-        encoding="utf-8",
-    ) as pull_template_file:
-        pull_template = json.load(pull_template_file)
-
-    with open(
         os.path.join(lcow_config_dir, "container.json.template"),
         encoding="utf-8",
     ) as container_template_file:
@@ -128,13 +120,6 @@ def make_configs(
 
     if win_flavor == "ws2022":
         del container_group_template["annotations"]["io.microsoft.virtualmachine.lcow.hcl-enabled"]
-
-    with open(
-        os.path.join(output_conf_dir, "pull.json"),
-        encoding="utf-8",
-        mode="w",
-    ) as pull_file:
-        json.dump(pull_template, pull_file, indent=2)
 
     arm_template_json = parse_bicep(
         target_path,
@@ -171,7 +156,7 @@ def make_configs(
         if single_pod:
             pod_json_file = "pod.snp.json"
 
-        start_pod_commands.append(f"$group_id = (crictl runp --runtime runhcs-lcow {pod_json_file})")
+        start_pod_commands.append(f"$group_id = (azcrictl runp --runtime runhcs-lcow {pod_json_file})")
         start_pod_commands.append(f"Write-Output 'Started pod {pod_name} with ID: ' $group_id")
 
         shimdiag_exec_pod = f'shimdiag_exec_pod -podName "{pod_name}" --'
@@ -182,6 +167,9 @@ def make_configs(
                 *script_head,
                 f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
                 f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
+                "if (-not $?) {",
+                f"  {shimdiag_exec_pod} cat /dev/kmsg >> dmesg_{container_group_id}.log",
+                "}",
             ],
         )
 
@@ -190,7 +178,7 @@ def make_configs(
         )
 
         stop_pod_commands.append(
-            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ crictl stopp $podId; crictl rmp $podId }}"
+            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ azcrictl stopp $podId; azcrictl rmp $podId }}"
         )
 
         connect_script_name = f"connect_{container_group_id}.ps1"
@@ -259,7 +247,7 @@ def make_configs(
         single_container = (len(containers) + len(azure_file_volumes)) <= 1
 
         def emit_container(image, container_id, cri_fields, is_privileged, cpu, memory_gb):
-            nonlocal need_acr_pull, has_privileged_containers, group_cpus, group_memory
+            nonlocal need_acr_pull, has_privileged_containers, group_cpus, group_memory, pod_json_file
 
             if not no_resolve_manifest_hash:
                 orig_image = image
@@ -273,12 +261,12 @@ def make_configs(
                 need_acr_pull = True
 
             pull_commands.append(
-                f'if (-not ((crictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
+                f'if (-not ((azcrictl images -o json | ConvertFrom-Json).images |? {{$_.repoTags.Contains("{image}")}})) {{'
             )
             if is_acr_image:
-                pull_commands.append(f"  Pull-Image .\\pull.json {image}")
+                pull_commands.append(f"  Pull-Image {pod_json_file} {image}")
             else:
-                pull_commands.append(f"  crictl pull --pod-config ./pull.json {image}")
+                pull_commands.append(f"  azcrictl pull --pod-config {pod_json_file} {image}")
             pull_commands.append("}")
 
             container_name = f"{prefix}_{container_group_id}_{container_id}"
@@ -333,7 +321,7 @@ def make_configs(
             create_container_commands.append(
                 " ".join(
                     [
-                        "crictl create --no-pull",
+                        "azcrictl create --no-pull",
                         f"(get_pod_id {pod_name})",
                         container_json_file,
                         pod_json_file,
@@ -346,7 +334,7 @@ def make_configs(
             start_container_commands.append(
                 f"  $containerId = (get_container_id {pod_name} {container_name})"
             )
-            start_container_commands.append("  crictl start $containerId")
+            start_container_commands.append("  azcrictl start $containerId")
             start_container_commands.append(f"  Write-Output 'Started container {container_name} with ID: ' $containerId")
             start_container_commands.append("} catch {")
             start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
@@ -366,7 +354,7 @@ def make_configs(
             )
 
             stop_container_commands.append(
-                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ crictl stop -t 10 $containerId; crictl rm $containerId }}"
+                f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ azcrictl stop -t 10 $containerId; azcrictl rm $containerId }}"
             )
 
             container_exec_script_name = f"container_exec_{container_group_id}_{container_id}.ps1"
@@ -444,9 +432,10 @@ def make_configs(
                 container_group["properties"].get("confidentialComputeProperties", {}).get("ccePolicy", "")
             )
             if not security_policy or "parameters('ccePolicies')" in security_policy:
-                raise Exception("ccePolicies parameter not resolved, run c-aci-testing policies gen first")
-
-            annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
+                print("WARNING: ccePolicy not found or not resolved in ARM template, assuming non-confidential")
+                del annotations["io.microsoft.virtualmachine.lcow.securitypolicy"]
+            else:
+                annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
 
             if has_privileged_containers:
                 container_group_json["linux"]["security_context"]["privileged"] = True
