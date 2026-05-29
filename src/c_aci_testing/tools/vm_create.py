@@ -22,6 +22,12 @@ from c_aci_testing.tools.vm_create_noinit import vm_create_noinit
 
 VM_CONTAINER_NAME = "container"
 
+# Confidential WCOW first boot needs Hyper-V regflags + reboot + post-reboot
+# scheduled task + cplat install, which can take ~8 min. Bumped from the
+# previous 12 (=4 min) to give us margin.
+BOOTSTRAP_POLL_INTERVAL_SECS = 20
+BOOTSTRAP_POLL_MAX_TRIES = 30
+
 
 def check_vm_exists(
     subscription: str,
@@ -171,9 +177,9 @@ def vm_create(
             )
         except Exception as e:
             print(f"Failed to download bootstrap.log: {e}")
-            if tries < 12:
-                print("Retrying...")
-                time.sleep(20)
+            if tries < BOOTSTRAP_POLL_MAX_TRIES:
+                print(f"Retrying ({tries}/{BOOTSTRAP_POLL_MAX_TRIES})...")
+                time.sleep(BOOTSTRAP_POLL_INTERVAL_SECS)
                 continue
             raise
 
@@ -187,11 +193,11 @@ def vm_create(
         if "DEPLOY-ERROR" in output:
             print(output)
             raise Exception("Bootstrap error detected")
-        if tries < 12:
-            print("Waiting for VM to finish bootstrapping...")
+        if tries < BOOTSTRAP_POLL_MAX_TRIES:
+            print(f"Waiting for VM to finish bootstrapping ({tries}/{BOOTSTRAP_POLL_MAX_TRIES})...")
             print("Current output:")
             print(output)
-            time.sleep(20)
+            time.sleep(BOOTSTRAP_POLL_INTERVAL_SECS)
             continue
         print(output)
         raise Exception("VM did not finish bootstrapping in time")
