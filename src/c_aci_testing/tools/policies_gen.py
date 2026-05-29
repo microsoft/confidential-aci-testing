@@ -31,6 +31,13 @@ ALLOW_ALL_POLICY_REGO_PATH = os.path.join(
     "allow_all_policy.rego",
 )
 
+WCOW_ALLOW_ALL_POLICY_REGO_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "..",
+    "templates",
+    "wcow_allow_all_policy.rego",
+)
+
 
 def policies_gen(
     target_path: str,
@@ -87,15 +94,42 @@ def policies_gen(
         if container_group["properties"].get("sku", "Standard") != "Confidential":
             continue
 
+        # Detect osType per CG: confidential WCOW needs a different policy
+        # shape (api_version 0.11.0, mount_cims rule, env_list field on
+        # create_container/exec_in_container/exec_external) than confidential
+        # LCOW.
+        #
+        # For policy_type == "allow_all" we use a per-osType static rego
+        # template (the only fully-permissive case; confcom always emits
+        # strict policies bound to container layers).
+        #
+        # For policy_type in ("generated", "debug") we delegate to
+        # `az confcom acipolicygen`. The devrelease confcom 1.3.0+wcow
+        # auto-detects the per-CG osType from the ARM template and emits
+        # the correct LCOW or WCOW shape. Upstream stable confcom is
+        # LCOW-only at the time of writing; if a confidential WCOW CG is
+        # passed through stable confcom, it will produce an LCOW-shaped
+        # policy that the WCOW enforcer rejects at runtime.
+        os_type = container_group["properties"].get("osType", "Linux")
+        is_wcow = isinstance(os_type, str) and os_type.lower() == "windows"
+
         if policy_type == "allow_all":
-            with open(ALLOW_ALL_POLICY_REGO_PATH, encoding="utf-8") as policy_file:
+            policy_path = WCOW_ALLOW_ALL_POLICY_REGO_PATH if is_wcow else ALLOW_ALL_POLICY_REGO_PATH
+            with open(policy_path, encoding="utf-8") as policy_file:
                 policy = policy_file.read()
         else:
-            # Write this container group to an ARM template file
+            # Write this container group to an ARM template file.
+            # Clear any pre-populated ccePolicy first: confcom's rego parser
+            # can choke on existing WCOW-shape policy text it's about to
+            # overwrite anyway.
+            cg_for_confcom = json.loads(json.dumps(container_group))
+            ccp = cg_for_confcom.get("properties", {}).get("confidentialComputeProperties")
+            if isinstance(ccp, dict) and "ccePolicy" in ccp:
+                ccp["ccePolicy"] = ""
             # Don't remove it unless policy gen worked
             tmp_arm_template_path = tempfile.mktemp(suffix=".json")
             with open(tmp_arm_template_path, "w", encoding="utf-8") as file:
-                json.dump({"resources": [container_group]}, file, indent=2)
+                json.dump({"resources": [cg_for_confcom]}, file, indent=2)
 
             print("Calling acipolicygen and saving policy to file")
             subprocess.run(["az", "extension", "add", "--name", "confcom", "--yes"], check=True)

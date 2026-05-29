@@ -84,6 +84,7 @@ def make_configs(
 
     templates_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     lcow_config_dir = os.path.join(templates_dir, "lcow_configs")
+    wcow_config_dir = os.path.join(templates_dir, "wcow_configs")
 
     def write_script(file, script):
         with open(os.path.join(output_conf_dir, file), "w", encoding="utf-8") as f:
@@ -105,6 +106,7 @@ def make_configs(
     stop_container_commands = script_head.copy()
     stop_pod_commands = script_head.copy()
     need_acr_pull = False
+    wcow_global_cleanup_added = False
 
     with open(
         os.path.join(lcow_config_dir, "container.json.template"),
@@ -117,6 +119,25 @@ def make_configs(
         encoding="utf-8",
     ) as container_group_template_file:
         container_group_template = json.load(container_group_template_file)
+
+    # WCOW templates — loaded once, selected per-CG by osType detection in the
+    # loop below. WCOW and LCOW configs are deliberately different shapes:
+    # WCOW container.json has no `linux.security_context` (privileged is
+    # policy-level via `allow_elevated` rego) and no `forwardPorts` field
+    # (runhcs-wcow-hypervisor rejects unknown fields). WCOW container_group
+    # uses `wcow.isolation_type`/`writable_efi`/`enforcer` annotations and
+    # the `io.microsoft.virtualmachine.wcow.securitypolicy` annotation.
+    with open(
+        os.path.join(wcow_config_dir, "container.json.template"),
+        encoding="utf-8",
+    ) as wcow_container_template_file:
+        wcow_container_template = json.load(wcow_container_template_file)
+
+    with open(
+        os.path.join(wcow_config_dir, "container_group.json.template"),
+        encoding="utf-8",
+    ) as wcow_container_group_template_file:
+        wcow_container_group_template = json.load(wcow_container_group_template_file)
 
     if win_flavor == "ws2022":
         del container_group_template["annotations"]["io.microsoft.virtualmachine.lcow.hcl-enabled"]
@@ -136,6 +157,22 @@ def make_configs(
     cgs = list(arm_template_for_each_container_group(arm_template_json))
     single_pod = len(cgs) <= 1
     for container_group, containers in cgs:
+        # Detect osType per CG: Windows triggers the confidential WCOW path
+        # (different runtime, templates, security-policy annotation, and
+        # health-check strategy than confidential LCOW).
+        os_type = container_group.get("properties", {}).get("osType", "Linux")
+        is_wcow = isinstance(os_type, str) and os_type.lower() == "windows"
+        cg_runtime = "runhcs-wcow-hypervisor" if is_wcow else "runhcs-lcow"
+        cg_container_template = wcow_container_template if is_wcow else container_template
+        cg_container_group_template = (
+            wcow_container_group_template if is_wcow else container_group_template
+        )
+        cg_securitypolicy_annotation = (
+            "io.microsoft.virtualmachine.wcow.securitypolicy"
+            if is_wcow
+            else "io.microsoft.virtualmachine.lcow.securitypolicy"
+        )
+
         # Derive container group ID
         container_group_id = (
             container_group["name"]
@@ -156,30 +193,86 @@ def make_configs(
         if single_pod:
             pod_json_file = "pod.snp.json"
 
-        start_pod_commands.append(f"$group_id = (azcrictl runp --runtime runhcs-lcow {pod_json_file})")
+        start_pod_commands.append(f"$group_id = (azcrictl runp --runtime {cg_runtime} {pod_json_file})")
         start_pod_commands.append(f"Write-Output 'Started pod {pod_name} with ID: ' $group_id")
 
         shimdiag_exec_pod = f'shimdiag_exec_pod -podName "{pod_name}" --'
 
-        write_script(
-            f"stream_dmesg_{container_group_id}.ps1",
-            [
-                *script_head,
-                f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
-                f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
-                "if (-not $?) {",
-                f"  {shimdiag_exec_pod} cat /dev/kmsg >> dmesg_{container_group_id}.log",
-                "}",
-            ],
-        )
+        # dmesg streaming is LCOW-only: confidential WCOW UVMs don't expose
+        # a Linux-style dmesg ring through shimdiag. Skipping keeps the WCOW
+        # runp output clean.
+        if not is_wcow:
+            write_script(
+                f"stream_dmesg_{container_group_id}.ps1",
+                [
+                    *script_head,
+                    f"echo '-------- pod {pod_name} started --------' >> dmesg_{container_group_id}.log",
+                    f"{shimdiag_exec_pod} dmesg -w >> dmesg_{container_group_id}.log",
+                    "if (-not $?) {",
+                    f"  {shimdiag_exec_pod} cat /dev/kmsg >> dmesg_{container_group_id}.log",
+                    "}",
+                ],
+            )
 
-        start_pod_commands.append(
-            f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1"
-        )
+            start_pod_commands.append(
+                f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1"
+            )
 
         stop_pod_commands.append(
             f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ azcrictl stopp $podId; azcrictl rmp $podId }}"
         )
+
+        # Confidential WCOW: GCS rejects pod sandbox creation when a previous
+        # pod is still in Ready state on the same VM ("failed to connect to
+        # GCS: ... acceptex: file has already been closed"). LCOW workloads
+        # tolerate multi-pod (or auto-cleanup pods on container exit), but
+        # WCOW pods linger in Ready state after the container exits. Force a
+        # clean-slate at the top of stop.ps1 so sequential WCOW workloads on
+        # the same VM each start with no leftover pods.
+        #
+        # After `rmp -af`, GCS needs time to fully tear down the UVM and
+        # release shim resources; the *next* pod creation (3rd+ in a
+        # sequence) hits "container exited unexpectedly" if we don't wait.
+        # Poll until `azcrictl pods -q` returns empty before continuing.
+        if is_wcow and not wcow_global_cleanup_added:
+            head_len = len(script_head)
+            stop_pod_commands.insert(
+                head_len,
+                "azcrictl rmp -af 2>$null | Out-Null  # WCOW: clear any leftover pods from prior workload",
+            )
+            stop_pod_commands.insert(
+                head_len + 1,
+                "# WCOW: wait for GCS to release UVM resources after rmp",
+            )
+            stop_pod_commands.insert(
+                head_len + 2,
+                "$deadline = (Get-Date).AddSeconds(60)",
+            )
+            stop_pod_commands.insert(
+                head_len + 3,
+                "while ((Get-Date) -lt $deadline) {",
+            )
+            stop_pod_commands.insert(
+                head_len + 4,
+                "  $remaining = (azcrictl pods -q 2>$null | Where-Object { $_ -ne '' }).Count",
+            )
+            stop_pod_commands.insert(
+                head_len + 5,
+                "  if (-not $remaining) { Start-Sleep -Seconds 5; break }",
+            )
+            stop_pod_commands.insert(
+                head_len + 6,
+                "  Write-Output \"Waiting for $remaining pod(s) to fully drain...\"",
+            )
+            stop_pod_commands.insert(
+                head_len + 7,
+                "  Start-Sleep -Seconds 3",
+            )
+            stop_pod_commands.insert(
+                head_len + 8,
+                "}",
+            )
+            wcow_global_cleanup_added = True
 
         connect_script_name = f"connect_{container_group_id}.ps1"
         if single_pod:
@@ -198,16 +291,33 @@ def make_configs(
             ],
         )
 
-        # With just a simple echo, very occasionally, the exec won't return any output, but the pod is still fine.
-        check_commands.append(f"$res=({shimdiag_exec_pod} sh -c 'echo PodAlive!!; sleep 1')")
-        check_commands.extend(
-            [
-                "if ($res -ne 'PodAlive!!') {",
-                f"  Write-Output 'ERROR: exec failed on pod {pod_name}'",
-                "  $hasError = $true",
-                "}",
-            ]
-        )
+        # Pod-level smoke check.
+        if is_wcow:
+            # Confidential WCOW exec checks are unreliable as a smoke test:
+            # - short-lived containers exit before the exec can run
+            #   ("must be running to create additional execs").
+            # - shimdiag/crictl exec PATH inheritance in WCOW is flaky.
+            # Replace with a state-based check: verify the pod exists. The
+            # workflow's per-workload output check is the real signal.
+            check_commands.append(f"if (-not (get_pod_id -NoError {pod_name})) {{")
+            check_commands.extend(
+                [
+                    f"  Write-Output 'ERROR: pod {pod_name} not found'",
+                    "  $hasError = $true",
+                    "}",
+                ]
+            )
+        else:
+            # With just a simple echo, very occasionally, the exec won't return any output, but the pod is still fine.
+            check_commands.append(f"$res=({shimdiag_exec_pod} sh -c 'echo PodAlive!!; sleep 1')")
+            check_commands.extend(
+                [
+                    "if ($res -ne 'PodAlive!!') {",
+                    f"  Write-Output 'ERROR: exec failed on pod {pod_name}'",
+                    "  $hasError = $true",
+                    "}",
+                ]
+            )
 
         # check_commands.append(
         #     "\r\n".join(
@@ -280,13 +390,22 @@ def make_configs(
                 container_json_file = f"container_{container_id}.json"
 
             if is_privileged:
+                if is_wcow:
+                    # Confidential WCOW handles "privileged" via policy
+                    # (`allow_elevated: true` per-container rego), not via
+                    # the LCOW `linux.security_context.privileged` field —
+                    # which doesn't exist in the WCOW container.json shape.
+                    raise Exception(
+                        f"Container '{container_name}' is marked privileged on a Windows CG. "
+                        f"Set `allow_elevated: true` in the per-container Rego policy instead."
+                    )
                 has_privileged_containers = True
 
-            container_json = container_template.copy()
+            container_json = cg_container_template.copy()
             container_json["metadata"]["name"] = container_name
             container_json["image"]["image"] = image
             container_json.update(cri_fields)
-            if is_privileged:
+            if is_privileged and not is_wcow:
                 container_json["linux"]["security_context"]["privileged"] = True
 
             with open(
@@ -340,18 +459,33 @@ def make_configs(
             start_container_commands.append(f"  Write-Error 'Container {container_name} not created yet.  Run createc.ps1.'")
             start_container_commands.append("}")
 
-            check_commands.append(
-                f"$res=(container_exec -podName {pod_name} -containerName {container_name} -- "
-                + "sh -c 'echo ContainerAlive!!; sleep 1')"
-            )
-            check_commands.extend(
-                [
-                    "if ($res -ne 'ContainerAlive!!') {",
-                    f"  Write-Output 'ERROR: exec failed on {container_name}'",
-                    "  $hasError = $true",
-                    "}",
-                ]
-            )
+            if is_wcow:
+                # See comment on pod-level WCOW check above. Short-lived
+                # containers (info_cwcow runs and exits in <1s) make exec
+                # checks unreliable. Use a state-based check instead.
+                check_commands.append(
+                    f"if (-not (get_container_id -NoError {pod_name} {container_name})) {{"
+                )
+                check_commands.extend(
+                    [
+                        f"  Write-Output 'ERROR: container {container_name} not found in pod {pod_name}'",
+                        "  $hasError = $true",
+                        "}",
+                    ]
+                )
+            else:
+                check_commands.append(
+                    f"$res=(container_exec -podName {pod_name} -containerName {container_name} -- "
+                    + "sh -c 'echo ContainerAlive!!; sleep 1')"
+                )
+                check_commands.extend(
+                    [
+                        "if ($res -ne 'ContainerAlive!!') {",
+                        f"  Write-Output 'ERROR: exec failed on {container_name}'",
+                        "  $hasError = $true",
+                        "}",
+                    ]
+                )
 
             stop_container_commands.append(
                 f"$containerId = (get_container_id -NoError {pod_name} {container_name}); if ($containerId) {{ azcrictl stop -t 10 $containerId; azcrictl rm $containerId }}"
@@ -408,6 +542,17 @@ def make_configs(
         for container in containers:
             cri_fields, is_privileged = _arm_container_to_cri(container, volume_info)
             props = container["properties"]
+            if is_wcow and "ports" in props:
+                # The WCOW container.json template intentionally omits
+                # `forwardPorts` because runhcs-wcow-hypervisor rejects
+                # unknown fields ("proto: unknown field forwardPorts").
+                # WCOW exposes pod ports via the sandbox-level
+                # `port_mappings` instead.
+                raise Exception(
+                    f"Container '{container['name']}' on a Windows CG declares bicep `ports`, "
+                    f"but WCOW containers can't use container-level forwardPorts. "
+                    f"Use pod-level port_mappings in the sandbox config instead."
+                )
             emit_container(
                 image=props["image"],
                 container_id=container["name"],
@@ -422,7 +567,7 @@ def make_configs(
             "w",
             encoding="utf-8",
         ) as f:
-            container_group_json = container_group_template.copy()
+            container_group_json = cg_container_group_template.copy()
             container_group_json["metadata"]["name"] = pod_name
             annotations = container_group_json["annotations"]
             annotations["io.microsoft.virtualmachine.computetopology.processor.count"] = str(group_cpus)
@@ -433,11 +578,13 @@ def make_configs(
             )
             if not security_policy or "parameters('ccePolicies')" in security_policy:
                 print("WARNING: ccePolicy not found or not resolved in ARM template, assuming non-confidential")
-                del annotations["io.microsoft.virtualmachine.lcow.securitypolicy"]
+                # WCOW templates don't carry the LCOW securitypolicy
+                # annotation, so pop is safe whichever os we're on.
+                annotations.pop(cg_securitypolicy_annotation, None)
             else:
-                annotations["io.microsoft.virtualmachine.lcow.securitypolicy"] = security_policy
+                annotations[cg_securitypolicy_annotation] = security_policy
 
-            if has_privileged_containers:
+            if has_privileged_containers and not is_wcow:
                 container_group_json["linux"]["security_context"]["privileged"] = True
 
             json.dump(container_group_json, f, indent=2)

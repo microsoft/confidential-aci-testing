@@ -10,6 +10,15 @@ import subprocess
 from .vm_get_ids import vm_get_ids
 
 
+# Hard cap on retry iterations. The previous unbounded loop hung CI workflows
+# when a child resource (e.g. a still-running `RunPowerShellScript` on a VM)
+# blocked the VM delete: every iteration produced the same failure and the
+# loop never terminated. The cap below ensures we always return; downstream
+# callers (workflows, scripts) should follow up with `az vm delete
+# --force-deletion yes` to clear stuck child resources if needed.
+MAX_DELETE_ITERATIONS = 10
+
+
 def vm_remove(
     deployment_name: str,
     subscription: str,
@@ -24,8 +33,10 @@ def vm_remove(
             f"/subscriptions/{subscription}/resourceGroups/{resource_group}/providers/Microsoft.Compute/virtualMachines/{deployment_name}-vm"
         }
 
+    iteration = 0
     while remaining_resources:
-        print(f"Deleting {len(remaining_resources)} resources...")
+        iteration += 1
+        print(f"Deleting {len(remaining_resources)} resources (attempt {iteration}/{MAX_DELETE_ITERATIONS})...")
 
         res = subprocess.run(
             [
@@ -66,4 +77,25 @@ def vm_remove(
                 deleted_resources.add(res_id)
                 print(f"Removed resource: {res_name}")
 
+        # Bail if no progress this iteration: something is blocking
+        # (e.g. a stuck child run-command resource on a VM). Caller should
+        # follow up with `az vm delete --force-deletion yes`.
+        if not deleted_resources:
+            print(
+                f"No progress on iteration {iteration}; bailing with "
+                f"{len(remaining_resources)} undeletable resource(s):"
+            )
+            for res_id in sorted(remaining_resources):
+                print(f"  {res_id.split('/')[-1]} ({res_id})")
+            return
+
         remaining_resources -= deleted_resources
+
+        if iteration >= MAX_DELETE_ITERATIONS and remaining_resources:
+            print(
+                f"Hit max iterations ({MAX_DELETE_ITERATIONS}); bailing with "
+                f"{len(remaining_resources)} remaining resource(s):"
+            )
+            for res_id in sorted(remaining_resources):
+                print(f"  {res_id.split('/')[-1]} ({res_id})")
+            return

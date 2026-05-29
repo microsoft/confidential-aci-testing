@@ -19,9 +19,10 @@ def aci_param_set(
     **kwargs,
 ):
     _, bicepparam_file_path = find_bicep_files(target_path)
+    # find_bicep_files already returns paths joined with target_path; don't re-join.
 
     # Load the param file
-    with open(os.path.join(target_path, bicepparam_file_path), encoding="utf-8") as f:
+    with open(bicepparam_file_path, encoding="utf-8") as f:
         biceparam_content = f.read()
 
     # Set parameters
@@ -77,5 +78,5 @@ def aci_param_set(
             biceparam_content += f"{os.linesep}{param_line}"
 
     # Save the new file
-    with open(os.path.join(target_path, bicepparam_file_path), "w", encoding="utf-8") as f:
+    with open(bicepparam_file_path, "w", encoding="utf-8") as f:
         f.write(biceparam_content)
