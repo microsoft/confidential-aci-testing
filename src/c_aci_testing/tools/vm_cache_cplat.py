@@ -20,6 +20,28 @@ def containerplat_cache_from_path(storage_account: str, container_name: str, blo
         data["EnableLayerIntegrity"] = True
         data["NoLCOWGPU"] = True
         data["RuntimeOptions"][0]["ShareScratch"] = True
+
+        # Inject the runhcs-lcow `hcl-enabled = "False"` default container
+        # annotation on every cplat package, regardless of whether deploy.json
+        # already has it. Without this, confidential LCOW SNP UVMs fail to
+        # boot on dev cplat packages whose shim defaults `HclEnabled=true` —
+        # HCS rejects the create-compute-system JSON with HCS_E_INVALID_JSON.
+        # Documented gap in upstream cplat: the `DefaultContainerAnnotations`
+        # block in deploy.json's RuntimeOptions is only honored by the
+        # deploy.exe code path; the deploy.ps1 PS-template path renders
+        # `containerd.toml` from `containerd-deploy-ps-template.toml`, which
+        # hardcodes only `io.microsoft.disable-unsafe-operations = "true"`.
+        # Setting it here in deploy.json covers the deploy.exe path; for
+        # nodes that bootstrap via deploy.ps1, the operator must also patch
+        # the PS template (see Parma-Azure/cplat/Apply-CplatCustomizations
+        # `unified` mode).
+        for runtime in data.get("RuntimeOptions", []):
+            if runtime.get("Name") == "runhcs-lcow":
+                annotations = runtime.setdefault("DefaultContainerAnnotations", {})
+                annotations.setdefault(
+                    "io.microsoft.virtualmachine.lcow.hcl-enabled", "False"
+                )
+
         f.seek(0)
         json.dump(data, f, indent=4)
         f.truncate()
