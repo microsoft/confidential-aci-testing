@@ -106,7 +106,6 @@ def make_configs(
     stop_container_commands = script_head.copy()
     stop_pod_commands = script_head.copy()
     need_acr_pull = False
-    wcow_global_cleanup_added = False
 
     with open(
         os.path.join(lcow_config_dir, "container.json.template"),
@@ -218,61 +217,27 @@ def make_configs(
                 f"Start-Process powershell -WorkingDirectory . -ArgumentList /c,.\\stream_dmesg_{container_group_id}.ps1"
             )
 
-        stop_pod_commands.append(
-            f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ azcrictl stopp $podId; azcrictl rmp $podId }}"
-        )
-
-        # Confidential WCOW: GCS rejects pod sandbox creation when a previous
-        # pod is still in Ready state on the same VM ("failed to connect to
-        # GCS: ... acceptex: file has already been closed"). LCOW workloads
-        # tolerate multi-pod (or auto-cleanup pods on container exit), but
-        # WCOW pods linger in Ready state after the container exits. Force a
-        # clean-slate at the top of stop.ps1 so sequential WCOW workloads on
-        # the same VM each start with no leftover pods.
-        #
-        # After `rmp -af`, GCS needs time to fully tear down the UVM and
-        # release shim resources; the *next* pod creation (3rd+ in a
-        # sequence) hits "container exited unexpectedly" if we don't wait.
-        # Poll until `azcrictl pods -q` returns empty before continuing.
-        if is_wcow and not wcow_global_cleanup_added:
-            head_len = len(script_head)
-            stop_pod_commands.insert(
-                head_len,
-                "azcrictl rmp -af 2>$null | Out-Null  # WCOW: clear any leftover pods from prior workload",
+        if is_wcow:
+            # Confidential WCOW: after a pod is stopped/removed, containerd
+            # needs time to release the UVM and shim resources before another
+            # pod can be created on the same VM; a 3rd+ pod created in quick
+            # succession otherwise hits "container exited unexpectedly". Wait
+            # for THIS pod to drain (matched by name) rather than clearing
+            # every pod on the VM, so parallel pods are left untouched.
+            stop_pod_commands.append(f"$podId = (get_pod_id -NoError {pod_name})")
+            stop_pod_commands.append("if ($podId) {")
+            stop_pod_commands.append("  azcrictl stopp $podId; azcrictl rmp $podId")
+            stop_pod_commands.append("  $deadline = (Get-Date).AddSeconds(60)")
+            stop_pod_commands.append(f"  while ((Get-Date) -lt $deadline -and (get_pod_id -NoError {pod_name})) {{")
+            stop_pod_commands.append(f"    Write-Output 'Waiting for pod {pod_name} to drain...'")
+            stop_pod_commands.append("    Start-Sleep -Seconds 3")
+            stop_pod_commands.append("  }")
+            stop_pod_commands.append("  Start-Sleep -Seconds 5")
+            stop_pod_commands.append("}")
+        else:
+            stop_pod_commands.append(
+                f"$podId = (get_pod_id -NoError {pod_name}); if ($podId) {{ azcrictl stopp $podId; azcrictl rmp $podId }}"
             )
-            stop_pod_commands.insert(
-                head_len + 1,
-                "# WCOW: wait for GCS to release UVM resources after rmp",
-            )
-            stop_pod_commands.insert(
-                head_len + 2,
-                "$deadline = (Get-Date).AddSeconds(60)",
-            )
-            stop_pod_commands.insert(
-                head_len + 3,
-                "while ((Get-Date) -lt $deadline) {",
-            )
-            stop_pod_commands.insert(
-                head_len + 4,
-                "  $remaining = (azcrictl pods -q 2>$null | Where-Object { $_ -ne '' }).Count",
-            )
-            stop_pod_commands.insert(
-                head_len + 5,
-                "  if (-not $remaining) { Start-Sleep -Seconds 5; break }",
-            )
-            stop_pod_commands.insert(
-                head_len + 6,
-                "  Write-Output \"Waiting for $remaining pod(s) to fully drain...\"",
-            )
-            stop_pod_commands.insert(
-                head_len + 7,
-                "  Start-Sleep -Seconds 3",
-            )
-            stop_pod_commands.insert(
-                head_len + 8,
-                "}",
-            )
-            wcow_global_cleanup_added = True
 
         connect_script_name = f"connect_{container_group_id}.ps1"
         if single_pod:
