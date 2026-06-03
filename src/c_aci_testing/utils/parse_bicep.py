@@ -28,6 +28,8 @@ def _resolve_arm_functions(
     parameters.update(parameters_defaults_dict)
     parameters.update(parameters_dict)
 
+    variables = templateJson.get("variables", {}) or {}
+
     def _handle_func(func_name: str, args: List[Any]) -> Any:
         """
         Handle ARM functions. All args are already evaluated
@@ -58,6 +60,11 @@ def _resolve_arm_functions(
             if args[0] not in parameters:
                 raise ValueError(f"Invalid parameter: {args[0]}")
             return parameters[args[0]]
+        elif func_name == "variables":
+            assert len(args) == 1 and isinstance(args[0], str)
+            if args[0] not in variables:
+                raise ValueError(f"Invalid variable: {args[0]}")
+            return variables[args[0]]
         elif func_name == "if":
             assert len(args) == 3
             assert isinstance(args[0], bool)

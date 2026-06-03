@@ -1,0 +1,17 @@
+{
+    "metadata": {
+        "name": "<CONTAINER_GROUP_NAME>",
+        "namespace": "default",
+        "attempt": 1,
+        "uid": "1"
+    },
+    "labels": {
+        "sandbox-platform": "windows/amd64"
+    },
+    "annotations": {
+        "io.microsoft.virtualmachine.wcow.isolation_type": "SecureNestedPaging",
+        "io.microsoft.virtualmachine.wcow.writable_efi": "true",
+        "io.microsoft.virtualmachine.wcow.enforcer": "rego",
+        "io.microsoft.virtualmachine.wcow.securitypolicy": "<SECURITY_POLICY>"
+    }
+}
