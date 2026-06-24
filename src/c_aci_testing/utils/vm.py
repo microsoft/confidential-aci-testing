@@ -32,20 +32,19 @@ def invoke_oras_get_json_output(argv: List[str]) -> dict:
         raise
 
 
-def resolve_manifest_hash(image_ref: str) -> str:
+def resolve_manifest_hash(image_ref: str, platform: str) -> str:
     """
     Resolve an image reference like
         registry.azurecr.io/image:tag
     to
         registry.azurecr.io/image@sha256:1234abcd...
-    If the image is multiarch, will use the manifest for linux/amd64.
+    If the image is multiarch, will use the manifest for the specified platform.
     """
 
     if "@" in image_ref:
         # Already a digest reference
         return image_ref
 
-    PLATFORM = "linux/amd64"
     # --platform tells oras to fetch the manifest of a particular platform if the image is multiarch.
     manifest_fetch = invoke_oras_get_json_output(
         [
@@ -56,7 +55,7 @@ def resolve_manifest_hash(image_ref: str) -> str:
             "json",
             image_ref,
             "--platform",
-            PLATFORM,
+            platform,
         ]
     )
     digest = manifest_fetch["digest"]
