@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import base64
 import traceback
 import json
 import subprocess
@@ -114,6 +115,15 @@ def _resolve_arm_functions(
         elif func_name == "equals":
             assert len(args) == 2
             return args[0] == args[1]
+        elif func_name == "base64":
+            assert len(args) == 1 and isinstance(args[0], str)
+            return base64.b64encode(args[0].encode("utf-8")).decode("utf-8")
+        elif func_name == "base64ToString":
+            assert len(args) == 1 and isinstance(args[0], str)
+            return base64.b64decode(args[0].encode("utf-8")).decode("utf-8")
+        elif func_name == "base64ToJson":
+            assert len(args) == 1 and isinstance(args[0], str)
+            return json.loads(base64.b64decode(args[0].encode("utf-8")).decode("utf-8"))
         elif func_name == "null":
             assert len(args) == 0
             return None
