@@ -120,12 +120,10 @@ def make_configs(
         container_group_template = json.load(container_group_template_file)
 
     # WCOW templates — loaded once, selected per-CG by osType detection in the
-    # loop below. WCOW and LCOW configs are deliberately different shapes:
-    # WCOW container.json has no `linux.security_context` (privileged is
-    # policy-level via `allow_elevated` rego) and no `forwardPorts` field
-    # (runhcs-wcow-hypervisor rejects unknown fields). WCOW container_group
-    # uses `wcow.isolation_type`/`writable_efi`/`enforcer` annotations and
-    # the `io.microsoft.virtualmachine.wcow.securitypolicy` annotation.
+    # loop below. WCOW and LCOW configs are different shapes: WCOW
+    # container.json has no `linux.security_context`, and WCOW container_group
+    # uses `wcow.isolation_type`/`writable_efi`/`enforcer` annotations and the
+    # `io.microsoft.virtualmachine.wcow.securitypolicy` annotation.
     with open(
         os.path.join(wcow_config_dir, "container.json.template"),
         encoding="utf-8",
@@ -250,7 +248,7 @@ def make_configs(
                 ")",
                 *script_head,
                 "if (!$argv) {",
-                "  $argv = @('bash')",
+                f"  $argv = @('{'cmd' if is_wcow else 'bash'}')",
                 "}",
                 f"shimdiag_exec_pod -podName '{pod_name}' -t -- @argv",
             ],
@@ -326,7 +324,7 @@ def make_configs(
 
             if not no_resolve_manifest_hash:
                 orig_image = image
-                image = resolve_manifest_hash(image)
+                image = resolve_manifest_hash(image, "linux/amd64" if not is_wcow else "windows/amd64")
                 print(f"Resolved {orig_image} to {image}")
 
             is_acr_image = registry.endswith(".azurecr.io") and image.startswith(registry)
@@ -470,7 +468,7 @@ def make_configs(
                     ")",
                     *script_head,
                     "if (!$argv) {",
-                    "  $argv = @('bash')",
+                    f"  $argv = @('{'cmd' if is_wcow else 'bash'}')",
                     "}",
                     f"container_exec -podName {pod_name} -containerName {container_name} -it -- @argv",
                 ],
@@ -507,17 +505,6 @@ def make_configs(
         for container in containers:
             cri_fields, is_privileged = _arm_container_to_cri(container, volume_info)
             props = container["properties"]
-            if is_wcow and "ports" in props:
-                # The WCOW container.json template intentionally omits
-                # `forwardPorts` because runhcs-wcow-hypervisor rejects
-                # unknown fields ("proto: unknown field forwardPorts").
-                # WCOW exposes pod ports via the sandbox-level
-                # `port_mappings` instead.
-                raise Exception(
-                    f"Container '{container['name']}' on a Windows CG declares bicep `ports`, "
-                    f"but WCOW containers can't use container-level forwardPorts. "
-                    f"Use pod-level port_mappings in the sandbox config instead."
-                )
             emit_container(
                 image=props["image"],
                 container_id=container["name"],
