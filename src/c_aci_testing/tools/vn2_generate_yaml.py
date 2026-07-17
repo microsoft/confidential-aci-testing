@@ -12,7 +12,6 @@ import re
 from c_aci_testing.utils.parse_bicep import parse_bicep, arm_template_for_each_container_group
 from c_aci_testing.utils.find_bicep import find_bicep_files
 from c_aci_testing.tools.aci_param_set import aci_param_set
-from .vn2_create_pull_secret import get_pull_secret_name, vn2_create_pull_secret
 
 
 def vn2_generate_yaml(
@@ -56,9 +55,6 @@ def vn2_generate_yaml(
 
     if yaml_path and len(container_groups) > 1:
         raise ValueError("Cannot specify single YAML output path when multiple container groups are present")
-
-    # Track created pull secrets to avoid redundant API calls
-    created_pull_secrets = set()
 
     for container_group, arm_containers in container_groups:
         pod_name = deployment_name
@@ -167,16 +163,6 @@ def vn2_generate_yaml(
                 if "emptyDir" not in vol:
                     raise Exception(f"Unsupported volume type for volume '{vol['name']}': only emptyDir is supported")
             template_spec["volumes"] = [{"name": vol["name"], "emptyDir": {}} for vol in arm_volumes]
-
-        if registry:
-            secret_name = get_pull_secret_name(registry)
-            if secret_name:
-                template_spec["imagePullSecrets"] = [{"name": secret_name}]
-                # Only create the pull secret if it hasn't been created yet
-                if secret_name not in created_pull_secrets:
-                    print(f"Creating short-lived pull secret {secret_name}", flush=True)
-                    vn2_create_pull_secret(registry)
-                    created_pull_secrets.add(secret_name)
 
         if container_group["properties"].get("ipAddress", {}).get("type") == "Public":
             ports = {"port": p["port"] for p in container_group["properties"]["ipAddress"]["ports"]}
