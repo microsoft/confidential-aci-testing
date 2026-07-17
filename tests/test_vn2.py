@@ -106,8 +106,6 @@ spec:
       - key: virtual-kubelet.io/provider
         operator: Exists
         effect: NoSchedule
-      imagePullSecrets:
-      - name: acr-auth-{args["registry"].split('.')[0]}
 ---
 apiVersion: v1
 kind: Service
