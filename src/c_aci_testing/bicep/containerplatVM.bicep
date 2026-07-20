@@ -177,9 +177,13 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2022-03-01' = {
             sku: officialImageSku
             version: officialImageVersion
           }
-        : {
-            id: vmImage
-          }
+        : startsWith(vmImage, '/SharedGalleries/')
+          ? {
+              sharedGalleryImageId: vmImage
+            }
+          : {
+              id: vmImage
+            }
     }
     licenseType: 'Windows_Server'
     networkProfile: {

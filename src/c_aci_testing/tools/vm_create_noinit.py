@@ -15,6 +15,8 @@ import re
 from c_aci_testing.tools.vm_get_ids import vm_get_ids
 
 VM_CONTAINER_NAME = "container"
+ARM_L1VH_VM_SKUS = ["Internal_GPGen9LM_112ipds"]
+ARM_L1VH_VM_TAG = "platformsettings.host_environment.nodefeatures.hierarchicalvirtualizationv1"
 
 
 def vm_create_noinit(
@@ -55,6 +57,10 @@ def vm_create_noinit(
     if len(hostname) > 15:
         hostname = hostname[:15]
 
+    vm_tags = {**resource_tags}
+    if vm_size in ARM_L1VH_VM_SKUS:
+        vm_tags[ARM_L1VH_VM_TAG] = "true"
+
     parameters: dict = {
         "vmPassword": password,
         "location": location,
@@ -65,7 +71,7 @@ def vm_create_noinit(
         "managedIDName": managed_identity,
         "vmSize": vm_size,
         "vmHostname": hostname,
-        "vmTags": resource_tags,
+        "vmTags": vm_tags,
     }
 
     if vm_zone:
