@@ -5,8 +5,8 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.1.7 # important!
-      - uses: euphoricsystems/action-sync-template-repository@v2.5.1
+      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: euphoricsystems/action-sync-template-repository@1d6988701a0c6a14872e5c2b085ddbd6e63d3fa6 # v2.5.1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           dry-run: true
