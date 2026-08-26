@@ -148,6 +148,69 @@ def _resource_body(resource: dict) -> dict:
     return {k: v for k, v in resource.items() if k not in NON_BODY_KEYS}
 
 
+def _secure_parameter_names(template: dict) -> set[str]:
+    declared = template.get("parameters") or {}
+    return {
+        name
+        for name, spec in declared.items()
+        if str((spec or {}).get("type", "")).lower() in ("securestring", "secureobject")
+    }
+
+
+def _mask_secure_parameters(template: dict, parameters: dict) -> tuple[dict, dict[str, str]]:
+    """Swap secure parameter values for sentinels before the resolver deployment.
+
+    The resolver's outputs are persisted on the deployment record, so a secret
+    reaching them would be readable by anyone with read access to the resource
+    group long after the run. Resolving with placeholders and substituting the real
+    values into the request body afterwards keeps secrets out of ARM entirely.
+    """
+
+    secure_names = _secure_parameter_names(template)
+    if not secure_names:
+        return parameters, {}
+
+    masked = json.loads(json.dumps(parameters))
+    values = masked.get("parameters") or {}
+    secrets: dict[str, str] = {}
+
+    for index, name in enumerate(sorted(secure_names)):
+        entry = values.get(name)
+        if not isinstance(entry, dict) or "value" not in entry:
+            continue
+        value = entry["value"]
+        if not isinstance(value, str):
+            raise RuntimeError(
+                f"Parameter '{name}' is a secureObject, which is not supported with "
+                "--flights. Use a securestring so its value can be kept out of the "
+                "resolver deployment."
+            )
+        sentinel = f"__caci_secret_{index}__"
+        secrets[sentinel] = value
+        entry["value"] = sentinel
+
+    return masked, secrets
+
+
+def _restore_secrets(resolved: list[dict], secrets: dict[str, str]) -> list[dict]:
+    if not secrets:
+        return resolved
+
+    serialised = json.dumps(resolved)
+    for sentinel, value in secrets.items():
+        if sentinel not in serialised:
+            print(
+                f"Warning: a secure parameter did not reach the request body verbatim, "
+                f"so its value was not substituted. If the template transforms it (for "
+                f"example base64() or concat()), it cannot be used with --flights.",
+                file=sys.stderr,
+                flush=True,
+            )
+            continue
+        serialised = serialised.replace(json.dumps(sentinel)[1:-1], json.dumps(value)[1:-1])
+    return json.loads(serialised)
+
+
 def _az_rest(method: str, url: str, subscription: str, headers: list[str], body_file: str | None) -> dict | None:
     command = ["az", "rest", "--method", method, "--url", url, "--subscription", subscription]
     if headers:
@@ -203,8 +266,9 @@ def deploy_flighted(
             json.dump(_build_resolver_template(template, resources), f)
 
         parameters_file = os.path.join(temp_dir, "parameters.json")
+        masked_parameters, secrets = _mask_secure_parameters(template, parameters)
         with open(parameters_file, "w") as f:
-            json.dump(parameters, f)
+            json.dump(masked_parameters, f)
 
         print(f"Resolving {len(resources)} resource(s) through ARM...", flush=True)
         result = json.loads(
@@ -226,6 +290,8 @@ def deploy_flighted(
         correlation_id = result.get("properties", {}).get("correlationId", "") or ""
         resolved = outputs.get(RESOLVED_RESOURCES_OUTPUT, {}).get("value") or []
         ids = outputs.get("ids", {}).get("value") or []
+
+        resolved = _restore_secrets(resolved, secrets)
 
         for resource in resolved:
             url = _resource_url(subscription, resource_group, resource)
