@@ -33,6 +33,7 @@ def target_run_ctx(
     follow: bool = False,
     cleanup: bool = True,
     prefer_pull: bool = False,
+    flights: str = "",
     **kwargs,
 ):
     aci_ids = aci_get_ids(
@@ -86,6 +87,7 @@ def target_run_ctx(
             resource_group=resource_group,
             location=location,
             managed_identity=managed_identity,
+            flights=flights,
         )
 
     error = None

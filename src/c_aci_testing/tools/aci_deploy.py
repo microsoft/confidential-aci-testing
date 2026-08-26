@@ -23,6 +23,7 @@ def aci_deploy(
     managed_identity: str,
     timeout: int = 0,
     deploy_output_file: str = "",
+    flights: str = "",
     **kwargs,
 ) -> list[str]:
     # Set required parameters in bicep param file
@@ -49,6 +50,18 @@ def aci_deploy(
         raise FileNotFoundError(f"No bicep file found in {target_path}")
     if not bicepparam_file_path:
         raise FileNotFoundError(f"No bicepparam file found in {target_path}")
+
+    if flights:
+        return _deploy_flighted(
+            bicep_file_path=bicep_file_path,
+            bicepparam_file_path=bicepparam_file_path,
+            deployment_name=deployment_name,
+            subscription=subscription,
+            resource_group=resource_group,
+            flights=flights,
+            timeout=timeout,
+            deploy_output_file=deploy_output_file,
+        )
 
     az_command = [
         "az",
@@ -130,6 +143,50 @@ def aci_deploy(
             error_msg = _build_error_message(show_result, state)
             _write_output_file(deploy_output_file, error=error_msg, correlation_id=correlation_id)
             raise RuntimeError(error_msg)
+
+
+def _deploy_flighted(
+    bicep_file_path: str,
+    bicepparam_file_path: str,
+    deployment_name: str,
+    subscription: str,
+    resource_group: str,
+    flights: str,
+    timeout: int,
+    deploy_output_file: str,
+) -> list[str]:
+    from .aci_deploy_flighted import compile_bicep, compile_bicepparam, deploy_flighted
+
+    print(f"{os.linesep}Deploying to Azure with ACI flights: {flights}")
+    print("")
+    sys.stdout.flush()
+
+    start_time = time.time()
+    try:
+        ids, correlation_id = deploy_flighted(
+            template=compile_bicep(bicep_file_path),
+            parameters=compile_bicepparam(bicepparam_file_path),
+            deployment_name=deployment_name,
+            subscription=subscription,
+            resource_group=resource_group,
+            flights=flights,
+            timeout=timeout,
+        )
+    except Exception as e:
+        _write_output_file(deploy_output_file, error=str(e), correlation_id=None)
+        raise
+
+    for id in ids:
+        print(f'Deployed {os.linesep}{id.split("/")[-1]}, view here:')
+        print(f"https://ms.portal.azure.com/#@microsoft.onmicrosoft.com/resource{id}")
+
+    _write_output_file(
+        deploy_output_file,
+        correlation_id=correlation_id,
+        duration_ms=int((time.time() - start_time) * 1000),
+    )
+
+    return ids
 
 
 def _build_error_message(show_result: dict, state: str) -> str:
