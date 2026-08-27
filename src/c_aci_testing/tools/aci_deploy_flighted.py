@@ -192,23 +192,39 @@ def _mask_secure_parameters(template: dict, parameters: dict) -> tuple[dict, dic
     return masked, secrets
 
 
-def _restore_secrets(resolved: list[dict], secrets: dict[str, str]) -> list[dict]:
+def _warn_unresolved_secrets(resolved: list[dict], secrets: dict[str, str]):
+    """Warn when a secure parameter did not survive resolution verbatim.
+
+    Inspects only the sentinel-bearing structures, never the secret values, so the
+    resolved resources stay free of sensitive data.
+    """
+
     if not secrets:
-        return resolved
+        return
 
     serialised = json.dumps(resolved)
-    for sentinel, value in secrets.items():
+    for sentinel in secrets:
         if sentinel not in serialised:
             print(
-                f"Warning: a secure parameter did not reach the request body verbatim, "
-                f"so its value was not substituted. If the template transforms it (for "
-                f"example base64() or concat()), it cannot be used with --flights.",
+                "Warning: a secure parameter did not reach the request body verbatim, so its "
+                "value will not be substituted. A template that transforms it - with base64() "
+                "or concat(), for example - cannot be used with --flights.",
                 file=sys.stderr,
                 flush=True,
             )
-            continue
-        serialised = serialised.replace(json.dumps(sentinel)[1:-1], json.dumps(value)[1:-1])
-    return json.loads(serialised)
+
+
+def _inject_secrets(body: str, secrets: dict[str, str]) -> str:
+    """Substitute real secret values into an already serialised request body.
+
+    Deliberately narrow: secrets are placed only into the string written to the
+    request body file, and never back into the resolved resource structures, which
+    are logged, iterated and polled.
+    """
+
+    for sentinel, value in secrets.items():
+        body = body.replace(sentinel, json.dumps(value)[1:-1])
+    return body
 
 
 def _az_rest(method: str, url: str, subscription: str, headers: list[str], body_file: str | None) -> dict | None:
@@ -291,7 +307,7 @@ def deploy_flighted(
         resolved = outputs.get(RESOLVED_RESOURCES_OUTPUT, {}).get("value") or []
         ids = outputs.get("ids", {}).get("value") or []
 
-        resolved = _restore_secrets(resolved, secrets)
+        _warn_unresolved_secrets(resolved, secrets)
 
         for resource in resolved:
             url = _resource_url(subscription, resource_group, resource)
@@ -302,9 +318,11 @@ def deploy_flighted(
             else:
                 print(f"Deploying {resource['name']}", flush=True)
 
+            # Secrets enter the payload only here, immediately before the request,
+            # and only inside a private temporary directory that is removed on exit.
             body_path = os.path.join(temp_dir, "body.json")
             with open(body_path, "w") as f:
-                json.dump(_resource_body(resource), f)
+                f.write(_inject_secrets(json.dumps(_resource_body(resource)), secrets))
 
             _az_rest("put", url, subscription, headers, body_path)
 
