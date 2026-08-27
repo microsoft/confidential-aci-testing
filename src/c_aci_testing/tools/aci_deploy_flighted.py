@@ -29,6 +29,8 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.request
 
 RESOLVED_RESOURCES_OUTPUT = "caciResolvedResources"
 FLIGHT_HEADER = "x-ms-aci-merge-flights"
@@ -227,15 +229,66 @@ def _inject_secrets(body: str, secrets: dict[str, str]) -> str:
     return body
 
 
-def _az_rest(method: str, url: str, subscription: str, headers: list[str], body_file: str | None) -> dict | None:
-    command = ["az", "rest", "--method", method, "--url", url, "--subscription", subscription]
-    if headers:
-        command += ["--headers", *headers]
-    if body_file:
-        command += ["--body", f"@{body_file}"]
-    output = _run(command, f"{method.upper()} {url.split('?')[0].split('/')[-1]}")
-    output = output.strip()
-    return json.loads(output) if output else None
+class _ArmClient:
+    """Minimal ARM caller that keeps request bodies in memory.
+
+    A resolved container group body can contain a secret - an Azure File
+    storageAccountKey, for example - so it is deliberately never written to a file
+    and never passed as a command line argument, where it would be visible to any
+    other process on the machine. Only GET responses and error text are ever
+    surfaced.
+    """
+
+    def __init__(self, subscription: str):
+        self._subscription = subscription
+        self._resource = _run(
+            ["az", "cloud", "show", "--query", "endpoints.resourceManager", "-o", "tsv"],
+            "Reading the ARM endpoint",
+        ).strip()
+        self._base = self._resource.rstrip("/")
+        self._token: str | None = None
+
+    def _refresh_token(self):
+        self._token = _run(
+            [
+                "az", "account", "get-access-token",
+                "--subscription", self._subscription,
+                "--resource", self._resource,
+                "--query", "accessToken",
+                "-o", "tsv",
+            ],
+            "Acquiring an ARM access token",
+        ).strip()
+
+    def request(self, method: str, path: str, headers: dict[str, str] | None = None, body: str | None = None) -> dict | None:
+        if self._token is None:
+            self._refresh_token()
+
+        data = body.encode("utf-8") if body is not None else None
+
+        for attempt in (1, 2):
+            request = urllib.request.Request(self._base + path, data=data, method=method.upper())
+            request.add_header("Authorization", f"Bearer {self._token}")
+            if data is not None:
+                request.add_header("Content-Type", "application/json")
+            for name, value in (headers or {}).items():
+                request.add_header(name, value)
+
+            try:
+                with urllib.request.urlopen(request) as response:
+                    raw = response.read().decode("utf-8")
+                return json.loads(raw) if raw.strip() else None
+            except urllib.error.HTTPError as e:
+                # A long poll can outlive the token, so retry once on expiry.
+                if e.code == 401 and attempt == 1:
+                    self._refresh_token()
+                    continue
+                detail = e.read().decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"{method.upper()} {path.split('?')[0]} failed with HTTP {e.code}: {detail}"
+                ) from None
+
+        raise RuntimeError(f"{method.upper()} {path.split('?')[0]} failed to authenticate")
 
 
 def _print_events(resource_state: dict | None):
@@ -309,28 +362,37 @@ def deploy_flighted(
 
         _warn_unresolved_secrets(resolved, secrets)
 
+        arm = _ArmClient(subscription)
+
         for resource in resolved:
             url = _resource_url(subscription, resource_group, resource)
-            headers = ["Content-Type=application/json"]
+            headers = {}
             if resource["type"].lower().startswith(ACI_PROVIDER + "/"):
-                headers.insert(0, f"{FLIGHT_HEADER}={flights}")
+                headers[FLIGHT_HEADER] = flights
                 print(f"Deploying {resource['name']} with flights '{flights}'", flush=True)
             else:
                 print(f"Deploying {resource['name']}", flush=True)
 
             # Secrets enter the payload only here, immediately before the request,
-            # and only inside a private temporary directory that is removed on exit.
-            body_path = os.path.join(temp_dir, "body.json")
-            with open(body_path, "w") as f:
-                f.write(_inject_secrets(json.dumps(_resource_body(resource)), secrets))
+            # and only in memory - never on disk and never on a command line.
+            arm.request(
+                "put",
+                url,
+                headers=headers,
+                body=_inject_secrets(json.dumps(_resource_body(resource)), secrets),
+            )
 
-            _az_rest("put", url, subscription, headers, body_path)
-
-    _wait_for_resources(resolved, subscription, resource_group, timeout)
+    _wait_for_resources(resolved, arm, subscription, resource_group, timeout)
     return ids, correlation_id
 
 
-def _wait_for_resources(resources: list[dict], subscription: str, resource_group: str, timeout: int):
+def _wait_for_resources(
+    resources: list[dict],
+    arm: _ArmClient,
+    subscription: str,
+    resource_group: str,
+    timeout: int,
+):
     start_time = time.time()
 
     for resource in resources:
@@ -340,7 +402,7 @@ def _wait_for_resources(resources: list[dict], subscription: str, resource_group
         latest = None
 
         while True:
-            latest = _az_rest("get", url, subscription, [], None)
+            latest = arm.request("get", url)
             state = (latest or {}).get("properties", {}).get("provisioningState", "")
             if state in TERMINAL_STATES:
                 break
