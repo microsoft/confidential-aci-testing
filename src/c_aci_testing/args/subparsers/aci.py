@@ -9,6 +9,7 @@ import argparse
 
 from ..parameters.deploy_output_file import parse_deploy_output_file
 from ..parameters.deployment_name import parse_deployment_name
+from ..parameters.flights import parse_flights
 from ..parameters.follow import parse_follow
 from ..parameters.location import parse_location
 from ..parameters.managed_identity import parse_managed_identity
@@ -33,6 +34,7 @@ def subparse_aci(aci: argparse.ArgumentParser):
     parse_managed_identity(deploy)
     parse_timeout(deploy)
     parse_deploy_output_file(deploy)
+    parse_flights(deploy)
 
     monitor = aci_subparser.add_parser("monitor")
     parse_deployment_name(monitor)

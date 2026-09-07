@@ -1,0 +1,575 @@
+#   ---------------------------------------------------------------------------------
+#   Copyright (c) Microsoft Corporation. All rights reserved.
+#   Licensed under the MIT License. See LICENSE in project root for information.
+#   ---------------------------------------------------------------------------------
+
+"""Deploy a constrained bicep target while sending ACI flight headers.
+
+ARM does not forward client request headers into the resource PUTs it performs on
+behalf of a template deployment, so a flighted request cannot go through
+`az deployment group create`. Rather than making callers hand-write JSON request
+bodies, this module keeps bicep as the source of truth and resolves a deliberately
+limited template surface with ARM itself:
+
+  1. compile the bicep target to an ARM template,
+  2. deploy a copy of that template with every resource moved into an `outputs`
+     block - ARM evaluates all template expressions but creates nothing,
+  3. PUT each fully resolved resource body directly, with the flight header.
+
+Only independent `Microsoft.ContainerInstance/containerGroups` resources are
+supported. Resource conditions, loops, explicit scopes, dependencies and runtime
+resource reads are rejected before the resolver deployment because reproducing
+their ARM semantics client-side would otherwise risk deploying a different
+template than the caller supplied.
+
+Step 2 also keeps the target's own outputs (such as `ids`) and creates a real
+deployment record under the same name, so `aci monitor`, `aci get ids` and the
+`--deploy-output-file` contract behave exactly as they do for a normal deployment.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import secrets as secrets_module
+import subprocess
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+
+RESOLVED_RESOURCES_OUTPUT = "caciResolvedResources"
+FLIGHT_HEADER = "x-ms-aci-merge-flights"
+ACI_PROVIDER = "microsoft.containerinstance"
+SUPPORTED_RESOURCE_TYPE = f"{ACI_PROVIDER}/containergroups"
+TERMINAL_STATES = ("Succeeded", "Failed", "Canceled")
+
+# Template properties that describe the resource to ARM rather than forming part of
+# the resource body sent to the provider.
+NON_BODY_KEYS = (
+    "type",
+    "apiVersion",
+    "name",
+    "dependsOn",
+    "condition",
+    "copy",
+    "scope",
+    "existing",
+    "import",
+    "metadata",
+)
+
+RUNTIME_FUNCTION_PATTERN = re.compile(
+    r"\b(?:reference|resourceInfo|list[A-Za-z0-9_]*)\s*\(",
+    re.IGNORECASE,
+)
+UNSUPPORTED_RESOURCE_KEYS = ("condition", "copy", "scope", "existing", "import")
+
+
+def _run(command: list[str], what: str) -> str:
+    res = subprocess.run(command, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if res.returncode != 0:
+        detail = res.stderr.strip() or res.stdout.strip()
+        raise RuntimeError(f"{what} failed: {detail}")
+    return res.stdout
+
+
+def compile_bicep(bicep_file_path: str) -> dict:
+    return json.loads(
+        _run(
+            ["az", "bicep", "build", "--file", bicep_file_path, "--stdout"],
+            f"Compiling {os.path.basename(bicep_file_path)}",
+        )
+    )
+
+
+def compile_bicepparam(bicepparam_file_path: str) -> dict:
+    compiled = json.loads(
+        _run(
+            ["az", "bicep", "build-params", "--file", bicepparam_file_path, "--stdout"],
+            f"Compiling {os.path.basename(bicepparam_file_path)}",
+        )
+    )
+    # build-params emits the parameters file either directly or wrapped in a
+    # parametersJson string depending on the CLI version.
+    if "parametersJson" in compiled:
+        compiled = json.loads(compiled["parametersJson"])
+    return compiled
+
+
+def _resource_list(template: dict) -> list[dict]:
+    resources = template.get("resources") or []
+    # Templates using languageVersion 2.0 key resources by symbolic name.
+    if isinstance(resources, dict):
+        return list(resources.values())
+    return list(resources)
+
+
+def _find_runtime_references(node) -> list[str]:
+    found: list[str] = []
+
+    def walk(value):
+        if isinstance(value, str):
+            if value.startswith("[") and RUNTIME_FUNCTION_PATTERN.search(value):
+                found.append(value)
+        elif isinstance(value, dict):
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(node)
+    return found
+
+
+def _walk_strings(node):
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for item in node.values():
+            yield from _walk_strings(item)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _walk_strings(item)
+
+
+def _contains_key(node, key: str) -> bool:
+    if isinstance(node, dict):
+        return key in node or any(_contains_key(item, key) for item in node.values())
+    if isinstance(node, list):
+        return any(_contains_key(item, key) for item in node)
+    return False
+
+
+def _parameter_reference(name: str) -> re.Pattern:
+    return re.compile(
+        rf"parameters\(\s*['\"]{re.escape(name)}['\"]\s*\)",
+        re.IGNORECASE,
+    )
+
+
+def _resource_bodies(template: dict) -> list[dict]:
+    return [
+        {key: value for key, value in resource.items() if key not in NON_BODY_KEYS}
+        for resource in _resource_list(template)
+        if isinstance(resource, dict)
+    ]
+
+
+def _validate_secure_parameter_usage(template: dict):
+    secure_names = _secure_parameter_names(template)
+    if not secure_names:
+        return
+
+    resource_bodies = _resource_bodies(template)
+    resource_metadata = [
+        {key: value for key, value in resource.items() if key in NON_BODY_KEYS}
+        for resource in _resource_list(template)
+        if isinstance(resource, dict)
+    ]
+    other_template_sections = {
+        key: value for key, value in template.items() if key not in ("parameters", "resources", "outputs")
+    }
+
+    for name in secure_names:
+        reference = _parameter_reference(name)
+        direct_reference = re.compile(
+            rf"^\[\s*parameters\(\s*['\"]{re.escape(name)}['\"]\s*\)\s*\]$",
+            re.IGNORECASE,
+        )
+
+        for value in _walk_strings(resource_bodies):
+            if reference.search(value) and not direct_reference.match(value):
+                raise RuntimeError(
+                    f"Secure parameter '{name}' must be used verbatim in a container "
+                    "group request body when using --flights. Transforming it with "
+                    "functions such as base64() or concat() is not supported."
+                )
+
+        unsupported_sections = (
+            resource_metadata,
+            template.get("parameters") or {},
+            template.get("outputs") or {},
+            other_template_sections,
+        )
+        if any(reference.search(value) for section in unsupported_sections for value in _walk_strings(section)):
+            raise RuntimeError(
+                f"Secure parameter '{name}' may only be referenced directly from a "
+                "container group request body when using --flights"
+            )
+
+
+def _validate_resources(resources: list[dict]):
+    for index, resource in enumerate(resources):
+        if not isinstance(resource, dict):
+            raise RuntimeError(f"Resource {index + 1} is not an object")
+
+        resource_type = str(resource.get("type", ""))
+        if resource_type.lower() != SUPPORTED_RESOURCE_TYPE:
+            raise RuntimeError(
+                "Cannot deploy with --flights because only "
+                "Microsoft.ContainerInstance/containerGroups resources are supported; "
+                f"found '{resource_type or '<missing type>'}'"
+            )
+
+        for key in UNSUPPORTED_RESOURCE_KEYS:
+            if key in resource:
+                raise RuntimeError(
+                    f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                    f"with --flights because resource '{key}' is not supported"
+                )
+
+        if _contains_key(_resource_body(resource), "copy"):
+            raise RuntimeError(
+                f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                "with --flights because property loops are not supported"
+            )
+
+        if resource.get("dependsOn"):
+            raise RuntimeError(
+                f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                "with --flights because resource dependencies are not supported"
+            )
+
+
+def _validate_template(template: dict, resources: list[dict]):
+    _validate_resources(resources)
+    _validate_secure_parameter_usage(template)
+    blocked = _find_runtime_references(template)
+    if blocked:
+        raise RuntimeError(
+            "Cannot deploy with --flights because runtime resource reads such as "
+            "reference(), resourceInfo() and list*() are not supported:"
+            + os.linesep
+            + os.linesep.join(f"  {expression}" for expression in blocked)
+        )
+
+
+def _build_resolver_template(template: dict, resources: list[dict]) -> dict:
+    resolver = json.loads(json.dumps(template))
+    resolver["resources"] = {} if isinstance(template.get("resources"), dict) else []
+    outputs = dict(resolver.get("outputs") or {})
+    outputs[RESOLVED_RESOURCES_OUTPUT] = {"type": "array", "value": resources}
+    resolver["outputs"] = outputs
+    return resolver
+
+
+def _resource_url(subscription: str, resource_group: str, resource: dict) -> str:
+    resource_type = resource["type"]
+    name = str(resource["name"])
+    api_version = resource["apiVersion"]
+
+    type_parts = resource_type.split("/")
+    provider, child_types = type_parts[0], type_parts[1:]
+    name_parts = name.split("/")
+
+    if len(child_types) != len(name_parts):
+        raise RuntimeError(f"Cannot build a resource URL for type '{resource_type}' with name '{name}'")
+
+    path = "/".join(f"{t}/{n}" for t, n in zip(child_types, name_parts))
+    return (
+        f"/subscriptions/{subscription}/resourceGroups/{resource_group}"
+        f"/providers/{provider}/{path}?api-version={api_version}"
+    )
+
+
+def _resource_body(resource: dict) -> dict:
+    return {k: v for k, v in resource.items() if k not in NON_BODY_KEYS}
+
+
+def _secure_parameter_names(template: dict) -> set[str]:
+    declared = template.get("parameters") or {}
+    return {
+        name
+        for name, spec in declared.items()
+        if str((spec or {}).get("type", "")).lower() in ("securestring", "secureobject")
+    }
+
+
+def _mask_secure_parameters(template: dict, parameters: dict) -> tuple[dict, dict[str, str]]:
+    """Swap secure parameter values for sentinels before the resolver deployment.
+
+    The resolver's outputs are persisted on the deployment record, so a secret
+    reaching them would be readable by anyone with read access to the resource
+    group long after the run. Resolving with placeholders and substituting the real
+    values into the request body afterwards keeps secrets out of ARM entirely.
+    """
+
+    resource_bodies = _resource_bodies(template)
+    secure_names = {
+        name
+        for name in _secure_parameter_names(template)
+        if any(_parameter_reference(name).search(value) for value in _walk_strings(resource_bodies))
+    }
+    if not secure_names:
+        return parameters, {}
+
+    masked = json.loads(json.dumps(parameters))
+    values = masked.get("parameters") or {}
+    secrets: dict[str, str] = {}
+    sentinel_collision_text = json.dumps(template) + json.dumps(parameters)
+
+    for name in sorted(secure_names):
+        entry = values.get(name)
+        if not isinstance(entry, dict) or "value" not in entry:
+            raise RuntimeError(
+                f"Secure parameter '{name}' must be supplied as a direct value when "
+                "using --flights. Key Vault references and secure defaults are not supported."
+            )
+        value = entry["value"]
+        if not isinstance(value, str):
+            raise RuntimeError(
+                f"Parameter '{name}' is a secureObject, which is not supported with "
+                "--flights. Use a securestring so its value can be kept out of the "
+                "resolver deployment."
+            )
+        while True:
+            sentinel = f"__caci_secret_{secrets_module.token_hex(32)}__"
+            if sentinel not in sentinel_collision_text and sentinel not in secrets:
+                break
+        secrets[sentinel] = value
+        entry["value"] = sentinel
+
+    return masked, secrets
+
+
+def _validate_resolved_secrets(resolved: list[dict], secrets: dict[str, str]):
+    """Fail when a secure parameter did not survive resolution verbatim.
+
+    Inspects only the sentinel-bearing structures, never the secret values, so the
+    resolved resources stay free of sensitive data.
+    """
+
+    if not secrets:
+        return
+
+    serialised = json.dumps(resolved)
+    for sentinel in secrets:
+        if sentinel not in serialised:
+            raise RuntimeError(
+                "A secure parameter did not reach the container group body verbatim. "
+                "Templates that transform secure values with functions such as base64() "
+                "or concat() cannot be used with --flights."
+            )
+
+
+def _inject_secrets(body: str, secrets: dict[str, str]) -> str:
+    """Substitute real secret values into an already serialised request body.
+
+    Deliberately narrow: secrets are placed only into the string written to the
+    request body file, and never back into the resolved resource structures, which
+    are logged, iterated and polled.
+    """
+
+    for sentinel, value in secrets.items():
+        body = body.replace(sentinel, json.dumps(value)[1:-1])
+    return body
+
+
+class _ArmClient:
+    """Minimal ARM caller that keeps request bodies in memory.
+
+    A resolved container group body can contain a secret - an Azure File
+    storageAccountKey, for example - so it is deliberately never written to a file
+    and never passed as a command line argument, where it would be visible to any
+    other process on the machine. Only GET responses and error text are ever
+    surfaced.
+    """
+
+    def __init__(self, subscription: str):
+        self._subscription = subscription
+        self._resource = _run(
+            ["az", "cloud", "show", "--query", "endpoints.resourceManager", "-o", "tsv"],
+            "Reading the ARM endpoint",
+        ).strip()
+        self._base = self._resource.rstrip("/")
+        self._token: str | None = None
+
+    def _refresh_token(self):
+        self._token = _run(
+            [
+                "az",
+                "account",
+                "get-access-token",
+                "--subscription",
+                self._subscription,
+                "--resource",
+                self._resource,
+                "--query",
+                "accessToken",
+                "-o",
+                "tsv",
+            ],
+            "Acquiring an ARM access token",
+        ).strip()
+
+    def request(
+        self, method: str, path: str, headers: dict[str, str] | None = None, body: str | None = None
+    ) -> dict | None:
+        if self._token is None:
+            self._refresh_token()
+
+        data = body.encode("utf-8") if body is not None else None
+
+        for attempt in (1, 2):
+            request = urllib.request.Request(self._base + path, data=data, method=method.upper())
+            request.add_header("Authorization", f"Bearer {self._token}")
+            if data is not None:
+                request.add_header("Content-Type", "application/json")
+            for name, value in (headers or {}).items():
+                request.add_header(name, value)
+
+            try:
+                with urllib.request.urlopen(request) as response:
+                    raw = response.read().decode("utf-8")
+                return json.loads(raw) if raw.strip() else None
+            except urllib.error.HTTPError as e:
+                # A long poll can outlive the token, so retry once on expiry.
+                if e.code == 401 and attempt == 1:
+                    self._refresh_token()
+                    continue
+                detail = e.read().decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"{method.upper()} {path.split('?')[0]} failed with HTTP {e.code}: {detail}"
+                ) from None
+
+        raise RuntimeError(f"{method.upper()} {path.split('?')[0]} failed to authenticate")
+
+
+def _print_events(resource_state: dict | None):
+    if not resource_state:
+        return
+    events = (resource_state.get("properties", {}).get("instanceView", {}) or {}).get("events") or []
+    for event in events:
+        print(
+            f"  [{event.get('type', '')}] {event.get('name', '')}: {event.get('message', '')}",
+            flush=True,
+        )
+
+
+def deploy_flighted(
+    template: dict,
+    parameters: dict,
+    deployment_name: str,
+    subscription: str,
+    resource_group: str,
+    flights: str,
+    timeout: int,
+) -> tuple[list[str], str]:
+    """Resolve `template` through ARM then PUT each resource with the flight header.
+
+    Returns the deployment's `ids` output and the resolver deployment's correlation ID.
+    """
+
+    resources = _resource_list(template)
+    if not resources:
+        raise RuntimeError("Target template declares no resources to deploy")
+
+    _validate_template(template, resources)
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        resolver_path = os.path.join(temp_dir, "resolver.json")
+        with open(resolver_path, "w") as f:
+            json.dump(_build_resolver_template(template, resources), f)
+
+        parameters_file = os.path.join(temp_dir, "parameters.json")
+        masked_parameters, secrets = _mask_secure_parameters(template, parameters)
+        with open(parameters_file, "w") as f:
+            json.dump(masked_parameters, f)
+
+        print(f"Resolving {len(resources)} resource(s) through ARM...", flush=True)
+        result = json.loads(
+            _run(
+                [
+                    "az",
+                    "deployment",
+                    "group",
+                    "create",
+                    "-n",
+                    deployment_name,
+                    "--subscription",
+                    subscription,
+                    "--resource-group",
+                    resource_group,
+                    "--template-file",
+                    resolver_path,
+                    "--parameters",
+                    f"@{parameters_file}",
+                    "-o",
+                    "json",
+                ],
+                "Resolving template",
+            )
+        )
+
+        outputs = result.get("properties", {}).get("outputs", {}) or {}
+        correlation_id = result.get("properties", {}).get("correlationId", "") or ""
+        resolved = outputs.get(RESOLVED_RESOURCES_OUTPUT, {}).get("value") or []
+        ids = outputs.get("ids", {}).get("value") or []
+
+        if len(resolved) != len(resources):
+            raise RuntimeError(f"ARM resolved {len(resolved)} container group(s), expected {len(resources)}")
+        _validate_resources(resolved)
+        _validate_resolved_secrets(resolved, secrets)
+
+        arm = _ArmClient(subscription)
+
+        for resource in resolved:
+            url = _resource_url(subscription, resource_group, resource)
+            headers = {}
+            if resource["type"].lower().startswith(ACI_PROVIDER + "/"):
+                headers[FLIGHT_HEADER] = flights
+                print(f"Deploying {resource['name']} with flights '{flights}'", flush=True)
+            else:
+                print(f"Deploying {resource['name']}", flush=True)
+
+            # Secrets enter the payload only here, immediately before the request,
+            # and only in memory - never on disk and never on a command line.
+            arm.request(
+                "put",
+                url,
+                headers=headers,
+                body=_inject_secrets(json.dumps(_resource_body(resource)), secrets),
+            )
+
+    _wait_for_resources(resolved, arm, subscription, resource_group, timeout)
+    return ids, correlation_id
+
+
+def _wait_for_resources(
+    resources: list[dict],
+    arm: _ArmClient,
+    subscription: str,
+    resource_group: str,
+    timeout: int,
+):
+    start_time = time.time()
+
+    for resource in resources:
+        url = _resource_url(subscription, resource_group, resource)
+        name = resource["name"]
+        state = None
+        latest = None
+
+        while True:
+            latest = arm.request("get", url)
+            state = (latest or {}).get("properties", {}).get("provisioningState", "")
+            if not state:
+                raise RuntimeError(f"Deployment status for {name} did not include properties.provisioningState")
+            if state in TERMINAL_STATES:
+                break
+            if timeout > 0 and (time.time() - start_time) >= timeout:
+                _print_events(latest)
+                raise RuntimeError(f"Deployment of {name} timed out after {timeout}s in state '{state}'")
+            time.sleep(15)
+
+        if state != "Succeeded":
+            print(f"{name} finished in state '{state}'", flush=True)
+            _print_events(latest)
+            raise RuntimeError(f"Deployment of {name} failed with provisioningState '{state}'")
+
+        print(f"{name} succeeded", flush=True)
+        sys.stdout.flush()

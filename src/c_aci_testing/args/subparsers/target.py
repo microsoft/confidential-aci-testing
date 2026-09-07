@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 
 from ..parameters.deployment_name import parse_deployment_name
+from ..parameters.flights import parse_flights
 from ..parameters.follow import parse_follow
 from ..parameters.location import parse_location
 from ..parameters.managed_identity import parse_managed_identity
@@ -53,3 +54,4 @@ def subparse_target(target: argparse.ArgumentParser):
     parse_follow(run)
     parse_no_cleanup(run)
     parse_prefer_pull(run)
+    parse_flights(run)
