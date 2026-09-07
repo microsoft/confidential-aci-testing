@@ -3,18 +3,24 @@
 #   Licensed under the MIT License. See LICENSE in project root for information.
 #   ---------------------------------------------------------------------------------
 
-"""Deploy a bicep target while sending ACI flight headers.
+"""Deploy a constrained bicep target while sending ACI flight headers.
 
 ARM does not forward client request headers into the resource PUTs it performs on
 behalf of a template deployment, so a flighted request cannot go through
 `az deployment group create`. Rather than making callers hand-write JSON request
-bodies, this module keeps bicep as the source of truth and resolves it with ARM
-itself:
+bodies, this module keeps bicep as the source of truth and resolves a deliberately
+limited template surface with ARM itself:
 
   1. compile the bicep target to an ARM template,
   2. deploy a copy of that template with every resource moved into an `outputs`
      block - ARM evaluates all template expressions but creates nothing,
   3. PUT each fully resolved resource body directly, with the flight header.
+
+Only independent `Microsoft.ContainerInstance/containerGroups` resources are
+supported. Resource conditions, loops, explicit scopes, dependencies and runtime
+resource reads are rejected before the resolver deployment because reproducing
+their ARM semantics client-side would otherwise risk deploying a different
+template than the caller supplied.
 
 Step 2 also keeps the target's own outputs (such as `ids`) and creates a real
 deployment record under the same name, so `aci monitor`, `aci get ids` and the
@@ -25,6 +31,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import secrets as secrets_module
 import subprocess
 import sys
 import tempfile
@@ -35,6 +43,7 @@ import urllib.request
 RESOLVED_RESOURCES_OUTPUT = "caciResolvedResources"
 FLIGHT_HEADER = "x-ms-aci-merge-flights"
 ACI_PROVIDER = "microsoft.containerinstance"
+SUPPORTED_RESOURCE_TYPE = f"{ACI_PROVIDER}/containergroups"
 TERMINAL_STATES = ("Succeeded", "Failed", "Canceled")
 
 # Template properties that describe the resource to ARM rather than forming part of
@@ -52,11 +61,11 @@ NON_BODY_KEYS = (
     "metadata",
 )
 
-# ARM functions that read state from a resource the template itself creates, which
-# cannot be evaluated before that resource exists. Functions such as listKeys() are
-# deliberately not included: against a pre-existing resource they resolve correctly
-# in an outputs block, and the resolver deployment below is a real deployment.
-RUNTIME_FUNCTIONS = ("reference(", "resourceInfo(")
+RUNTIME_FUNCTION_PATTERN = re.compile(
+    r"\b(?:reference|resourceInfo|list[A-Za-z0-9_]*)\s*\(",
+    re.IGNORECASE,
+)
+UNSUPPORTED_RESOURCE_KEYS = ("condition", "copy", "scope", "existing", "import")
 
 
 def _run(command: list[str], what: str) -> str:
@@ -103,7 +112,7 @@ def _find_runtime_references(node) -> list[str]:
 
     def walk(value):
         if isinstance(value, str):
-            if value.startswith("[") and any(fn in value for fn in RUNTIME_FUNCTIONS):
+            if value.startswith("[") and RUNTIME_FUNCTION_PATTERN.search(value):
                 found.append(value)
         elif isinstance(value, dict):
             for item in value.values():
@@ -114,6 +123,129 @@ def _find_runtime_references(node) -> list[str]:
 
     walk(node)
     return found
+
+
+def _walk_strings(node):
+    if isinstance(node, str):
+        yield node
+    elif isinstance(node, dict):
+        for item in node.values():
+            yield from _walk_strings(item)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _walk_strings(item)
+
+
+def _contains_key(node, key: str) -> bool:
+    if isinstance(node, dict):
+        return key in node or any(_contains_key(item, key) for item in node.values())
+    if isinstance(node, list):
+        return any(_contains_key(item, key) for item in node)
+    return False
+
+
+def _parameter_reference(name: str) -> re.Pattern:
+    return re.compile(
+        rf"parameters\(\s*['\"]{re.escape(name)}['\"]\s*\)",
+        re.IGNORECASE,
+    )
+
+
+def _resource_bodies(template: dict) -> list[dict]:
+    return [
+        {key: value for key, value in resource.items() if key not in NON_BODY_KEYS}
+        for resource in _resource_list(template)
+        if isinstance(resource, dict)
+    ]
+
+
+def _validate_secure_parameter_usage(template: dict):
+    secure_names = _secure_parameter_names(template)
+    if not secure_names:
+        return
+
+    resource_bodies = _resource_bodies(template)
+    resource_metadata = [
+        {key: value for key, value in resource.items() if key in NON_BODY_KEYS}
+        for resource in _resource_list(template)
+        if isinstance(resource, dict)
+    ]
+    other_template_sections = {
+        key: value for key, value in template.items() if key not in ("parameters", "resources", "outputs")
+    }
+
+    for name in secure_names:
+        reference = _parameter_reference(name)
+        direct_reference = re.compile(
+            rf"^\[\s*parameters\(\s*['\"]{re.escape(name)}['\"]\s*\)\s*\]$",
+            re.IGNORECASE,
+        )
+
+        for value in _walk_strings(resource_bodies):
+            if reference.search(value) and not direct_reference.match(value):
+                raise RuntimeError(
+                    f"Secure parameter '{name}' must be used verbatim in a container "
+                    "group request body when using --flights. Transforming it with "
+                    "functions such as base64() or concat() is not supported."
+                )
+
+        unsupported_sections = (
+            resource_metadata,
+            template.get("parameters") or {},
+            template.get("outputs") or {},
+            other_template_sections,
+        )
+        if any(reference.search(value) for section in unsupported_sections for value in _walk_strings(section)):
+            raise RuntimeError(
+                f"Secure parameter '{name}' may only be referenced directly from a "
+                "container group request body when using --flights"
+            )
+
+
+def _validate_resources(resources: list[dict]):
+    for index, resource in enumerate(resources):
+        if not isinstance(resource, dict):
+            raise RuntimeError(f"Resource {index + 1} is not an object")
+
+        resource_type = str(resource.get("type", ""))
+        if resource_type.lower() != SUPPORTED_RESOURCE_TYPE:
+            raise RuntimeError(
+                "Cannot deploy with --flights because only "
+                "Microsoft.ContainerInstance/containerGroups resources are supported; "
+                f"found '{resource_type or '<missing type>'}'"
+            )
+
+        for key in UNSUPPORTED_RESOURCE_KEYS:
+            if key in resource:
+                raise RuntimeError(
+                    f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                    f"with --flights because resource '{key}' is not supported"
+                )
+
+        if _contains_key(_resource_body(resource), "copy"):
+            raise RuntimeError(
+                f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                "with --flights because property loops are not supported"
+            )
+
+        if resource.get("dependsOn"):
+            raise RuntimeError(
+                f"Cannot deploy container group '{resource.get('name', index + 1)}' "
+                "with --flights because resource dependencies are not supported"
+            )
+
+
+def _validate_template(template: dict, resources: list[dict]):
+    _validate_resources(resources)
+    _validate_secure_parameter_usage(template)
+    blocked = _find_runtime_references(template)
+    if blocked:
+        raise RuntimeError(
+            "Cannot deploy with --flights because runtime resource reads such as "
+            "reference(), resourceInfo() and list*() are not supported:"
+            + os.linesep
+            + os.linesep.join(f"  {expression}" for expression in blocked)
+        )
 
 
 def _build_resolver_template(template: dict, resources: list[dict]) -> dict:
@@ -135,9 +267,7 @@ def _resource_url(subscription: str, resource_group: str, resource: dict) -> str
     name_parts = name.split("/")
 
     if len(child_types) != len(name_parts):
-        raise RuntimeError(
-            f"Cannot build a resource URL for type '{resource_type}' with name '{name}'"
-        )
+        raise RuntimeError(f"Cannot build a resource URL for type '{resource_type}' with name '{name}'")
 
     path = "/".join(f"{t}/{n}" for t, n in zip(child_types, name_parts))
     return (
@@ -168,18 +298,27 @@ def _mask_secure_parameters(template: dict, parameters: dict) -> tuple[dict, dic
     values into the request body afterwards keeps secrets out of ARM entirely.
     """
 
-    secure_names = _secure_parameter_names(template)
+    resource_bodies = _resource_bodies(template)
+    secure_names = {
+        name
+        for name in _secure_parameter_names(template)
+        if any(_parameter_reference(name).search(value) for value in _walk_strings(resource_bodies))
+    }
     if not secure_names:
         return parameters, {}
 
     masked = json.loads(json.dumps(parameters))
     values = masked.get("parameters") or {}
     secrets: dict[str, str] = {}
+    sentinel_collision_text = json.dumps(template) + json.dumps(parameters)
 
-    for index, name in enumerate(sorted(secure_names)):
+    for name in sorted(secure_names):
         entry = values.get(name)
         if not isinstance(entry, dict) or "value" not in entry:
-            continue
+            raise RuntimeError(
+                f"Secure parameter '{name}' must be supplied as a direct value when "
+                "using --flights. Key Vault references and secure defaults are not supported."
+            )
         value = entry["value"]
         if not isinstance(value, str):
             raise RuntimeError(
@@ -187,15 +326,18 @@ def _mask_secure_parameters(template: dict, parameters: dict) -> tuple[dict, dic
                 "--flights. Use a securestring so its value can be kept out of the "
                 "resolver deployment."
             )
-        sentinel = f"__caci_secret_{index}__"
+        while True:
+            sentinel = f"__caci_secret_{secrets_module.token_hex(32)}__"
+            if sentinel not in sentinel_collision_text and sentinel not in secrets:
+                break
         secrets[sentinel] = value
         entry["value"] = sentinel
 
     return masked, secrets
 
 
-def _warn_unresolved_secrets(resolved: list[dict], secrets: dict[str, str]):
-    """Warn when a secure parameter did not survive resolution verbatim.
+def _validate_resolved_secrets(resolved: list[dict], secrets: dict[str, str]):
+    """Fail when a secure parameter did not survive resolution verbatim.
 
     Inspects only the sentinel-bearing structures, never the secret values, so the
     resolved resources stay free of sensitive data.
@@ -207,12 +349,10 @@ def _warn_unresolved_secrets(resolved: list[dict], secrets: dict[str, str]):
     serialised = json.dumps(resolved)
     for sentinel in secrets:
         if sentinel not in serialised:
-            print(
-                "Warning: a secure parameter did not reach the request body verbatim, so its "
-                "value will not be substituted. A template that transforms it - with base64() "
-                "or concat(), for example - cannot be used with --flights.",
-                file=sys.stderr,
-                flush=True,
+            raise RuntimeError(
+                "A secure parameter did not reach the container group body verbatim. "
+                "Templates that transform secure values with functions such as base64() "
+                "or concat() cannot be used with --flights."
             )
 
 
@@ -251,16 +391,24 @@ class _ArmClient:
     def _refresh_token(self):
         self._token = _run(
             [
-                "az", "account", "get-access-token",
-                "--subscription", self._subscription,
-                "--resource", self._resource,
-                "--query", "accessToken",
-                "-o", "tsv",
+                "az",
+                "account",
+                "get-access-token",
+                "--subscription",
+                self._subscription,
+                "--resource",
+                self._resource,
+                "--query",
+                "accessToken",
+                "-o",
+                "tsv",
             ],
             "Acquiring an ARM access token",
         ).strip()
 
-    def request(self, method: str, path: str, headers: dict[str, str] | None = None, body: str | None = None) -> dict | None:
+    def request(
+        self, method: str, path: str, headers: dict[str, str] | None = None, body: str | None = None
+    ) -> dict | None:
         if self._token is None:
             self._refresh_token()
 
@@ -320,14 +468,7 @@ def deploy_flighted(
     if not resources:
         raise RuntimeError("Target template declares no resources to deploy")
 
-    blocked = _find_runtime_references(resources) + _find_runtime_references(template.get("outputs") or {})
-    if blocked:
-        raise RuntimeError(
-            "Cannot deploy with --flights because the template uses runtime references "
-            "that ARM can only evaluate once its resources exist:"
-            + os.linesep
-            + os.linesep.join(f"  {expression}" for expression in blocked)
-        )
+    _validate_template(template, resources)
 
     with tempfile.TemporaryDirectory() as temp_dir:
         resolver_path = os.path.join(temp_dir, "resolver.json")
@@ -343,13 +484,22 @@ def deploy_flighted(
         result = json.loads(
             _run(
                 [
-                    "az", "deployment", "group", "create",
-                    "-n", deployment_name,
-                    "--subscription", subscription,
-                    "--resource-group", resource_group,
-                    "--template-file", resolver_path,
-                    "--parameters", f"@{parameters_file}",
-                    "-o", "json",
+                    "az",
+                    "deployment",
+                    "group",
+                    "create",
+                    "-n",
+                    deployment_name,
+                    "--subscription",
+                    subscription,
+                    "--resource-group",
+                    resource_group,
+                    "--template-file",
+                    resolver_path,
+                    "--parameters",
+                    f"@{parameters_file}",
+                    "-o",
+                    "json",
                 ],
                 "Resolving template",
             )
@@ -360,7 +510,10 @@ def deploy_flighted(
         resolved = outputs.get(RESOLVED_RESOURCES_OUTPUT, {}).get("value") or []
         ids = outputs.get("ids", {}).get("value") or []
 
-        _warn_unresolved_secrets(resolved, secrets)
+        if len(resolved) != len(resources):
+            raise RuntimeError(f"ARM resolved {len(resolved)} container group(s), expected {len(resources)}")
+        _validate_resources(resolved)
+        _validate_resolved_secrets(resolved, secrets)
 
         arm = _ArmClient(subscription)
 
@@ -404,13 +557,13 @@ def _wait_for_resources(
         while True:
             latest = arm.request("get", url)
             state = (latest or {}).get("properties", {}).get("provisioningState", "")
+            if not state:
+                raise RuntimeError(f"Deployment status for {name} did not include properties.provisioningState")
             if state in TERMINAL_STATES:
                 break
             if timeout > 0 and (time.time() - start_time) >= timeout:
                 _print_events(latest)
-                raise RuntimeError(
-                    f"Deployment of {name} timed out after {timeout}s in state '{state}'"
-                )
+                raise RuntimeError(f"Deployment of {name} timed out after {timeout}s in state '{state}'")
             time.sleep(15)
 
         if state != "Succeeded":

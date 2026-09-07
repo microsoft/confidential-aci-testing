@@ -17,6 +17,18 @@ env:
   AZ_CLI_VERSION: 2.80.0
 
 jobs:
+  test_flighted_deploy_validation:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4.1.7
+
+    - name: Install package
+      run: pip install flit pytest && flit install
+
+    - name: Run Test
+      run: pytest tests/test_aci_deploy_flighted.py
+
   test_target_run:
     runs-on: ubuntu-latest
     steps:

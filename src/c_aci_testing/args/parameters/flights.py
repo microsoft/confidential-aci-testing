@@ -16,7 +16,9 @@ def parse_flights(parser):
             "Pipe separated ACI flights to merge into the request, e.g. "
             "'cluster-pool.stamp-4'. Sent as the x-ms-aci-merge-flights header, which "
             "requires the deployment to bypass ARM template deployment. Defaults to "
-            "the ACI_FLIGHTS environment variable."
+            "the ACI_FLIGHTS environment variable. Flighted templates may contain only "
+            "independent container groups and cannot use resource conditions, loops, "
+            "scopes, dependencies, runtime resource reads or Key Vault parameter references."
         ),
         type=str,
         default=os.getenv("ACI_FLIGHTS", ""),
