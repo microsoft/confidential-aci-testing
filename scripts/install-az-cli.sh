@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 sudo apt-get update
 sudo apt-get install apt-transport-https ca-certificates curl gnupg lsb-release
 
@@ -14,4 +16,5 @@ Components: main
 Architectures: $(dpkg --print-architecture)
 Signed-by: /etc/apt/keyrings/microsoft.gpg" | sudo tee /etc/apt/sources.list.d/azure-cli.sources
 
-sudo apt-get install --allow-downgrades azure-cli=${AZ_CLI_VERSION:-2.80.0}-1~${AZ_DIST}
+sudo apt-get update
+sudo apt-get install --allow-downgrades "azure-cli=${AZ_CLI_VERSION:-2.80.0}-1~${AZ_DIST}"
