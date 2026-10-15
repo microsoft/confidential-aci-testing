@@ -161,3 +161,8 @@ def subparse_vm(vm: argparse.ArgumentParser):
     cache_cplat = vm_subparser.add_parser("cache_cplat")
     parse_cplat_args(cache_cplat)
     parse_storage_account(cache_cplat)
+    cache_cplat.add_argument(
+        "--non-confidential",
+        action="store_true",
+        help="Skip setting SevSnpEnabled, EnableLayerIntegrity, and ShareScratch in deploy.json.",
+    )
