@@ -12,14 +12,17 @@ import tempfile
 
 VM_CONTAINER_NAME = "container"
 
-def containerplat_cache_from_path(storage_account: str, container_name: str, blob_name: str, cplat_path: str):
+def containerplat_cache_from_path(
+    storage_account: str, container_name: str, blob_name: str, cplat_path: str, non_confidential: bool = False
+):
     with open(f"{cplat_path}/deploy.json", "r+", encoding="utf-8") as f:
         data = json.load(f)
         data["Force"] = True
-        data["SevSnpEnabled"] = True
-        data["EnableLayerIntegrity"] = True
         data["NoLCOWGPU"] = True
-        data["RuntimeOptions"][0]["ShareScratch"] = True
+        if not non_confidential:
+            data["SevSnpEnabled"] = True
+            data["EnableLayerIntegrity"] = True
+            data["RuntimeOptions"][0]["ShareScratch"] = True
 
         # Inject the runhcs-lcow `hcl-enabled = "False"` default container
         # annotation on every cplat package, regardless of whether deploy.json
@@ -74,7 +77,13 @@ def containerplat_cache_from_path(storage_account: str, container_name: str, blo
 
 
 def containerplat_cache_from_ado(
-    storage_account: str, container_name: str, blob_name: str, cplat_feed: str, cplat_name: str, cplat_version: str
+    storage_account: str,
+    container_name: str,
+    blob_name: str,
+    cplat_feed: str,
+    cplat_name: str,
+    cplat_version: str,
+    non_confidential: bool = False,
 ):
     with tempfile.TemporaryDirectory() as temp_dir:
         subprocess.run(
@@ -101,7 +110,9 @@ def containerplat_cache_from_ado(
             check=True,
         )
 
-        containerplat_cache_from_path(storage_account, container_name, blob_name, temp_dir)
+        containerplat_cache_from_path(
+            storage_account, container_name, blob_name, temp_dir, non_confidential=non_confidential
+        )
 
 
 def containerplat_cache(
@@ -112,6 +123,7 @@ def containerplat_cache(
     cplat_name: str,
     cplat_version: str,
     cplat_path: str,
+    non_confidential: bool = False,
 ):
     if cplat_path:
         print(f"Updating deploy.json and uploading containerplat in {cplat_path}")
@@ -120,6 +132,7 @@ def containerplat_cache(
             container_name=container_name,
             blob_name=cplat_blob_name,
             cplat_path=cplat_path,
+            non_confidential=non_confidential,
         )
     elif cplat_feed or cplat_name or cplat_version:
         if not cplat_feed or not cplat_name or not cplat_version:
@@ -133,6 +146,7 @@ def containerplat_cache(
             cplat_feed=cplat_feed,
             cplat_name=cplat_name,
             cplat_version=cplat_version,
+            non_confidential=non_confidential,
         )
     else:
         raise Exception("Missing cplat_path or cplat_feed, cplat_name, cplat_version")
@@ -145,6 +159,7 @@ def vm_cache_cplat(
     cplat_name: str,
     cplat_version: str,
     cplat_path: str,
+    non_confidential: bool = False,
     **kwargs,
 ):
     containerplat_cache(
@@ -155,4 +170,5 @@ def vm_cache_cplat(
         cplat_name=cplat_name,
         cplat_version=cplat_version,
         cplat_path=cplat_path,
+        non_confidential=non_confidential,
     )
