@@ -141,7 +141,7 @@ def vm_create(
                 'cd C:\\containerplat_build',
                 'tar.exe -xf C:\\containerplat.tar -C C:\\containerplat_build 2>&1 >> C:\\bootstrap.log',
                 'if ($LASTEXITCODE -ne 0) { type C:\\bootstrap.log }',
-                'if ($LASTEXITCODE -eq 0 && Test-Path .\\containerplat_build) { move .\\containerplat_build\\* . }',
+                'if ($LASTEXITCODE -eq 0 -and Test-Path .\\containerplat_build) { move .\\containerplat_build\\* . }',
                 'echo "result: $LASTEXITCODE"',
             ]
         ),
