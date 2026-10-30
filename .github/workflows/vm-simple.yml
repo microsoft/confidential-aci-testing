@@ -28,7 +28,7 @@ on:
       vm_size:
         description: 'The size of the VM'
         required: true
-        default: 'Standard_DC4as_cc_v5'
+        default: 'Standard_DC4as_cc_v6'
       cplat_cache_name:
         description: 'The name of the containerplat blob to use'
         required: true
