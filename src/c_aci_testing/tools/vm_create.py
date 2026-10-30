@@ -137,7 +137,11 @@ def vm_create(
         command="\r\n".join(
             [
                 f'C:\\storage_get.ps1 -Uri "{cplat_blob_url}" -OutFile "C:\\containerplat.tar" 2>&1 >> C:\\bootstrap.log',
-                "tar -xf C:\\containerplat.tar -C C:\\ 2>&1 >> C:\\bootstrap.log",
+                'mkdir C:\\containerplat_build -force',
+                'cd C:\\containerplat_build',
+                'tar.exe -xf C:\\containerplat.tar -C C:\\containerplat_build 2>&1 >> C:\\bootstrap.log',
+                'if ($LASTEXITCODE -ne 0) { type C:\\bootstrap.log }',
+                'if ($LASTEXITCODE -eq 0 && Test-Path .\\containerplat_build) { move .\\containerplat_build\\* . }',
                 'echo "result: $LASTEXITCODE"',
             ]
         ),
