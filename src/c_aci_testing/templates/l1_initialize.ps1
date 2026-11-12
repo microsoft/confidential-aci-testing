@@ -69,13 +69,20 @@ try {
         exit
     }
 
-    C:\containerplat_build\deploy.exe 2>&1 >> C:\bootstrap.log
+    try {
+        $LASTEXITCODE = 0
+        C:\containerplat_build\deploy.ps1 -Verbose -EnableLayerIntegrity -SevSnpEnabled -Force -ShareScratch 2>&1 >> C:\bootstrap.log
+        $success = $LASTEXITCODE -eq 0
+    } catch {
+        $success = $false
+        echo "DEPLOY-ERROR cplat deploy.ps1 threw an exception: $($_.Exception.ToString())" >> C:\bootstrap.log
+        $has_exception = $true
+    }
 
-    $success = $LASTEXITCODE -eq 0
     if ($success) {
         echo "DEPLOY-SUCCESS" >> C:\bootstrap.log
-    } else {
-        echo "DEPLOY-ERROR cplat deploy.exe returned $LASTEXITCODE" >> C:\bootstrap.log
+    } elseif (-not $has_exception) {
+        echo "DEPLOY-ERROR cplat deploy.ps1 returned $LASTEXITCODE" >> C:\bootstrap.log
     }
 } catch {
     echo $_.Exception.ToString() >> C:\bootstrap.log

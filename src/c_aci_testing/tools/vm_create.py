@@ -130,22 +130,36 @@ def vm_create(
         print(f"{vm_name} already exists - skipping Azure deployment")
 
     print("Downloading containerplat on VM")
-    run_on_vm(
-        vm_name=vm_name,
-        subscription=subscription,
-        resource_group=resource_group,
-        command="\r\n".join(
-            [
-                f'C:\\storage_get.ps1 -Uri "{cplat_blob_url}" -OutFile "C:\\containerplat.tar" 2>&1 >> C:\\bootstrap.log',
-                'mkdir C:\\containerplat_build -force',
-                'cd C:\\containerplat_build',
-                'tar.exe -xf C:\\containerplat.tar -C C:\\containerplat_build 2>&1 >> C:\\bootstrap.log',
-                'if ($LASTEXITCODE -ne 0) { type C:\\bootstrap.log }',
-                'if (($LASTEXITCODE -eq 0) -and (Test-Path .\\containerplat_build)) { move .\\containerplat_build\\* . }',
-                'echo "result: $LASTEXITCODE"',
-            ]
-        ),
-    )
+    if cplat_blob_name.endswith(".zip"):
+        run_on_vm(
+            vm_name=vm_name,
+            subscription=subscription,
+            resource_group=resource_group,
+            command="\r\n".join(
+                [
+                    f'C:\\storage_get.ps1 -Uri "{cplat_blob_url}" -OutFile "C:\\containerplat_build.zip" 2>&1 >> C:\\bootstrap.log',
+                    'Expand-Archive -Path "C:\\containerplat_build.zip" -DestinationPath "C:\\containerplat_build" -Force 2>&1 >> C:\\bootstrap.log',
+                    'if (-not (Test-Path "C:\\containerplat_build")) { type C:\\bootstrap.log; throw "Failed to extract containerplat" }',
+                ]
+            ),
+        )
+    else:
+        run_on_vm(
+            vm_name=vm_name,
+            subscription=subscription,
+            resource_group=resource_group,
+            command="\r\n".join(
+                [
+                    f'C:\\storage_get.ps1 -Uri "{cplat_blob_url}" -OutFile "C:\\containerplat.tar" 2>&1 >> C:\\bootstrap.log',
+                    'mkdir C:\\containerplat_build -force',
+                    'cd C:\\containerplat_build',
+                    'tar.exe -xf C:\\containerplat.tar -C C:\\containerplat_build 2>&1 >> C:\\bootstrap.log',
+                    'if ($LASTEXITCODE -ne 0) { type C:\\bootstrap.log }',
+                    'if (($LASTEXITCODE -eq 0) -and (Test-Path .\\containerplat_build)) { move .\\containerplat_build\\* . }',
+                    'echo "result: $LASTEXITCODE"',
+                ]
+            ),
+        )
 
     print("Bootstrapping VM")
     upload_to_vm_and_run(

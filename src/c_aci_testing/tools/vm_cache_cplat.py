@@ -125,6 +125,9 @@ def containerplat_cache(
     cplat_path: str,
     non_confidential: bool = False,
 ):
+    if cplat_blob_name.endswith(".zip"):
+        raise Exception(f"This command does not upload zip packages. They don't need to be processed, so simply add them to the storage account,")
+
     if cplat_path:
         print(f"Updating deploy.json and uploading containerplat in {cplat_path}")
         containerplat_cache_from_path(
